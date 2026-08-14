@@ -19,7 +19,8 @@ import {
   UserMinus,
   DollarSign,
   Edit2,
-  QrCode
+  QrCode,
+  ScrollText
 } from 'lucide-react';
 import { useOrders } from '../hooks/useData';
 import Pagination from '../components/ui/Pagination';
@@ -32,6 +33,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getStatusStyle, formatCurrency } from '../utils/statusUtils';
 import CarVisualChecklist from '../components/features/CarVisualChecklist';
 import CertificadoGarantia from '../components/features/CertificadoGarantia';
+import ReciboOS from '../components/features/ReciboOS';
 import { sendWhatsApp, getServiceFinishedMsg, getVehicleReceivedMsg } from '../utils/whatsappUtils';
 import { toast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
@@ -49,6 +51,7 @@ const OrdensServico = () => {
   };
   const [showChecklist, setShowChecklist] = useState(false);
   const [showCertificado, setShowCertificado] = useState(false);
+  const [showRecibo, setShowRecibo] = useState(false);
   const [showPagamento, setShowPagamento] = useState(false);
   const [showDetalhes, setShowDetalhes] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
@@ -303,6 +306,13 @@ const OrdensServico = () => {
                           <FileText size={20} />
                         </button>
                         <button 
+                          onClick={() => { setActiveOS(os); setShowRecibo(true); }}
+                          className="p-2.5 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition-all border border-transparent hover:border-sky-200"
+                          title="Imprimir Recibo (A4)"
+                        >
+                          <ScrollText size={20} />
+                        </button>
+                        <button 
                           onClick={() => { setActivePaymentOS(os); setShowPagamento(true); }}
                           className={`p-2.5 rounded-xl transition-all border ${
                             os.saldo_devedor > 0 
@@ -413,6 +423,7 @@ const OrdensServico = () => {
 
       {showChecklist && <CarVisualChecklist osData={currentActiveOS} onClose={() => setShowChecklist(false)} />}
       {showCertificado && <CertificadoGarantia os={currentActiveOS} onClose={() => setShowCertificado(false)} />}
+      {showRecibo && <ReciboOS os={currentActiveOS} onClose={() => setShowRecibo(false)} />}
       {showPagamento && currentActivePaymentOS && (
         <PagamentoModal 
            os={currentActivePaymentOS}

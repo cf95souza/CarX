@@ -4,13 +4,14 @@ import {
   Car, Shield, Award, Clock, CheckCircle2, AlertCircle, FileText, 
   Camera, ChevronRight, LogOut, Phone, Search, Key, Smartphone, 
   Sparkles, Calendar, ArrowRight, Download, Eye, X, Check, Share2, 
-  RefreshCw, Layers, Wrench, ShieldCheck
+  RefreshCw, Layers, Wrench, ShieldCheck, ScrollText
 } from 'lucide-react';
 import { useBrand } from '../contexts/BrandContext';
 import { supabase, hasRealConnection } from '../lib/supabase';
 import { toast } from '../utils/toast';
 import { sendWhatsApp } from '../utils/whatsappUtils';
 import CertificadoGarantia from '../components/features/CertificadoGarantia';
+import ReciboOS from '../components/features/ReciboOS';
 import CalendarSyncModal from '../components/ui/CalendarSyncModal';
 
 const ClientPortal = () => {
@@ -28,6 +29,7 @@ const ClientPortal = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState('ALL');
   const [loadingData, setLoadingData] = useState(false);
   const [activeOSForCert, setActiveOSForCert] = useState(null);
+  const [activeOSForRecibo, setActiveOSForRecibo] = useState(null);
   const [activeOSForSync, setActiveOSForSync] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
 
@@ -180,6 +182,8 @@ const ClientPortal = () => {
       const veiculoObj = Array.isArray(o.veiculos) ? o.veiculos[0] : o.veiculos;
       return {
         ...o,
+        cliente_nome: o.clientes ? (Array.isArray(o.clientes) ? o.clientes[0]?.nome : o.clientes.nome) : (o.cliente_nome || o.cliente || 'Cliente Não Informado'),
+        cliente_telefone: o.clientes ? (Array.isArray(o.clientes) ? o.clientes[0]?.telefone : o.clientes.telefone) : (o.cliente_telefone || 'Não informado'),
         veiculo_id: veiculoObj?.id || o.veiculo_id || `v-${o.id}`,
         veiculo_desc: veiculoObj ? `${veiculoObj.marca || ''} ${veiculoObj.modelo || ''}`.trim() : (o.veiculo_desc || 'Veículo Não Identificado'),
         placa: veiculoObj?.placa || o.placa || 'SEM-PLACA',
@@ -222,6 +226,8 @@ const ClientPortal = () => {
     const demoOrders = [
       {
         id: 9021,
+        cliente_nome: 'Cliente VIP',
+        cliente_telefone: '(11) 99999-9999',
         veiculo_id: 'v-101',
         veiculo_desc: 'BMW 320i M-Sport',
         placa: 'BMW-2024',
@@ -240,6 +246,8 @@ const ClientPortal = () => {
       },
       {
         id: 8840,
+        cliente_nome: 'Cliente VIP',
+        cliente_telefone: '(11) 99999-9999',
         veiculo_id: 'v-101',
         veiculo_desc: 'BMW 320i M-Sport',
         placa: 'BMW-2024',
@@ -256,6 +264,8 @@ const ClientPortal = () => {
       },
       {
         id: 7420,
+        cliente_nome: 'Cliente VIP',
+        cliente_telefone: '(11) 99999-9999',
         veiculo_id: 'v-102',
         veiculo_desc: 'Porsche Carrera 911',
         placa: 'POR-9110',
@@ -636,14 +646,25 @@ const ClientPortal = () => {
                           </button>
 
                           {isCompleted && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveOSForCert(order)}
-                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs shadow-md shadow-emerald-950 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
-                            >
-                              <Award className="w-4 h-4" />
-                              <span>Certificado de Garantia</span>
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setActiveOSForRecibo(order)}
+                                className="px-3.5 py-2 rounded-xl bg-slate-700/80 hover:bg-slate-700 text-sky-400 font-bold text-xs border border-sky-500/30 flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                                title="Baixar Recibo de Serviço"
+                              >
+                                <ScrollText className="w-3.5 h-3.5 text-sky-400" />
+                                <span>Recibo (PDF)</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setActiveOSForCert(order)}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-black text-xs shadow-md shadow-emerald-950 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                              >
+                                <Award className="w-4 h-4" />
+                                <span>Certificado de Garantia</span>
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -695,6 +716,14 @@ const ClientPortal = () => {
         <CertificadoGarantia
           os={activeOSForCert}
           onClose={() => setActiveOSForCert(null)}
+        />
+      )}
+
+      {/* Modal Recibo OS */}
+      {activeOSForRecibo && (
+        <ReciboOS
+          os={activeOSForRecibo}
+          onClose={() => setActiveOSForRecibo(null)}
         />
       )}
 
