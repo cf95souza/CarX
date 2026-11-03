@@ -130,3 +130,4 @@ else
     echo -e "${RED}>>> EXISTEM FALHAS QUE PRECISAM SER CORRIGIDAS ANTES DE HOMOLOGAR T1.1. <<<${NC}"
     exit 1
 fi
+

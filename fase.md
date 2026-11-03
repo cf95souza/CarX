@@ -163,7 +163,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T1.2 — Docker Compose Base e Topologia de Redes
+### [x] T1.2 — Docker Compose Base e Topologia de Redes `(Concluído)`
 - **Descrição:** Orquestração dos 5 blocos da aplicação CarX e serviços de apoio em redes segmentadas.
 - **Topologia de Containers:**
   1. `carx-web` (Nginx servindo landing, gestão e operador PWA)
@@ -171,12 +171,32 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
   3. `carx-db` (PostgreSQL 16)
   4. `carx-wa` (Gateway de WhatsApp isolado na rede interna)
   5. `carx-admin-web` (Frontend Super Admin)
-  - *Apoio:* `proxy` (Caddy com SSL automático), `redis`, `minio` (S3 local).
+  - *Apoio:* `proxy` (Caddy com SSL automático), `redis`, `minio` (S3 local com pgsty/silo), `backup`, `uptime`.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 3: Topologia e Containers (Linhas 107–137)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L107-L137)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.2 (Linhas 504–507)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L504-L507)
 - **Entrega:** `infra/compose.prod.yml`, `infra/compose.staging.yml` e `infra/compose.dev.yml` com redes `public`, `app`, `data` e `wa`. Banco de dados, Redis, MinIO e Gateway sem portas expostas externamente.
 - **Pronto quando:** `docker compose up -d` sobe todos os serviços saudáveis com healthchecks ativos.
+- **Status da Validação:**
+  - Arquivos de orquestração criados e validados: `infra/compose.prod.yml`, `infra/compose.staging.yml` e `infra/compose.dev.yml` (sintaxe e topologia validadas via `docker compose config`).
+  - Segmentação em 4 redes Docker:
+    - `carx_net_public`: Exclusiva para tráfego web (`proxy`, `carx-web`, `carx-admin-web`, `uptime`).
+    - `carx_net_app`: Barramento de aplicação (`proxy`, `carx-api`, `carx-worker`, `redis`, `minio`).
+    - `carx_net_data`: Rede de dados isolada com `internal: true` (`carx-api`, `carx-worker`, `carx-db`, `backup`). O banco PostgreSQL nunca acessa a internet nem a rede pública.
+    - `carx_net_wa`: Rede isolada do gateway de WhatsApp (`carx-api`, `carx-worker`, `carx-wa`).
+  - Dockerfiles multi-stage otimizados e seguros criados em `infra/docker/`:
+    - `api.Dockerfile`: Build TypeScript estrito, execução com usuário não-root `node` e dumb-init.
+    - `web.Dockerfile` e `admin.Dockerfile`: Nginx Alpine com segurança contra clickjacking, MIME sniffing e regras de cache imutável de assets Vite.
+    - `wa.Dockerfile`: Gateway isolado com persistência de sessões em volume criptografável.
+    - `nginx-web.conf` e `nginx-admin.conf`: Configurações de alta performance com compressão Gzip e SPA fallback.
+    - `Caddyfile`: Proxy com terminação TLS automática e suporte aos subdomínios de lojas.
+    - `.dockerignore`: Otimizado na raiz para evitar injeção de `node_modules` do host em builds Linux.
+  - Execução no Docker Desktop homologada com sucesso:
+    - `carx-dev-db`: Up (healthy)
+    - `carx-dev-minio`: Up (healthy)
+    - `carx-dev-redis`: Up (healthy)
+    - `carx-dev-wa`: Up (healthy)
+    - `carx-dev-api`: Up (healthy), requisição ao endpoint `/health` respondendo HTTP 200 `{"status":"ok","service":"carx-api"}`.
 
 ---
 

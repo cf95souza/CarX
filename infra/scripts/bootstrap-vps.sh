@@ -358,3 +358,4 @@ echo "==========================================================================
 echo -e "${YELLOW}IMPORTANTE:${NC} Antes de desconectar da sessão atual, teste o login"
 echo -e "em um novo terminal com: ${GREEN}ssh ${DEPLOY_USER}@<IP_DO_SERVIDOR>${NC}"
 echo "=============================================================================="
+

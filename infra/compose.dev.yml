@@ -1,0 +1,161 @@
+# ==============================================================================
+# CarX — Ambiente de Desenvolvimento Local (compose.dev.yml)
+# ==============================================================================
+# Otimizado para Docker Desktop no Windows / Mac / Linux
+# Mapeia portas seguras em 127.0.0.1 para inspeção local (DBeaver, Redis, MinIO)
+# ==============================================================================
+
+name: carx-dev
+
+networks:
+  public:
+    driver: bridge
+    name: carx_dev_net_public
+  app:
+    driver: bridge
+    name: carx_dev_net_app
+  data:
+    driver: bridge
+    name: carx_dev_net_data
+  wa:
+    driver: bridge
+    name: carx_dev_net_wa
+
+volumes:
+  pg_data_dev:
+    name: carx_dev_pg_data
+  redis_data_dev:
+    name: carx_dev_redis_data
+  minio_data_dev:
+    name: carx_dev_minio_data
+  wa_sessions_dev:
+    name: carx_dev_wa_sessions
+
+services:
+  # ----------------------------------------------------------------------------
+  # Banco de Dados PostgreSQL 16 Local
+  # ----------------------------------------------------------------------------
+  carx-db:
+    image: postgres:16-alpine
+    container_name: carx-dev-db
+    restart: unless-stopped
+    ports:
+      - "${DEV_DB_PORT:-127.0.0.1:5433}:5432"
+    environment:
+      - POSTGRES_DB=carx_dev
+      - POSTGRES_USER=carx_dev_user
+      - POSTGRES_PASSWORD=carx_dev_password
+    volumes:
+      - pg_data_dev:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carx_dev_user -d carx_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # Redis 7 Local
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: carx-dev-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # MinIO (S3 Emulador Local) + Console Web
+  # ----------------------------------------------------------------------------
+  minio:
+    image: pgsty/silo:latest
+    container_name: carx-dev-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    volumes:
+      - minio_data_dev:/data
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # WhatsApp Gateway Local
+  # ----------------------------------------------------------------------------
+  carx-wa:
+    build:
+      context: ..
+      dockerfile: infra/docker/wa.Dockerfile
+    image: carx/wa:dev
+    container_name: carx-dev-wa
+    restart: unless-stopped
+    ports:
+      - "${DEV_WA_PORT:-127.0.0.1:8088}:8080"
+    volumes:
+      - wa_sessions_dev:/data/sessions
+    networks:
+      - wa
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # API Fastify Local
+  # ----------------------------------------------------------------------------
+  carx-api:
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    image: carx/api:dev
+    container_name: carx-dev-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://carx_dev_user:carx_dev_password@carx-db:5432/carx_dev?schema=public
+      - REDIS_URL=redis://redis:6379
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - WA_GATEWAY_URL=http://carx-wa:8080
+      - JWT_SECRET=carx_super_secret_jwt_key_dev_mode_only
+    depends_on:
+      carx-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - app
+      - data
+      - wa
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

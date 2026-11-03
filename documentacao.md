@@ -312,3 +312,24 @@ Implementado o ferramental automatizado de provisionamento e proteção perimetr
   - Script executável que audita localmente ou remotamente os 7 pilares de conformidade de segurança e gera relatório de status com saída em código de erro (fail-closed).
 - **Runbook Operacional (`infra/README.md`)**:
   - Documentação completa com comandos de execução em 1 linha via SSH e passos de validação pré-deploy.
+
+#### Tarefa T1.2: Docker Compose Base e Topologia de Redes 🐳
+Concluída a arquitetura de conteinerização do CarX cobrindo os 5 blocos da aplicação e serviços de apoio em ambientes de produção, homologação e desenvolvimento local:
+- **Topologia de Containers e Isolamento em 4 Redes**:
+  - `infra/compose.prod.yml`: Orquestração de produção com recursos e limites de memória calibrados.
+  - `infra/compose.staging.yml`: Ambiente de homologação isolado na mesma VPS sem colisão de portas ou volumes.
+  - `infra/compose.dev.yml`: Ambiente para Docker Desktop com bind em `127.0.0.1` para inspeção local de banco e caches.
+  - **Rede `carx_net_public`**: Permite acesso apenas aos frontends (`carx-web`, `carx-admin-web`), proxy Caddy e painel de status (`uptime`).
+  - **Rede `carx_net_app`**: Barramento privado para comunicação entre o proxy, API Fastify (`carx-api`), background worker (`carx-worker`), Redis e MinIO (`pgsty/silo`).
+  - **Rede `carx_net_data` (Modo Interno `internal: true`)**: Rede blindada para persistência. O banco PostgreSQL e o container de backup diário não possuem qualquer saída para a internet nem visibilidade da rede pública.
+  - **Rede `carx_net_wa`**: Rede isolada para o gateway de WhatsApp (`carx-wa`), acessível estritamente pelas instâncias da API e do Worker.
+- **Dockerfiles Multi-stage e Configurações Otimizadas (`infra/docker/`)**:
+  - `api.Dockerfile`: Compilação TypeScript com `node:20-alpine`, execução com usuário sem privilégios `node` e gerenciador de processos `dumb-init`.
+  - `web.Dockerfile` & `admin.Dockerfile`: Builds Vite estáticos servidos via Nginx Alpine com cabeçalhos de segurança (HSTS, CSP, X-Frame-Options, anti-sniffing) e cache imutável para assets com hash.
+  - `wa.Dockerfile`: Gateway de mensageria com persistência isolada de credenciais de sessão.
+  - `nginx-web.conf` & `nginx-admin.conf`: Configurações de servidor Nginx com compressão Gzip e SPA fallback nativo.
+  - `Caddyfile`: Configuração de proxy reverso com suporte a roteamento de subdomínios dinâmicos das lojas (`*.carx.com.br`) e terminação TLS automática Let's Encrypt.
+  - `.dockerignore`: Filtro abrangente prevenindo que artefatos locais do Windows corrompam as imagens Docker Linux.
+- **Validação Prática no Docker Desktop**:
+  - Todos os containers de infraestrutura e aplicação subiram saudáveis (`carx-dev-db`, `carx-dev-minio`, `carx-dev-redis`, `carx-dev-wa`, `carx-dev-api`).
+  - Healthchecks validados com sucesso via curl interno e verificação de integridade de processos.

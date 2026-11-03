@@ -1,0 +1,239 @@
+# ==============================================================================
+# CarX — Topologia de Containers de Homologação (compose.staging.yml)
+# ==============================================================================
+# Espelho idêntico da produção com isolamento de volumes e nomes de contêineres
+# ==============================================================================
+
+name: carx-staging
+
+networks:
+  public:
+    driver: bridge
+    name: carx_staging_net_public
+  app:
+    driver: bridge
+    name: carx_staging_net_app
+  data:
+    driver: bridge
+    internal: true
+    name: carx_staging_net_data
+  wa:
+    driver: bridge
+    name: carx_staging_net_wa
+
+volumes:
+  caddy_data:
+    name: carx_staging_caddy_data
+  caddy_config:
+    name: carx_staging_caddy_config
+  pg_data:
+    name: carx_staging_pg_data
+  redis_data:
+    name: carx_staging_redis_data
+  minio_data:
+    name: carx_staging_minio_data
+  wa_sessions:
+    name: carx_staging_wa_sessions
+  backups_data:
+    name: carx_staging_backups_data
+
+services:
+  carx-web:
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        - VITE_API_URL=https://staging-api.${BASE_DOMAIN:-carx.com.br}
+        - VITE_APP_ENV=staging
+    image: carx/web:staging
+    container_name: carx-staging-web
+    restart: unless-stopped
+    networks:
+      - public
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  carx-admin-web:
+    build:
+      context: ..
+      dockerfile: infra/docker/admin.Dockerfile
+      args:
+        - VITE_API_URL=https://staging-api.${BASE_DOMAIN:-carx.com.br}
+        - VITE_APP_ENV=staging
+    image: carx/admin-web:staging
+    container_name: carx-staging-admin-web
+    restart: unless-stopped
+    networks:
+      - public
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  carx-api:
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    image: carx/api:staging
+    container_name: carx-staging-api
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=staging
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@carx-staging-db:5432/${POSTGRES_DB:-carx_staging}?schema=public
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@carx-staging-redis:6379
+      - MINIO_ENDPOINT=carx-staging-minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD}
+      - WA_GATEWAY_URL=http://carx-staging-wa:8080
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      carx-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - app
+      - data
+      - wa
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  carx-worker:
+    image: carx/api:staging
+    container_name: carx-staging-worker
+    restart: unless-stopped
+    command: ["node", "-e", "console.log('CarX Staging Worker ativo'); setInterval(() => {}, 60000);"]
+    environment:
+      - NODE_ENV=staging
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@carx-staging-db:5432/${POSTGRES_DB:-carx_staging}?schema=public
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@carx-staging-redis:6379
+      - WA_GATEWAY_URL=http://carx-staging-wa:8080
+    depends_on:
+      carx-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app
+      - data
+      - wa
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 384M
+
+  carx-db:
+    image: postgres:16-alpine
+    container_name: carx-staging-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-carx_staging}
+      - POSTGRES_USER=${POSTGRES_USER:-carx_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - data
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carx_admin} -d ${POSTGRES_DB:-carx_staging}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  carx-wa:
+    build:
+      context: ..
+      dockerfile: infra/docker/wa.Dockerfile
+    image: carx/wa:staging
+    container_name: carx-staging-wa
+    restart: unless-stopped
+    volumes:
+      - wa_sessions:/data/sessions
+    networks:
+      - wa
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: carx-staging-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    networks:
+      - app
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: pgsty/silo:latest
+    container_name: carx-staging-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    networks:
+      - app
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3

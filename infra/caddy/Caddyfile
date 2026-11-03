@@ -1,0 +1,97 @@
+# ==============================================================================
+# CarX — Configuração do Proxy Reverso Caddy com TLS Automático
+# ==============================================================================
+
+{
+    email {$ACME_EMAIL:admin@carx.com.br}
+    admin off
+    servers {
+        trusted_proxies static private_ranges
+    }
+}
+
+# Snippet de Segurança e Headers HTTP
+(security_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
+# Snippet de Compressão
+(compression) {
+    encode zstd gzip
+}
+
+# ------------------------------------------------------------------------------
+# 1. API Fastify do CarX
+# ------------------------------------------------------------------------------
+api.{$BASE_DOMAIN:carx.com.br} {
+    import security_headers
+    import compression
+
+    # Limite de tamanho de upload no corpo da requisição (ex: fotos de vistorias)
+    request_body {
+        max_size 15MB
+    }
+
+    reverse_proxy carx-api:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 2. Painel Super Admin (admin.carx...)
+# ------------------------------------------------------------------------------
+admin.{$BASE_DOMAIN:carx.com.br} {
+    import security_headers
+    import compression
+
+    # Bloqueio de Frame para proteção contra Clickjacking
+    header X-Frame-Options "DENY"
+
+    reverse_proxy carx-admin-web:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 3. Monitoramento e Status (status.carx...)
+# ------------------------------------------------------------------------------
+status.{$BASE_DOMAIN:carx.com.br} {
+    import security_headers
+    import compression
+
+    reverse_proxy uptime:3001
+}
+
+# ------------------------------------------------------------------------------
+# 4. Landing Page e Domínio Raiz (carx.com.br / www)
+# ------------------------------------------------------------------------------
+{$BASE_DOMAIN:carx.com.br}, www.{$BASE_DOMAIN:carx.com.br} {
+    import security_headers
+    import compression
+
+    reverse_proxy carx-web:80
+}
+
+# ------------------------------------------------------------------------------
+# 5. App Central e Subdomínios Wildcard de Lojas (*.carx... e app.carx...)
+# ------------------------------------------------------------------------------
+app.{$BASE_DOMAIN:carx.com.br}, *.{$BASE_DOMAIN:carx.com.br} {
+    import security_headers
+    import compression
+
+    reverse_proxy carx-web:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+

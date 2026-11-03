@@ -94,3 +94,4 @@ Na sessão conectada como `carx`:
 sudo ./verify-vps-security.sh
 ```
 O script testará todos os requisitos de segurança e acusará aprovação total (`Aprovações: 7/7, Falhas: 0`).
+
