@@ -1,624 +1,650 @@
-# Guia de Desenvolvimento - OsSystem (White Label PWA)
+# CarX — Guia Mestre de Fases e Execução (fase.md)
 
-Este documento é a bússola do projeto. Ele define as fases, objetivos e o progresso em tempo real. **Consultar este arquivo antes de qualquer nova implementação.**
+Este documento é a **bússola oficial de execução** do **CarX** (transformação do legado *OsSystem* em SaaS multitenant automotivo de alta performance).
 
-## 🎯 Objetivo Geral
-Criar uma aplicação White Label para estética automotiva (PPF, Insulfilm, Envelopamento) com:
-- **PWA Mobile:** Para o Operador realizar checklists e gerir OS.
-- **Web Dashboard:** Para o Gestor controlar a loja, estoque e faturamento.
-- **TV Real-time:** Para exibição do status de produção na loja.
-- **Infra:** Supabase (Auth/DB/Realtime) + Vercel (Hospedagem).
+> **Aviso Obrigatório para Agentes de Código:**
+> Nenhuma implementação deve ser feita sem consultar previamente as seções indicadas de [**CarX_Documento_Unico.md**](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md) e as referências visuais da pasta [**rebraind/**](file:///d:/Repositorios/CarX/rebraind/).
+> Cada etapa possui: **Entrega**, **Critério "Pronto quando"**, **Seção de Referência** e **Assets Visuais**. Só avance para a próxima tarefa quando o critério for 100% satisfeito.
 
 ---
 
-## 🛠️ Stack Tecnológica
-- **Frontend:** React + Vite
-- **Estilização:** Tailwind CSS (Baseado no `ui-design-system` e `dashboard-layout`)
-- **Backend:** Supabase (PostgreSQL + Realtime)
-- **PWA:** Vite PWA Plugin
+## 🧭 Painel Geral de Progresso
+
+| Fase | Descrição | Status | Dependências |
+|---|---|---|---|
+| **Fase 0** | Fundação do Projeto, Monorepo e Design System | `[x] Concluído` | Nenhuma |
+| **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[ ] Não Iniciado` | Fase 0 |
+| **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[ ] Não Iniciado` | Fase 1 |
+| **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[ ] Não Iniciado` | Fase 2 |
+| **Fase 4** | Migração de Dados e Clientes Legados (ETL) | `[ ] Não Iniciado` | Fase 3 |
+| **Fase 5** | Produto SaaS Comercial, Landing Page e Faturamento | `[ ] Não Iniciado` | Fase 3 |
+| **Fase 6** | Diferenciais Competitivos (Ondas 1, 2 e 3) | `[ ] Não Iniciado` | Fase 5 |
+| **Fase 7** | Qualidade Contínua, Testes de Carga e Hardening | `[ ] Não Iniciado` | Contínuo |
+| **Fase 8** | Go-To-Market e Beta Fechado | `[ ] Não Iniciado` | Fase 5 e 6 |
 
 ---
 
-## 🚀 Fases e Funcionalidades Detalhadas
+## 📋 FASE 0 — Fundação do Projeto & Monorepo
 
-### ✅ Fase 1: Setup e Fundação (Concluída)
+**Objetivo:** Estruturar a base do monorepo, padronização TypeScript, linters, pipeline de CI e criação do pacote de componentes base (`packages/ui`) com os tokens visuais oficiais da marca CarX.
 
-### ✅ Fase 2: Design System e App Shell (Concluída)
-- [x] Criação do `Sidebar` e `Header` profissionais (Skill: `dashboard-layout`).
-- [x] Implementação de **Variáveis de Ambiente (.env)** para personalização.
-- [x] **BrandContext:** Sistema de cores e logos dinâmicos.
-- [x] Layouts base para Desktop (Gestor) e Mobile (Operador).
-- [x] Ajustar layout do Certificado para A4 (Compactação Cirúrgica)
-- [x] Implementar cálculo dinâmico de garantia (Anos/Meses) com base no serviço
-- [x] Corrigir persistência do prazo de garantia na criação da OS
-- [x] Sincronizar atualizações nos repositórios principal e do cliente
-
-**Próxima Fase**: Monitoramento e Suporte de Produção.
-
-### ✅ Fase 3: Módulo Gestor - Ordens de Serviço e Checklist (Concluída)
-- [x] **Cadastros:** Clientes, Veículos, Serviços e Materiais/Estoque.
-- [x] **Agenda Inteligente:** Calendário interativo para gestão de horários.
-- [x] **Vendas/Orçamentos:** Fluxo de orçamento que vira OS após aprovação.
-- [x] **Checklist Digital de Avarias (O Diferencial):** Mapa visual do veículo (SVG interativo) onde o gestor marca pontos de dano antes de iniciar.
-- [x] **Certificado de Garantia:** Geração automática de PDF baseado no tempo de garantia do serviço. [x]
-- [x] **Integração WhatsApp:** Botões de um clique para enviar confirmação de agenda e aviso de conclusão de serviço. [x]
-
-### ✅ Fase 4: Módulo Operador (PWA Mobile)
-- [x] **Dashboard Real:** KPIs de Fila Geral, Atribuídos e Finalizados (Histórico).
-- [x] **Fila Organizada:** Divisão entre "Meus Serviços" e "Disponíveis para Coleta".
-- [x] **Perfil:** Edição de Nome, E-mail e Troca de Senha.
-- [x] **Execução Técnica:** Botão de Observação funcional e Sincronização Real-time com a TV.
-- [x] **Finalização:** Registro de tempo de execução e mudança de status real para histórico.
-
-### ✅ Fase 5: Visualização TV (Experiência do Cliente) (Concluída)
-- [x] **Painel Real-time:** Status dos carros em produção com animações de progresso.
-- [x] **Identificação:** Nome do cliente, Veículo e Serviço.
-- [x] **Relógio e Data:** Estética premium sincronizada.
-
-### ✅ Fase 6: Configurações e Persistência de Marca (Concluída)
-- [x] **Tabela de Configurações:** Criar tabela no Supabase para armazenar ID do YouTube, Cores e Logo.
-- [x] **Painel do Gestor:** Tela para editar o link da Playlist/Vídeo do YouTube.
-- [x] **Integração Dinâmica:** Monitor TV passa a ler o vídeo do banco de dados, permitindo trocas sem novo deploy.
-- [x] **White Label Real:** Gestão completa de identidade visual via interface.
-
-### ✅ Fase 7: Autenticação e RBAC (Supabase Auth) - CONCLUÍDO
-- [x] Implementação do Supabase Auth (E-mail/Senha).
-- [x] Criação da tabela `perfis` e Trigger de auto-criação.
-- [x] Desenvolvimento do `AuthContext` e Hook `useAuth`.
-- [x] Criação da Tela de Login Premium.
-- [x] Proteção de Rotas por Cargo (ADM, Gestor, Operador).
-- [x] Garantia de acesso público ao Monitor TV.
-
-### ✅ Fase 8: Gestão de Colaboradores e Realismo de Dados (Concluída)
-- [x] **Painel de Usuários:** Refatoração completa da tela de `Colaboradores` integrada ao Supabase.
-- [x] Fase 8: Dashboard em Tempo Real e Desmockagem
-    - [x] Substituir dados mockados no Dashboard por métricas reais (Supabase)
-    - [x] Fase 10: Orçamentos e OS Inteligentes 🚗🏍️💡
-    - [x] Padronizar tipos de veículos no banco (CARRO/MOTO)
-    - [x] Implementar filtragem dinâmica no modal de orçamento
-    - [x] Implementar campos de Desconto e ajuste de preços finais
-    - [x] Integrar Agendamento (Data e Técnico) ao fluxo de Aprovação
-    - [x] Especializar Checklist Digital para Carro ou Moto
-    - [x] Estabilizar Dashboard e Listas contra dados inconsistentes (Null Guards)
-áficos
-- [x] Fase 9: Especialização de Serviços por Veículo 🚗🏍️
-    - [x] Adicionar distinção entre Carro, Moto ou Ambos no catálogo
-    - [x] Implementar badges visuais de aplicabilidade nos cards
-    - [x] Refinamento visual corporativo (Bordas, Sombras e Tipografia) conforme design system
-    - [x] Validar persistência no Supabase após migração SQL
-- [x] **Regras de Proteção:** Implementação da regra de ouro (ADM não desativa a si mesmo).
-- [x] **Gestão de Marca:** White Label dinâmico e centralizado no `BrandContext` com persistência em banco.
-- [x] **Sincronização Real-time:** Ativação de WebSockets em todas as tabelas principais para espelhamento instantâneo.
-- [x] **Estabilização de Auth & Redirecionamento (F5 Fix):** Resolução definitiva de loops e atrasos no login/logout com redirecionamento RBAC instantâneo.
-- [x] **Dashboard Real-time:** Desmockagem da Performance de Serviços e KPIs baseados em dados reais de catálogo e OS.
-
-### ✅ Fase 11: Refinamentos de UX e Sincronização Final - CONCLUÍDO
-- [x] Correção do link WhatsApp para usar o telefone real do cliente.
-- [x] Implementação de Desconto em Porcentagem (%) com cálculo automático.
-- [x] Retenção de orçamentos aprovados na tela de Vendas para acompanhamento.
-- [x] Agenda de Conflitos: Visualização de ocupação do dia no modal de agendamento.
-- [x] Limpeza de nomes de técnicos (remover e-mails e cargos do select).
-- [x] Estabilização do salvamento de checklist e assinatura digital.
+### [x] T0.1 — Repositório e Monorepo `(Concluído)`
+- **Descrição:** Configurar a arquitetura de monorepo com workspaces (`pnpm`), isolando aplicações e pacotes compartilhados.
+- **Estrutura obrigatória:**
+  - `apps/web` (frontend React/Vite para Gestor, Operador PWA e Landing)
+  - `apps/api` (backend Node.js + TypeScript com Fastify ou NestJS)
+  - `apps/admin` (painel do Super Admin)
+  - `packages/shared` (tipos, enums de status da OS, validações Zod, permissões RBAC)
+  - `packages/ui` (design system com Tailwind, tokens e componentes)
+  - `infra/` (arquivos Docker, compose e configurações de proxy)
+  - `docs/` (arquitetura, decisões e glossário)
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 2: Decisão de Arquitetura (Linhas 80–105)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L80-L105)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T0.1 (Linhas 477–480)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L477-L480)
+- **Entrega:** Monorepo configurado com `pnpm-workspace.yaml`, TypeScript estrito (`strict: true`), ESLint, Prettier, EditorConfig e Husky/lint-staged.
+- **Pronto quando:** Os comandos `pnpm install`, `pnpm lint` e `pnpm typecheck` executam sem erros em terminal limpo.
+- **Status da Validação:**
+  - `pnpm install`: ✅ Concluído com sucesso (v12.16.1 em workspaces).
+  - `pnpm typecheck`: ✅ Concluído com sucesso (`tsc -b` sem erros em todos os projetos).
+  - `pnpm lint`: ✅ Concluído com sucesso (ESLint 9 com suporte a JS/JSX e TS/TSX com zero erros).
 
 ---
 
-## 💎 Diferenciais Estratégicos (Onde vamos ganhar o mercado)
-
-Para entregar um produto superior aos concorrentes, implementaremos:
-
-1. **Checklist Visual 2D/3D:** Em vez de apenas texto, um desenho técnico do carro onde se clica para apontar riscos ou amassados. Isso gera confiança extrema no cliente.
-2. **Histórico de Manutenção Pós-Venda:** O sistema avisará o gestor (e opcionalmente o cliente) após 6 meses/1 ano para uma "revisão de garantia" (ex: conferir se o PPF está levantando). Isso gera recorrência.
-3. **Link de Acompanhamento para o Cliente:** Enviar um link único para o cliente ver o progresso do carro dele pelo celular, sem precisar ligar para a loja.
-4. **Baixa Automática de Estoque:** Gastou 5 metros de PPF? O sistema já retira do estoque e avisa se estiver acabando.
-
----
-
-## 🏢 Regras White Label (Versão Single-Tenant)
-1. **Instância Única:** Cada cliente terá seu próprio deploy e seu próprio banco de dados Supabase.
-2. **Cores/Logo:** Configuradas via `.env` ou Painel de Configurações do Gestor.
-
-### ✅ Fase 12: Estabilização e Auditoria Técnica
-- [x] **F5 Fix:** Correção definitiva da persistência de sessão no refresh da página.
-- [x] **UI Serviços:** Novo formulário de cadastro (mais bonito), campo de Garantia e ajuste de Descrição.
-- [x] **UI Vendas:** Menu de 3 pontos sem scroll, botão "APROVAR" e correção de texto no WhatsApp.
-- [x] **Monitor TV PRO:** Melhorar legibilidade (texto maior), exibir 4 carros e vídeo reduzido.
-- [x] **Lógica de Entrega:** Botão "Entregue" para limpar a TV e mover para histórico final.
-- [x] **Configurações:** Corrigir persistência de cores, logo e vídeo no banco de dados.
-
-### ✅ Fase 13: Diferenciais Estratégicos e Pós-Venda
-- [x] **Garantia Digital:** Gerador de Certificado em PDF com dados da OS e prazos.
-- [x] **Link do Cliente:** Página pública para o cliente acompanhar o progresso em tempo real. (Sincronizado via TV)
-- [x] **Notificação Automática:** WhatsApp automático ao atingir 100% de conclusão.
-- [x] **Estabilidade PWA:** Ajustes de contraste e fix do cronômetro (Fase 14/15 consolidada).
-- [x] **Ergonomia Mobile:** Redução de escala do cronômetro (4xl) e correção de acessibilidade dos botões de ação para evitar sobreposição do menu.
-
-### ✅ Fase 17: Múltiplos Serviços & Monitor Compacto (Concluído)
-- [x] Controle granular de progresso por item e TV otimizada.
-
-### ✅ Fase 18: Ajustes Habilidade Gestor - Parte 1 (Concluída)
-- [x] **Dashboard:**
-  - Corrigir a barra de rolagem horizontal indevida na listagem de Ordens Recentes.
-  - Revisar e corrigir a lógica de todos os KPIs do Dashboard para garantir que os cálculos batam com a lista real e com a tela de Vendas.
-- [x] **Vendas:**
-  - Transformar o menu de ações de cada orçamento (os 3 pontinhos) em um pop-up flutuante (`absolute`/`fixed`) para não empurrar o layout para baixo nem gerar barras de rolagem.
-- [x] **Ordens de Serviço:**
-  - Substituir o `window.confirm` do fim do Checklist Visual por um pop-up React customizado e bonito com a opção "Enviar Link" e "Não Enviar".
-  - Refatorar o botão "Ações / Enviar Link": Se a OS estiver em andamento, manda o acompanhamento sem precisar refazer checklist; se estiver concluída, exibe alerta "Serviço já concluído".
-  - Criar o botão "Finalizar" para concluir a OS de fato (ex: retirando da TV e mudando status) e para liberar o gerador de Certificado de Garantia.
-
-### ✅ Fase 18: Ajustes Habilidade Gestor - Parte 2 (Resoluções de Bug & CRUDs - Concluída)
-- [x] **Clientes:**
-  - Diagnosticar e resolver problema de demora no carregamento da lista (otimização de view/query).
-  - Expandir as ações do cliente: criar painel ou modal de Edição de Cliente (permitir editar Nomes, Telefones e E-mails), além do Histórico já existente.
-- [x] **Serviços:**
-  - Corrigir o crash fatal da página (`ReferenceError: Type is not defined` na linha 430).
-  - Restabelecer a funcionalidade de todos os botões (Novo Serviço, Detalhes/Edição, Excluir) permitindo ajuste de valor, nome, categorias e tipo de automóvel (Carro, Moto ou Ambos).
-- [x] **Estoque:**
-  - Dar vida à tela: conectar os botões inativos e finalizar o fluxo CRUD (Criar, Ler, Atualizar, Excluir) conectado à tabela real `estoque_materiais` já existente no Supabase.
-
-### ✅ Fase 18: Ajustes Habilidade Gestor - Parte 3 (Colab & Configs - Concluída)
-- [x] **Colaboradores:**
-  - Habilitar edição/exibição correta do campo `nome` para os colaboradores (perfis).
-  - Garantir que os select boxes de agendamento (ex: Vendas) utilizem esse Nome em vez de apenas o E-mail.
-- [x] **Configurações da Loja:**
-  - Diagnosticar por que as alterações de nome_loja, cores e vídeo não estão persistindo após dar F5 (Provável bug na query de Update do Supabase).
-  - Adicionar campo para inserção/upload da Logo da loja (`logo_url`).
-  - Refletir a Logo inserida em todo o ecossistema: TV, Certificado de Garantia e Link de Status da OS do cliente.
-
-### ✅ Fase 19: Refinamento de UX, Responsividade e Sticky Modals (Concluída)
-- [x] **Sticky Modals:** Refatoração de todos os modais extensos (`Agendamento`, `Novo Orcamento`, `Vendas`, `Serviços`, `Checklist`, `Certificado`) para usar cabeçalho e rodapé fixos.
-- [x] **Responsividade Crítica:** Garantia de que botões de ação permaneçam visíveis em monitores pequenos (1366x768) e dispositivos móveis.
-- [x] **Lógica de Faturamento:** Revisão dos contadores de `Vendas.jsx` e `Dashboard.jsx` para incluir ordens "Entregues" no total convertido.
-- [x] **Visibilidade de Histórico:** Inclusão do status "ENTREGUE" na Agenda e telas de Gestão, garantindo que o carro não "suma" após a entrega.
-- [x] **Ergonomia do Executor:** Refatoração da Folha de Obra do Operador para manter o botão "Finalizar" sempre acessível.
-
-### ✅ Fase 20: Sincronização de Faturamento e Fluxo de Entrega (Concluída)
-- [x] Correção do cálculo de faturamento total incluindo ordens "ENTREGUES".
-- [x] Implementação do status "ENTREGUE" na Agenda e telas de Gestão.
-- [x] Garantia de que a entrega remove o veículo da TV em tempo real.
-
-### ✅ Fase 21: Ergonomia e Responsividade Pro (Concluída)
-- [x] Modais com cabeçalho e rodapé fixos para melhor usabilidade em OS longas.
-- [x] Ajuste de escala para resolução 1366x768 (Padrão corporativo).
-- [x] Refatoração da Folha de Obra para manter o botão "Finalizar" sempre visível.
-
-### ✅ Fase 22: Identidade Visual Avançada (Concluída)
-- [x] Persistência da Logomarca dinâmica em todo o sistema (TV, Link Cliente, Certificado).
-- [x] Implementação da Cor de Fundo do Monitor configurável via painel.
-- [x] Sincronização global de marca via BrandContext.
-
-### ✅ Fase 23: Monitor TV Real-time Precision (Concluída)
-- [x] **Layout Dinâmico Inteligente**: 
-    - Sem Vídeo: Grade 2x2 (4 slots) equilibrada.
-    - Com Vídeo: Divisão 50/50 com 3 slots fixos verticais.
-- [x] Refatoração do **Card Bicolor**: Lado Azul (Info) e Lado Escuro (Execução).
-- [x] Tipografia Dinâmica: Ajuste automático de fontes dependendo do layout (Compacto vs. Full).
-
-### ✅ Fase 24: Integração de Redes Sociais e WhatsApp (Concluída)
-- [x] Expansão da tabela `loja_config` para suportar canais sociais.
-- [x] Novos campos em Configurações: WhatsApp, Instagram, YouTube e TikTok.
-- [x] Botões de contato dinâmicos no Link do Cliente (visibilidade condicional).
-
-### ✅ Fase 27: Responsividade Global - Gestor Mobile & Tablet (Concluída)
-- [x] **App Shell:** Refatoração do `DashboardLayout` e `Sidebar` com controle Offcanvas (Menu Hamburger).
-- [x] **Grades Automáticas:** Layout do `Dashboard`, `Vendas` e `OrdensServico` configurado de `grid-cols-4` limitante para contêineres colapsáveis flexíveis (`sm:grid-cols-2`, `xl:grid-cols-4`).
-- [x] **Prevenção de Quebra (Tabelas e Cards):** Implementação de rolagens nativas seguras horizontais (`overflow-x-auto`) nas telas de Clientes e Serviços.
-- [x] **Ergonomia Modular:** Ajustes em modais de Orçamento (paddings variáveis `p-6 md:p-10`) e botões flexíveis expansíveis para acomodar o toque.
-
-### ✅ Fase 28: Padronização UX e Estoque Avançado (Concluída)
-- [x] **Padronização Visual:** Unificar as cores de status (Aguardando, Em Execução, Concluído, Entregue) em todas as telas (`Dashboard`, `Vendas`, `OrdensServico`, `Operador`, `TV` e `Agenda`).
-- [x] **Fluxo de Vendas:** Novo botão de atalho "Ir para Ordem de Serviço" para propostas aprovadas, simplificando os próximos passos.
-- [x] **Integração de Estoque na OS:** Habilitado flag `Controle de Estoque` no Catálogo de Serviços, vinculando materiais específicos (Ex: metros de PPF) diretamente à etapa do orçamento/OS com baixa automática na conclusão.
-- [x] **Estoque Rápido:** Adição de atalho para "Repor Produto" diretamente na tela de listagem de materiais.
-- [x] **Branding e PWA:** Inserção dinâmica da Logomarca (do Banco de Dados) como Favicon da aplicação em tempo real.
-
-### ✅ Fase 28.1: Estoque Avançado - Automação Baseada no Catálogo (Concluída)
-- [x] **Configuração Mestre:** Refatorada a interface de Catálogo de Serviços (`Servicos.jsx`) permitindo gerentes construírem "receitas" com múltiplos insumos necessários para execução de cada pacote.
-- [x] **Redução de Fricção (Orçamento):** Retirada toda a carga dos Vendedores. O modal do Orçamento não exibe nem exige vínculo de múltiplos materiais (já são copiados ativamente e silenciosamente do catálogo em formato JSON Array).
-- [x] **Lógica de Dedução:** A engine `updateOrderProgress` percorre a lista de produtos (injetada na OS) e faz os descontos sequenciais no estoque da corporação sem atrito.
-
-### ✅ Fase 28.2: Refinamento Visual (Certificados e Logos) (Concluída)
-- [x] **Impressão Cirúrgica:** Refatoração drástica (`window.open`) para emissão do Certificado de Garantia em PDF, injetando CSS dinâmico que ignora o layout pai e evita dores de cabeça como corte de páginas.
-- [x] **Enquadramento A4:** Ajuste de paddings verticais e borders (`print:`) permitindo respiro visual na tela comum e encolhimento harmonioso no papel de 285mm.
-- [x] **Design do Símbolo da Loja:** Conserto de variância de dados (`logoUrl`) e melhoria da UX de símbolos espalhados. Sidebar e TV agora abraçam perfeitamente as imagens de logotipo que o usuário manda, arredondando cantos estilo MacOS (App Icon).
-
-### ✅ Fase 28.3: Sistema Global de Notificações - Toasts (Concluída)
-- [x] Padrão Ouro: Desenvolver arquitetura Global de Popups Event-Driven para dispensar re-renders com uso de bibliotecas pesadas de fora.
-- [x] Extermínio Inicial dos Alerts: Substituição de ~12 popups cinzas nativos.
-- [x] Polir componentes (como Checklist Automotivo e persistência de Supabase) para se integrarem em silêncio de fundo disparando avisos laterais elegantes de "Sucesso".
-
-- [x] **Ordens de Serviço**:
-    - [x] Corrigir botões de "Entrega" e "Conclusão de Serviço".
-    - [x] Garantir baixa única de estoque (Idempotência).
-
-- [x] **Gestão de Clientes**:
-    - [x] Implementar contador de serviços concluídos por cliente.
-    - [x] Melhorar painel lateral de detalhes (perfil do cliente).
-- [x] **Controle de Estoque**:
-    - [x] Substituir `window.prompt` por modal de reposição premium.
-    - [x] Validar entrada de quantidades (apenas números).
-- [x] **Colaboradores**:
-    - [x] Incluir campo "Nome" no modal de edição.
-    - [x] Proteger campo "E-mail" (somente leitura com cadeado).
-- [x] **Camada de Segurança & Estabilização**:
-    - [x] Implementar Prevenção de IDOR (UUID Tracking Token) nos links de status dos clientes. **(Concluído)**
-    - [x] Hardening de Banco (Habilitar RLS em todas as tabelas e configurar Políticas). **(Concluído - SQL Executado)**
-    - [x] Padronização de Notificações (Auditoria completa de Toasts). **(Concluído - Sistema 100% Event-Driven)**
-    - [x] Estabilizar Sessão no Refresh (Garantir persistência ao dar F5 no navegador).
-    - [x] Corrigir Erros Críticos (ReferenceError: toast is not defined em múltiplos módulos).
-
-
----
-### ✅ Fase 29: Estabilização Crítica e Segurança de Produção (Concluída)
-- [x] **RLS & Recursion Fix:** Correção do loop infinito nas políticas de segurança da tabela `profiles`.
-- [x] **Schema Profiles:** Adição das colunas `nome` e `telefone` na tabela `profiles` para suporte completo ao CRUD de colaboradores.
-- [x] **Sincronização de Técnicos:** Implantação da desnormalização do nome do técnico nas Ordens de Serviço para persistência de exibição.
-- [x] **Fix de Produção (Require Error):** Implementação de shims de compatibilidade (`global`, `process`, `require`) no `index.html` e `vite.config.js` para resolver crashes em dispositivos móveis (Safari/Vercel).
-- [x] **Auditoria de Importações:** Correção de `ReferenceError` (useState, icons) em `Servicos.jsx` e `OrdensServico.jsx`.
-- [x] **Versionamento Final:** Commit e Push de todas as melhorias para o repositório principal.
-
-### ✅ Fase 30: Auditoria Técnica e PWA Pro (Concluída)
-- [x] **PWA Update Prompt:** Troca de `autoUpdate` para `Prompt` com notificação de "Nova Versão" elegante (Toast).
-- [x] **Performance (Lazy Loading):** Implementação de Code Splitting em todas as rotas principais.
-- [x] **Segurança (RLS Hardening):** Pente-fino nas políticas de banco, protegendo dados anônimos via UUID.
-- [x] **Maturidade de Código:** Limpeza de arquivos temporários e padronização da estrutura do projeto.
-- [x] **Versionamento:** Sincronização final com o repositório Git.
-
-### ✅ Fase 31: Módulo de Relatórios Estratégicos (Concluído)
-- [x] **Data Aggregation:** Queries de filtragem reativa por período integrada ao hook `useOrders`.
-- [x] **Relatórios UI:** Dashboard de análise com KPIs de Faturamento, Ticket Médio e Eficiência.
-- [x] **Gráficos de Performance:** Barra de produtividade por técnico baseada em valor gerado.
-- [x] **Multisseleção Pro:** Implementação de filtros de Status e Serviços com checkboxes (Check-all logic).
-- [x] **Impressão Cirúrgica:** Refatoração de CSS global para focar apenas no grid de auditoria (A4 optimized).
-- [x] **Ordenação Cronológica:** Exibição crescente por data para auditoria de linha do tempo.
-
-### ✅ Fase 32: Flexibilidade de Preços nos Orçamentos (Concluída)
-- [x] **Edição de Valor no Orçamento:** Permitir que o gestor altere o valor de um serviço manualmente no momento da criação do orçamento/OS, mesmo que exista um valor pré-definido no catálogo.
-- [x] **Ajuste por Dificuldade:** Campo de entrada numérica que herda o preço padrão mas permite override manual.
-
-### ✅ Fase 33: Controle Financeiro e Pagamentos (Concluída)
-- [x] **Esquema de Pagamentos:** Adicionar colunas de controle financeiro na tabela `ordens_servico` (valor_pago, historico_pagamentos).
-- [x] **Combo de Pagamento (Pop-up $):** Modal para registro de adiantamentos e saldo restante com seleção de método (PIX, Crédito, etc).
-- [x] **Indicadores Financeiros:** Exibir saldo devedor e total pago nas listas de Vendas e OS.
-- [x] **Flexibilidade Total:** Permitir que o serviço siga para execução mesmo sem pagamento inicial, conforme a necessidade do gestor.
-
----
-### ✅ Fase 34: Estabilização e Customização White Label (Operador Focus) (Concluída)
-- [x] **Privacidade Operacional**: Ocultação de cronômetro e notificações para o cargo de operador.
-- [x] **Upload Real de Mídia**: Integração do Storage Supabase (bucket `os-photos`) para registro de execução.
-- [x] **Infraestrutura**: Resolução de erros de WebSocket Realtime e limpeza de avisos de console (Router flags).
-- [x] **Segurança de Dados**: Garantia de persistência de tempo decorrido mesmo com UI oculta.
-
-
----
-### ✅ Fase 35: Segurança de Acesso, Gestão de Usuários e Notificações (Concluída)
-- [x] **Segurança de Acesso**: Link "Esqueceu sua senha? Contate o Administrador" funcional via WhatsApp.
-- [x] **Alteração de Senha**: Módulo de troca de senha (mín. 6 chars) no perfil do Operador e Gestor.
-- [x] **Gestão de Equipe**: Implementação do modal "Novo Usuário" (Signup via ADM sem troca de sessão).
-- [x] **Notificações Inteligentes (Sino)**: 
-    - [x] Lógica de alertas proativos e retroativos para Estoque Baixo (< Mínimo Alerta).
-    - [x] Interface do Sino no Header com filtro de apenas "Não Lidas" e botão "Limpar Tudo".
-    - [x] Estabilização de UX: Painel limpo que some ao marcar como lido.
-
-### ✅ Fase 36: Flexibilidade Administrativa e Edição de Valores (Concluída)
-- [x] **Edição Dinâmica**: Implementar modal de ajuste individual de Preço e Garantia para cada item da OS/Orçamento.
-- [x] **Recálculo em Tempo Real**: Atualização automática do Valor Total ao editar serviços.
-- [x] **UX Gestão**: Centralização da funcionalidade no menu "Ações" (três pontinhos) da tela de Vendas.
-- [x] **Segurança Financeira**: Bloqueio de edição para Operadores e avisos sobre pagamentos já registrados.
-
-### ✅ Fase 37: Refinamento de Agenda e Atribuição de Técnicos (Concluída)
-- [x] **Agendamento Direto**: Adicionada a opção de escolher o Técnico Responsável diretamente no modal de novo agendamento da Agenda.
-- [x] **Padronização de Fluxo**: O fluxo de criação de agendamentos agora possui a mesma flexibilidade de atribuir operadores que o fluxo de aprovação de vendas.
-- [x] **Desnormalização de Dados**: Garantia de que o nome do técnico seja salvo corretamente na OS para exibição instantânea.
-
-### ✅ Fase 38: Central de Ajuda Interna (Concluída Localmente)
-- [x] **Interface Premium**: Criação da página `Ajuda.jsx` com busca e categorias.
-- [x] **Manuais de Treinamento**: FAQs detalhadas sobre Vendas, Agenda, Checklist e Módulo do Operador.
-- [x] **Integração de Apoio**: Links de suporte e espaço para vídeo-aulas integrados ao Sidebar.
-
----
-### ✅ Fase 39: Detalhamento Técnico e Certificação de Placa (Concluído)
-- [x] **Certificado de Garantia**: Incluir a placa do veículo no layout de impressão (A4).
-- [x] **Histórico do Cliente**: Implementar modal de detalhamento de serviço (Popup centralizado).
-- [x] **Visibilidade 360°**: Separação de notas do gestor (`observacoes`) e do operador (`obs_tecnico`).
-- [x] **Galeria Técnica**: Exibição de todas as fotos da execução no modal de detalhes.
-
----
-*Última atualização: 07/04/2026 às 09:26 - STATUS: FASE 39 CONCLUÍDA LOCALMENTE 🚀*
-
-### ✅ Fase 40: Integridade e Padronização de Dados (Concluído)
-- [x] **Normalização de Nome**: Forçar `UPPERCASE` em todos os cadastros/edições de clientes.
-- [x] **Normalização de Telefone**: Salvar apenas dígitos (remover formatos inconsistentes) para unificação.
-- [x] **Prevenção de Duplicados**: Implementar verificação de telefone existente antes de novos cadastros.
-- [x] **Tratamento de Erros**: Exibir alertas claros para o gestor quando houver conflito de dados.
-
----
-*Última atualização: 07/04/2026 às 10:20 - STATUS: FASE 40 CONCLUÍDA LOCALMENTE 🚀*
-
-### ✅ Fase 41: Ajustes e Estornos Operacionais (Concluída)
-- [x] **Estorno de Pagamentos**: Permitir remoção de pagamentos incorretos com recalculo de saldo.
-- [x] **Remoção de Serviços**: Permitir excluir serviços de uma OS mantendo pelo menos um item.
-- [x] **Reversão de Estoque**: Devolver materiais ao estoque automaticamente ao remover serviços de OS entregues.
-- [x] **Refinamento de Gatilho**: Mover a baixa definitiva de estoque apenas para o status `ENTREGUE`.
-
----
-*Última atualização: 07/04/2026 às 14:27 - STATUS: FASE 41 CONCLUÍDA LOCALMENTE 🚀*
-
-### ✅ Fase 42: Edição Dinâmica de Escopo (Concluído)
-- [x] **Integração com Catálogo**: Permitir adicionar novos serviços a orçamentos existentes em Vendas.
-- [x] **Customização Ad-Hoc**: Trazer valor e garantia padrão do catálogo com possibilidade de ajuste imediato.
-- [x] **Remoção de Itens**: Permitir excluir serviços de orçamentos ou ordens não entregues.
-- [x] **Trava de Segurança**: Ocultar edição para veículos já marcados como `ENTREGUE`.
-
----
-*Última atualização: 07/04/2026 às 14:38 - STATUS: FASE 42 CONCLUÍDA LOCALMENTE 🚀*
-
-### ✅ Fase 43: Gestão de Cancelamentos e UI Premium (Concluído)
-- [x] **Novo Status**: Incluir `CANCELADO` para propostas que não evoluíram.
-- [x] **Limpeza de KPIs**: Remover valores de itens cancelados do faturamento e aguardando.
-- [x] **Ações Flexíveis**: Permitir "Cancelar" em propostas ativas e "Reabrir" em propostas canceladas.
-- [x] **Filtro de Relatórios**: Adicionar o status cancelado para auditoria gerencial.
-- [x] **UI/UX Modernization**: Substituição total de `alert()` e `confirm()` por `confirmDialog` e `toast`.
-
----
-*Última atualização: 07/04/2026 às 15:52 - STATUS: FASE 43 CONCLUÍDA E PUSH REALIZADO 🚀*
-
-### ✅ Fase 44: Gestão e Edição de Veículos (Concluída)
-- [x] **Edição de Dados**: Permitir alterar Marca, Modelo e Placa diretamente na tela de Clientes.
-- [x] **Correção de Erros**: Local centralizado para gerenciar a frota de cada cliente.
-- [x] **Validação de Unicidade**: Garantir que as placas editadas mantenham a integridade do banco.
-- [x] **UX Premium**: Seção dedicada "Meus Veículos" no perfil lateral do cliente.
+### [x] T0.2 — Pipeline de CI (Integração Contínua) `(Concluído)`
+- **Descrição:** Criação das workflows do GitHub Actions para validar qualidade e integridade a cada Pull Request e push.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Infraestrutura / CI/CD (Linhas 142–144)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L142-L144)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T0.2 (Linhas 481–484)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L481-L484)
+- **Entrega:** `.github/workflows/ci.yml` configurado com etapas de checagem de tipos, lint, testes unitários e build das imagens Docker.
+- **Pronto quando:** Qualquer PR que introduza erro de tipagem ou quebra de lint é automaticamente bloqueado pelo GitHub Actions.
+- **Status da Validação:**
+  - Workflow `.github/workflows/ci.yml` criado com triggers em `push` e `pull_request` nas branches `main` e `dev`.
+  - Jobs `validate` (`pnpm lint` + `pnpm typecheck`) e `build` (`pnpm build`) configurados com política fail-closed e cancel-in-progress.
+  - Instalação congelada (`--frozen-lockfile`) e builds em produção de todos os workspaces validados com sucesso.
 
 ---
 
-### ✅ Fase 45: Sinal / Agendamento na Agenda (Concluída)
-- [x] **Compromisso Financeiro**: Adicionar campo de entrada para sinal no agendamento direto.
-- [x] **Fluxo Otimizado**: Registrar o valor pago já no momento da reserva.
-- [x] **Integração Financeira**: Sincronizar automaticamente com o saldo devedor da OS.
-- [x] **Histórico Formal**: Registro automático do sinal no histórico de pagamentos da OS.
+### [x] T0.3 — Convenções e Documentação Base `(Concluído)`
+- **Descrição:** Estabelecer a documentação técnica inicial do novo sistema para garantir alinhamento entre desenvolvedores e agentes.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Topologia de Containers (Linhas 107–144)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L107-L144)
+  - [CarX_Documento_Unico.md — Seção 4: Modelo de Dados (Linhas 147–166)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L147-L166)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T0.3 (Linhas 485–488)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L485-L488)
+- **Entrega:**
+  - `README.md` com instruções de setup local e execução via Docker.
+  - `docs/arquitetura.md` com o diagrama de redes e containers.
+  - `docs/decisoes.md` (registro das decisões da Parte III).
+  - `docs/glossario.md` (definições de OS, orçamento, porte do carro, bobina PPF, VCR, QA).
+  - `.env.example` completo e documentado sem credenciais reais.
+- **Pronto quando:** Um desenvolvedor ou agente sobe o ambiente local lendo exclusivamente o `README.md`.
+- **Status da Validação:**
+  - `README.md` completo com guia passo a passo de clone, variáveis, execução de containers e comandos de desenvolvimento.
+  - `docs/arquitetura.md` com topologia de containers (5 blocos + apoio) e segmentação em 4 redes Docker (`public`, `app`, `data`, `wa`).
+  - `docs/decisoes.md` estruturado com as 10 decisões fechadas e mapa das decisões em aberto.
+  - `docs/glossario.md` detalhando os conceitos e regras do domínio automotivo (OS, VCR, porte, bobina, QA, passaporte digital).
+  - `.env.example` documentado e blindado contra exposição de segredos reais.
 
 ---
 
-### ✅ Fase 46: Refinamento da Fila Operacional (Concluída)
-- [x] **Organização Cronológica**: Ordenar a fila do operador por data de agendamento crescente.
-- [x] **Visibilidade de Prazos**: Exibir data e hora do agendamento nos cards da fila.
-- [x] **Priorização Visual**: Destacar serviços agendados para hoje.
-- [x] **UX Operacional**: Reduzir a poluição visual separando o que é imediato do que é futuro.
+### [x] T0.4 — Higiene do Legado e Segurança `(Concluído)`
+- **Descrição:** Limpeza do repositório herdado do OsSystem, arquivamento de código desnecessário e isolamento das credenciais antigas.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 1.4: Higiene do Repositório (Linhas 75–76)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L75-L76)
+  - [CarX_Documento_Unico.md — Seção 9: Ações Imediatas (Linhas 288–297)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L288-L297)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T0.4 (Linhas 489–493)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L489-L493)
+- **Entrega:** Remoção de pastas duplicadas (`_skills`, `_1*`), arquivos de debug (`debug_config.js`, `tmp_test.cjs`), criação da tag git `legacy-final`, e garantia de que nenhuma credencial ou senha do Supabase permaneça exposta.
+- **Pronto quando:** Varredura no repositório não aponta senhas ou tokens hardcoded e os arquivos obsoletos estão expurgados.
+- **Status da Validação:**
+  - Tag git `legacy-final` criada no commit histórico final do legado OsSystem.
+  - Expurgados arquivos de depuração e scripts soltos: `debug_config.js`, `debug_console.cjs`, `tmp_test.cjs`, `avaliacao_ossystem.md.resolved`, `supabase/.temp/linked-project.json`.
+  - Expurgadas pastas obsoletas e duplicadas da raiz: `_1code-maturity-assessor`, `_1dashboard-layout`, `_1responsive-design`, `_1ui-design-system`, `ui-design-system` e `_skills` (100% preservada e integrada em `/skills`).
+  - `.gitignore` endurecido com bloqueio para arquivos temporários, logs, dists de pacotes e arquivos de debug.
+  - Varredura de segurança via `git grep` validou a ausência de senhas ou tokens reais hardcoded.
 
 ---
 
-### ✅ Fase 47: Comprovante de Agendamento via WhatsApp (Concluída)
-- [x] **Comunicação Transparente**: Gerar mensagem de confirmação com resumo financeiro.
-- [x] **Resumo Financeiro**: Incluir Total, Sinal e Saldo Restante na mensagem.
-- [x] **Integração na Agenda**: Permitir envio de WhatsApp logo após o agendamento direto.
-- [x] **Padronização**: Unificar a mensagem de confirmação entre os módulos de Vendas e Agenda.
+### [x] T0.5 — Design System, Tokens e Biblioteca de Componentes `(Concluído)`
+- **Descrição:** Implementação do pacote `packages/ui` baseado na nova identidade visual do CarX (Volt `#C8F52E` e Asfalto `#0E1116`), com suporte a tema claro e escuro, tipografia oficial e alvos de toque para oficina.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 10: Rebrand CarX e Design System (Linhas 299–365)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L299-L365)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T0.5 (Linhas 494–497)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L494-L497)
+  - [ui-design-system/SKILL.md](file:///d:/Repositorios/CarX/ui-design-system/SKILL.md)
+- **Assets e Telas de Referência Obrigatórios:**
+  - [Marca CarX (Logo, cores, tipografia Space Grotesk/Inter, pilares de UX)](file:///d:/Repositorios/CarX/rebraind/Marca%20CarX@2x.png)
+  - [Gestor · Painel (Cards de faturamento, pátio ao vivo, sidebar)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
+  - [Operador · Fila (Segmented controls, alvos de toque 56px, badge de retrabalho)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Fila@2x.png)
+  - [Operador · Execução (Cronômetro Space Grotesk, etapas, botão primário)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Execu%C3%A7%C3%A3o@2x.png)
+  - [TV da Loja (Layout escuro, relógio digital, fila em tempo real, barra de entrega Volt)](file:///d:/Repositorios/CarX/rebraind/TV%20da%20loja@2x.png)
+- **Entrega:** Pacote `packages/ui` contendo:
+  - Tokens Tailwind (cores: Volt `#C8F52E`, Asfalto `#0E1116`, Grafite `#171C24`, Aço `#232A35`, Alerta `#FFB020`, Info `#5CC8FF`, Erro `#FF6B5E`).
+  - Fontes `Space Grotesk` (títulos/números/cronômetro) e `Inter` (textos/tabelas).
+  - Componentes: `Button` (56-60px mobile, 48px desktop), `Chip`/`Badge` de status, `Card` (raio 20-24px), `Input`/`Select` (raio 14px), `Stopwatch` (tabular-nums), `Stepper`, `PhotoGalleryBar`, `BottomNav` (3 ícones), `Modal`, `EmptyState`, `OfflineIndicator`.
+- **Pronto quando:** As telas do Operador e do Painel do Gestor forem reproduzidas fielmente aos mockups de `rebraind/` e o contraste texto/fundo for validado em 4.5:1 (texto sobre Volt sempre em Asfalto).
+- **Status da Validação:**
+  - Pacote `@carx/ui` estruturado com tokens exportados em TypeScript (`tokens.ts`) e preset utilitário para Tailwind CSS (`tailwind-preset.ts`).
+  - Cores semânticas e de marca mapeadas com contraste garantido (4.5:1 WCAG: texto sobre Volt é forçado para `#0E1116`).
+  - Biblioteca completa de componentes ergonômicos para oficina implementada:
+    - `Button`: Variantes primária Volt, secundária Aço, outline, ghost e danger, com touch targets de 56px no mobile e 48px no desktop.
+    - `Badge`: Badges de status da OS, fila de produção e alertas com indicador dot pulsante.
+    - `Card`: Cards modulares com bordas suaves (raio 20-24px), variantes solid, outline e ghost.
+    - `Input` e `Select`: Campos de formulário com bordas de raio 14px, anéis de foco Volt e suporte a ícones.
+    - `Stopwatch`: Cronômetro de execução com dígitos monoespaçados (`tabular-nums`) e indicador de pulso ativo para bancada de trabalho.
+    - `Stepper`: Linha do tempo de etapas do checklist/produção com estados concluído, ativo e pendente.
+    - `PhotoGalleryBar`: Grade guiada de fotos com slots padronizados por ângulo (frontal, traseira, laterais, etc.).
+    - `BottomNav`: Barra inferior de polegar ergonômica com 3 a 5 abas rápidas para operadores com smartphone em oficina.
+    - `Modal`: Diálogo acessível com backdrop blur e suporte a fechamento por Escape.
+    - `EmptyState`: Componente para telas e listagens vazias com ícone e botão de ação primária.
+    - `OfflineIndicator`: Barra persistente de status de conectividade para operação em galpões com sinal instável.
+  - Builds validados: `pnpm typecheck` (código de saída 0), `pnpm lint` (0 erros) e `pnpm build` (compilação completa de todo o monorepo).
 
 ---
 
-### ✅ Fase 48: Gestão Dinâmica de Responsáveis (Técnicos) (Concluída)
-- [x] **Rastreabilidade Total**: Gravar automaticamente o ID do técnico ao finalizar OS da fila geral.
-- [x] **Flexibilidade de Escala**: Permitir que gestores alterem o técnico responsável de uma OS ativa.
-- [x] **Liberação de Carga**: Implementar opção de remover técnico, voltando a OS para a fila disponível.
-- [x] **Interface Gestora**: Adicionar modal de atribuição rápida na lista de Ordens de Serviço.
+## 🐳 FASE 1 — Infraestrutura na VPS & Docker
+
+**Objetivo:** Configurar a topologia de containers em Docker Desktop (local) e VPS Ubuntu Server, garantindo isolamento de redes, persistência de volumes, certificado SSL e rotinas de backup.
+
+### [ ] T1.1 — Endurecimento e Segurança do Servidor (VPS)
+- **Descrição:** Regras de segurança de borda na VPS: usuário restrito sem permissão direta de root por senha, firewall e prevenção de brute-force.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Infraestrutura na VPS (Linhas 138–144)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L138-L144)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.1 (Linhas 500–503)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L500-L503)
+- **Entrega:** Script de bootstrap da VPS configurando `ufw` (apenas portas 22, 80 e 443 expostas), SSH com autenticação exclusiva por chave pública, `fail2ban` ativo e `unattended-upgrades`.
+- **Pronto quando:** Acesso por senha e login com usuário `root` são rejeitados; varredura externa de portas acusa apenas 80 e 443 públicas.
 
 ---
 
-### ✅ Fase 49: Galeria de Trabalhos Recentes (Concluída)
-- [x] **Fase 49.1: Setup de Banco e Storage**
-    - [x] Atualizar `estrutura_db.md` (Tabela `trabalhos_recentes` e RLS).
-    - [x] Definir políticas de Storage (Preparação).
-- [x] **Fase 49.2: Interface Base e Roteamento**
-    - [x] Registro da rota `/trabalhos` no `App.jsx`.
-    - [x] Adição de menu "Trabalhos" no `Sidebar.jsx`.
-    - [x] Criação do esqueleto da página `Trabalhos.jsx`.
-- [x] **Fase 49.3: Fluxo de Upload e Listagem**
-    - [x] Implementação de upload para bucket `trabalhos-recentes`.
-    - [x] Persistência no banco de dados com metadados.
-    - [x] Grid responsivo de visualização.
-- [x] **Fase 49.4: Gestão Avançada (Renomear e Excluir)**
-    - [x] Modal de edição de título e categoria.
-    - [x] Lógica de remoção física e lógica.
-    - [x] Polimento Visual e Micro-animações.
-
----
----
-### ✅ Fase 50: Módulo de Detalhamento Veicular (Ano) (Concluída)
-- [x] **Infraestrutura**: Adição da coluna `ano` na tabela `veiculos` e atualização do hook `useData.js`.
-- [x] **Cadastro ADM**: Inclusão do campo Ano no modal de `Novo Orçamento` e na edição de veículos em `Clientes`.
-- [x] **Visibilidade Operacional**: Exibição do ano nos cards da `OperadorHome` e no cabeçalho da `ExecutorView`.
-- [x] **Certificação**: Inclusão do "Ano do Veículo" no grid do `Certificado de Garantia`.
-
----
----
-### ✅ Fase 51: UX Pro e Gestão Avançada de Clientes (Concluída)
-- [x] **Otimização Operacional**: Implementação de Atualização Otimista na troca de técnicos para resposta instantânea.
-- [x] **Ergonomia do Modal**: Refatoração do fechamento do modal de atribuição para evitar percepção de latência.
-- [x] **Gestão de Clientes**: Implementação da exclusão de clientes com validação de serviços vinculados.
-- [x] **Segurança de Dados**: Diálogo de confirmação com aviso dinâmico sobre veículos do cliente.
-- [x] **UI Condicional**: Ocultação automática do botão de excluir para clientes com histórico ativo.
-
-### ✅ Fase 52: Estabilização e Segurança de Produção (Concluída)
-- [x] **Hardening de Segurança (IDOR)**: Bloqueio de acesso por ID sequencial no status do cliente (agora aceita apenas UUID Tracking Token).
-- [x] **Privacidade Operacional**: Remoção de fallbacks de telefone hardcoded para evitar vazamento de dados.
-- [x] **Integridade Financeira**: Implementação de funções atômicas (RPC SQL) para registro de pagamentos, prevenindo race conditions.
-- [x] **Integridade de Estoque**: Migração da lógica de baixa de estoque para o banco de dados (Atomic transaction).
-- [x] **Cleanup de Ambiente**: Limpeza do arquivo `.env` removendo credenciais de teste expostas.
-
-### ✅ Fase 53: Paginação Premium e Sincronizada (Concluída)
-- [x] **Componentização**: Criação do componente reusável `Pagination.jsx` integrado ao design system.
-- [x] **Clientes**: Paginação reativa no frontend, removendo o limite anterior fixo de 50 registros.
-- [x] **Vendas**: Faturamento instantâneo com slice dinâmico de propostas e resets ao buscar/filtrar.
-- [x] **Ordens de Serviço**: Navegação premium por páginas de O.S. ativa.
-- [x] **Catálogo de Serviços**: Paginação no grid/lista de cartões de serviços do almoxarifado.
-- [x] **Controle de Materiais**: Paginação no inventário de insumos.
-- [x] **Relatórios**: Controle dinâmico de páginas de atividades, com ocultamento automático no print via CSS.
-
-### ✅ Fase 54: Otimização da Fila do Operador e Auto-Início (Concluída)
-- [x] **Alertas de Checklist**: Implementação de badges visuais `SEM CHECKLIST` (em vermelho com efeito pulse) e `CHECKLIST OK` (em verde) ao lado do status do veículo na fila de tarefas do operador.
-- [x] **Visibilidade do Botão**: Liberação do botão "Iniciar Atividade", mantendo-o sempre visível e ativo para transição à tela de execução.
-- [x] **Desobstrução do Layout**: Remoção da caixa de controle de cronômetro, play e pause interna da OS, liberando mais de 40% do espaço útil da tela em dispositivos móveis.
-- [x] **Auto-Início Inteligente**: Configuração de ativação automática do status de execução da OS ao carregar a tela, caso o checklist de entrada já esteja preenchido.
-- [x] **Banner Informativo**: Adicionado banner de alerta amigável na tela de execução instruindo o operador caso o veículo ainda não tenha checklist de entrada preenchido.
-- [x] **Progresso Médio Inteligente**: Exibição da porcentagem de progresso real e uma barra de carregamento no card do operador. Caso a O.S. tenha múltiplos serviços, o sistema calcula dinamicamente a média matemática de todos os sub-serviços para refletir o status real.
-
-### ✅ Fase 55: Checklist Digital Ampliado com Rolagem Unificada e Laterais Gigantes (Concluída)
-- [x] **Rolagem Unificada do Formulário**: O laudo visual agora se move como uma página contínua sob uma única barra de rolagem. As imagens do veículo e o formulário lateral (relato técnico/KM/assinatura) rolam juntos de forma natural e sem scrolls independentes.
-- [x] **Laterais Iguais à Superior (Destaque Máximo)**: A Lateral Esquerda e a Lateral Direita do veículo foram ampliadas para ter **exatamente a mesma dimensão massiva da Visão Superior**: altura fixa de `500px` no desktop/tablet e `340px` no mobile, com largura total (`md:col-span-2`). Isso garante proporções uniformes perfeitas e altíssima riqueza de detalhes para registrar riscos e amassados nos perfis.
-- [x] **Visão Superior em Destaque**: A Visão Superior conta com altura máxima de `500px` no desktop (`340px` no mobile) de largura total (`md:col-span-2`).
-- [x] **Vista Frontal e Vista Traseira Ampliadas**: Dispostas lado a lado com altura aumentada para `300px` no desktop (`220px` no mobile) para perfeita simetria.
-- [x] **Design Responsivo Avançado**: No celular ou tablet vertical, o formulário de resumo se posiciona perfeitamente abaixo das imagens, e no desktop/tablet horizontal, fica fixado na lateral de forma inteligente (sticky).
-
----
-### 🛠️ Fase 56: Hardening de Segurança, Validação de Uploads e Modularização (`useData.js`) (Concluída)
-- [x] **Validação de Uploads de Mídia**: Implementar verificação rigorosa de MIME Type whitelist (apenas imagens e mídias seguras) e limite de tamanho de 10MB no envio de fotos do operador para evitar injeção de arquivos perigosos.
-- [x] **Restrição de RLS para Operadores**: Ajustar política `FOR ALL` na tabela `ordens_servico`, garantindo permissão de **leitura total** (`SELECT`) para visualização da Fila Geral e atuação em emergências, e permissão controlada de **atualização** (`UPDATE`) apenas para OS ativas (bloqueando modificações em OS Concluídas/Entregues/Canceladas e negando `INSERT`/`DELETE`).
-- [x] **Modularização do `useData.js`**: Refatorar o arquivo monolítico de hooks em módulos limpos especializados (`useOrders`, `useClients`, `useCatalog`, `useMaterials`, etc.) facilitando code review e escalabilidade.
-- [x] **Criação Segura de Usuários**: Implementar criação de colaboradores via Admin API / Edge Function com `service_role`, garantindo que o cargo escolhido no modal (ADM/GESTOR/OPERADOR) seja persistido sem limitações do trigger padrão.
-
-### 🎯 Fase 57: Quick Wins Competitivos & Precificação Inteligente (Sprint 1 do Roadmap) (Concluída)
-- [x] **Preço Dinâmico por Classe de Veículo**: Cadastrar faixas automáticas de preços variando por porte (Hatch, Sedan, SUV, Pickup, Esportivo, Moto) sugeridas ao gestor na abertura de orçamento/OS.
-- [x] **Pacotes e Combos de Serviços**: Agrupar serviços no catálogo (Ex: PPF + Ceramic Coating + Insulfilm) aplicando descontos automáticos na seleção do combo.
-- [x] **QR Code Instantâneo na Recepção**: Gerar QR Code único com `tracking_token` ao abrir a OS para leitura direta e acompanhamento instantâneo pelo celular do cliente na loja.
-- [x] **Dark Mode Nativo**: Adicionar comutação de tema escuro de alto contraste em todo o painel gerencial (Dashboard do Gestor).
-
-### 📸 Fase 58: Documentação Visual Avançada & VCR (Sprint 2 do Roadmap) (Concluída)
-- [x] **Fotos Antes/Depois por Serviço**: Implementar registro fotográfico comparativo obrigatório ou opcional na execução com guias de ângulos visuais (frontal, lateral, traseira).
-- [x] **Laudo de Inspeção Digital (VCR - Vehicle Condition Report)**: Evoluir o checklist para gerar um laudo em PDF com fotos vinculadas por ponto de avaria assinado digitalmente e enviável por WhatsApp.
-- [x] **Push Notifications PWA**: Habilitar notificações nativas em tempo real no dispositivo do operador e gestor (nova OS atribuída, alerta de estoque mínimo, aprovação de orçamento).
-
-### 🌐 Fase 59: Portal do Cliente "Meu Veículo" & Self-Booking (Sprint 3 do Roadmap) (Concluída)
-- [x] **Auto-Agendamento Online (Self-Booking)**: Página pública de reservas onde o cliente escolhe veículo, serviço e horário disponível com checagem de conflitos em tempo real e aprovação pelo gestor.
-- [x] **Portal "Meu Veículo" (Área do Cliente)**: Área logada por Magic Link ou WhatsApp OTP com timeline do histórico completo da frota, fotos Antes/Depois e download de Certificados de Garantia.
-- [x] **Sincronização de Calendário**: Integração de agendamentos via iCal feed com Google Calendar e Apple Calendar.
-
-### 🔄 Fase 60: Motor de Retenção & Pós-Venda Ativo (Sprint 4 do Roadmap) (Concluída)
-- [x] **Pesquisa de Satisfação (NPS Automático)**: Disparo automático de mensagem via WhatsApp 24h após entrega perguntando nota de 0 a 10 com painel analítico de Detratores, Neutros e Promotores.
-- [x] **Sistema de Garantia Ativa (Lembretes Automáticos)**: Automação que calcula término/revisão de garantia e alerta gestor (30 dias antes) e cliente por WhatsApp (15 e 7 dias antes) para agendar revisão.
-- [x] **Lembretes de Manutenção Periódica**: Disparos preventivos periódicos por tipo de serviço (ex: inspeção de PPF a cada 12 meses, hidrofobia do Ceramic a cada 6 meses).
-
-### 📈 Fase 61: Inteligência Financeira (DRE) & Gamificação da Equipe (Sprint 5 do Roadmap) (Concluída)
-- [x] **Dashboard Financeiro Avançado (DRE Simplificado)**: Painel gerencial detalhando Receita Bruta, Custo de Materiais deduzidos por OS, Margem de Lucro por Serviço, Lucro Líquido e Projeção de Fluxo de Caixa.
-- [x] **Ranking de Técnicos (Gamificação)**: Quadro de produtividade com troféus, badges, nota NPS recebida, tempo médio de execução e dias consecutivos sem retrabalho (streak).
-- [x] **Controle de Comissões de Equipe**: Módulo de cálculo automático de porcentagem ou valor fixo por serviço para remuneração transparente aos técnicos no final do período.
-- [x] **Checklist de Qualidade (QA pelo Gestor)**: Vistoria rápida de acabamento e limpeza obrigatória antes de transicionar a OS de concluída para entregue.
-
-### 🚫 Fase 62: Programas de Fidelidade e Indicação (Descontinuada - Fora do Escopo Single-Tenant)
-- [~] **Programa de Indicação ("Member Get Member")**: Excluído por decisão de escopo (modelo Single-Tenant vendido completo sem recorrência/assinatura).
-- [~] **Programa de Fidelidade por Pontos**: Excluído por decisão de escopo (modelo Single-Tenant).
-
-### 🔌 Fase 63: Ecossistema Aberto, APIs e Dashboard TV 360° (Sprint 7 do Roadmap) (CONCLUÍDA)
-- [x] **API Pública RESTful + Swagger**: Abertura de endpoints seguros (`GET/POST /api/orders`, etc.) com documentação interativa para integração de ERPs externos.
-- [x] **Webhooks de Eventos**: Disparo de eventos em tempo real para sistemas de contabilidade e automações (OS criada, entregue, pagamento recebido).
-- [x] **Marketplace de Templates e Checklists**: Biblioteca de compartilhamento de receitas de serviços, laudos e checklists customizados entre lojas da rede.
-- [x] **Dashboard Gerencial na TV (Visão 360° Office)**: Painel de TV focado na gestão do escritório com métricas de faturamento do dia, ocupação dos técnicos e alertas críticos de estoque.
+### [ ] T1.2 — Docker Compose Base e Topologia de Redes
+- **Descrição:** Orquestração dos 5 blocos da aplicação CarX e serviços de apoio em redes segmentadas.
+- **Topologia de Containers:**
+  1. `carx-web` (Nginx servindo landing, gestão e operador PWA)
+  2. `carx-api` (API Node.js/TypeScript) + `carx-worker` (background jobs)
+  3. `carx-db` (PostgreSQL 16)
+  4. `carx-wa` (Gateway de WhatsApp isolado na rede interna)
+  5. `carx-admin-web` (Frontend Super Admin)
+  - *Apoio:* `proxy` (Caddy com SSL automático), `redis`, `minio` (S3 local).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Topologia e Containers (Linhas 107–137)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L107-L137)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.2 (Linhas 504–507)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L504-L507)
+- **Entrega:** `infra/compose.prod.yml`, `infra/compose.staging.yml` e `infra/compose.dev.yml` com redes `public`, `app`, `data` e `wa`. Banco de dados, Redis, MinIO e Gateway sem portas expostas externamente.
+- **Pronto quando:** `docker compose up -d` sobe todos os serviços saudáveis com healthchecks ativos.
 
 ---
 
-### 🛡️ Fase 64: Hardening de Segurança Pré-Produção (Auditoria Estrutural)
-
-> **Referência completa:** [`auditoria_seguranca_v2.md`](./auditoria_seguranca_v2.md)
-> Esta fase foi criada a partir da auditoria de segurança realizada em 28/07/2026, que identificou 1 achado crítico, 2 de severidade alta, 2 de severidade média e 1 de severidade baixa. Cada item abaixo referencia a seção correspondente no relatório.
-
-#### 🔴 Prioridade CRÍTICA
-
-- [x] **64.1 — Remoção do Modo Contingência (Backdoor de Autenticação)**
-  - 📋 **Ref. Auditoria:** Achado Crítico #1 — "Modo Contingência é um Backdoor"
-  - 📂 **Arquivos:** `src/contexts/AuthContext.jsx` (linhas 124-194), `src/pages/Colaboradores.jsx` (linhas 378-400)
-  - 🎯 **Ação:** Remover integralmente o bloco de login por contingência que cria `fakeUser` sem JWT válido. Remover toda lógica de `localStorage` que armazena senhas em texto puro (`oss_temp_pass_*`, `oss_temp_passwords_registry`, `oss_session_contingency`). Todo login deve passar obrigatoriamente pelo Supabase Auth.
-  - ⚠️ **Impacto:** Operadores que dependiam do modo offline precisarão de login real via Supabase Auth.
-
-- [x] **64.2 — Remoção da coluna `senha_temporaria` do banco de dados**
-  - 📋 **Ref. Auditoria:** Achado Crítico #1 (continuação) + Achado #4
-  - 📂 **Arquivos:** `database.md` (linha 101 — `ALTER TABLE profiles ADD COLUMN senha_temporaria`)
-  - 🎯 **Ação:** Executar `ALTER TABLE public.profiles DROP COLUMN IF EXISTS senha_temporaria;` no Supabase SQL Editor. Atualizar o `database.md` removendo a referência a essa coluna.
-  - 🔧 **SQL de Migração:**
-    ```sql
-    ALTER TABLE public.profiles DROP COLUMN IF EXISTS senha_temporaria;
-    ```
-
-- [x] **64.3 — Criar Edge Function para Reset de Senha Seguro**
-  - 📋 **Ref. Auditoria:** Achado Crítico #1 (recomendação de substituição)
-  - 📂 **Arquivos:** Novo arquivo `supabase/functions/reset-password/index.ts`, e refatorar `src/pages/Colaboradores.jsx` (modal de reset)
-  - 🎯 **Ação:** Criar Edge Function server-side que recebe `userId` + `newPassword`, valida que o caller é ADM/GESTOR via JWT, e chama `auth.admin.updateUserById()` para alterar a senha real do Supabase Auth. Substituir o modal de "senha temporária" no frontend pelo novo fluxo seguro.
-
-#### ⚠️ Prioridade ALTA
-
-- [x] **64.4 — Restringir RLS da tabela `pesquisas_nps`**
-  - 📋 **Ref. Auditoria:** Achado #2 — "RLS da tabela pesquisas_nps totalmente aberta"
-  - 📂 **Arquivos:** `database.md` (linhas 388-390)
-  - 🎯 **Ação:** Manter `INSERT WITH CHECK (true)` para permitir respostas públicas via WhatsApp. Substituir `SELECT USING (true)` e `UPDATE USING (true)` por políticas restritas a ADM/GESTOR usando `check_user_role()`. Impedir que usuários anônimos leiam nomes de clientes, notas e comentários.
-  - 🔧 **SQL de Migração:**
-    ```sql
-    DROP POLICY IF EXISTS "NPS: Leitura Pública e Autenticada" ON public.pesquisas_nps;
-    DROP POLICY IF EXISTS "NPS: Inserção Pública e Autenticada" ON public.pesquisas_nps;
-    DROP POLICY IF EXISTS "NPS: Atualização para todos" ON public.pesquisas_nps;
-    DROP POLICY IF EXISTS "NPS: Acesso Total" ON public.pesquisas_nps;
-
-    CREATE POLICY "NPS: Inserção Pública" ON public.pesquisas_nps FOR INSERT WITH CHECK (true);
-    CREATE POLICY "NPS: Leitura Gestores" ON public.pesquisas_nps FOR SELECT USING (public.check_user_role(ARRAY['ADM','GESTOR']));
-    CREATE POLICY "NPS: Atualização Gestores" ON public.pesquisas_nps FOR UPDATE USING (public.check_user_role(ARRAY['ADM','GESTOR']));
-    ```
-
-- [x] **64.5 — Proteger INSERT público em `ordens_servico` via Function SECURITY DEFINER**
-  - 📋 **Ref. Auditoria:** Achado #3 — "INSERT público em ordens_servico sem restrição"
-  - 📂 **Arquivos:** `database.md` (linha 270), `src/pages/SelfBooking.jsx`
-  - 🎯 **Ação:** Criar função `criar_agendamento_publico()` que aceita apenas campos seguros (nome, telefone, veículo, serviço, data) e fixa `status = 'ORÇAMENTO'` e `origem = 'ONLINE'`. Remover a política de INSERT público direto e substituir a chamada no SelfBooking por um `rpc('criar_agendamento_publico', {...})`.
-
-#### ⚠️ Prioridade MÉDIA
-
-- [x] **64.6 — Substituir `select('*')` por campos explícitos em `profiles`**
-  - 📋 **Ref. Auditoria:** Achado #4 — "select('*') em profiles expõe senha_temporaria"
-  - 📂 **Arquivos:** `src/hooks/useProfiles.js` (linha 10), `src/contexts/AuthContext.jsx` (linhas 84-88, 201-205)
-  - 🎯 **Ação:** Trocar todos os `select('*')` que consultam a tabela `profiles` por `select('id, nome, email, cargo, status, avatar_url, created_at')`. Garantir que nenhum campo sensível trafegue para o frontend.
-
-- [x] **64.7 — Restringir CORS da Edge Function `create-user`**
-  - 📋 **Ref. Auditoria:** Achado #5 — "CORS com Allow-Origin: *"
-  - 📂 **Arquivos:** `supabase/functions/create-user/index.ts` (linha 5)
-  - 🎯 **Ação:** Substituir `'Access-Control-Allow-Origin': '*'` por leitura de variável de ambiente `ALLOWED_ORIGIN` com fallback para o domínio de produção da Vercel (`https://os-system-tau.vercel.app`).
-
-#### 🟢 Prioridade BAIXA
-
-- [x] **64.8 — Remover `console.log` sensíveis de produção**
-  - 📋 **Ref. Auditoria:** Achado #6 — "Console Logs sensíveis em produção"
-  - 📂 **Arquivos:** `src/contexts/AuthContext.jsx` (linhas 55, 140, 155, 188), `src/pages/Colaboradores.jsx` (linha 383), `src/hooks/useOrders.js` (linha 71)
-  - 🎯 **Ação:** Remover todos os `console.log` que exponham eventos de autenticação, tentativas de login e dados de contingência. Opcionalmente, criar wrapper `debugLog()` condicionado a `import.meta.env.DEV` para uso futuro de depuração.
+### [ ] T1.3 — Domínio, SSL Wildcard e Subdomínios
+- **Descrição:** Configuração do proxy reverso Caddy para roteamento inteligente de subdomínios de cada oficina cliente (`{loja}.carx.com.br`) e subdomínios do sistema (`app.`, `admin.`, `api.`).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Domínios e Redes (Linhas 132–137)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L132-L137)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.3 (Linhas 508–512)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L508-L512)
+- **Entrega:** `Caddyfile` com provisionamento automático de certificados Let's Encrypt / ZeroSSL e wildcard DNS.
+- **Pronto quando:** Requisições para `https://app.<dominio>` e subdomínio de teste `https://loja-teste.<dominio>` respondem com SSL válido.
 
 ---
 
-#### 🚀 Roteiro Obrigatório de Implantação nos Clientes (Update Guide)
-
-> **ATENÇÃO:** Como esse patch envolve segurança de banco e edge functions, você precisará seguir estes passos **em cada cliente (instância Supabase)** no momento que for atualizar o código deles:
-
-1. **SQL Editor (No painel do cliente):**
-   ```sql
-   -- Remover backdoor e regras antigas
-   ALTER TABLE public.profiles DROP COLUMN IF EXISTS senha_temporaria;
-   DROP POLICY IF EXISTS "NPS: Leitura Pública e Autenticada" ON public.pesquisas_nps;
-   DROP POLICY IF EXISTS "NPS: Inserção Pública e Autenticada" ON public.pesquisas_nps;
-   DROP POLICY IF EXISTS "NPS: Atualização para todos" ON public.pesquisas_nps;
-   DROP POLICY IF EXISTS "NPS: Acesso Total" ON public.pesquisas_nps;
-   DROP POLICY IF EXISTS "OS: Criação Pública para Agendamento Online" ON public.ordens_servico;
-   DROP POLICY IF EXISTS "Notificacoes: Criação Pública para Agendamentos" ON public.notificacoes;
-   ```
-2. **Rodar o novo arquivo `database.md`** completo no SQL Editor do cliente (ele criará a `criar_agendamento_publico` e as novas policies do NPS).
-3. **Fazer login no projeto do cliente no terminal:** `npx supabase login` e depois `npx supabase link --project-ref ID_DO_CLIENTE`
-4. **Fazer deploy das funções no ambiente do cliente:**
-   - `npx supabase functions deploy create-user`
-   - `npx supabase functions deploy reset-password`
+### [ ] T1.4 — Backups Automáticos e Recuperação Testada
+- **Descrição:** Implementação de rotina de backup com envio para storage externo à VPS e script de restauração automatizada.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Backups (Linhas 140–141)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L140-L141)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.4 (Linhas 513–516)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L513-L516)
+- **Entrega:** Scripts de dump diário + WAL archiving, retenção (7 diários, 4 semanais, 6 mensais), sincronização com S3/Backblaze/R2, e documentação em `docs/runbook-backup.md`.
+- **Pronto quando:** Script `infra/scripts/restore-test.sh` restaura o último dump num container temporário de teste e valida a contagem de tabelas.
 
 ---
 
-*Última atualização: 28/07/2026 - STATUS: FASE 65 CRIADA — DOCUMENTAÇÃO DE APRESENTAÇÃO E ATUALIZAÇÃO DA TELA DE AJUDA 📖*
+### [ ] T1.5 — Monitoramento e Observabilidade
+- **Descrição:** Observabilidade básica com logs estruturados em JSON, página de status pública e rastreamento de exceções.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: Observabilidade (Linhas 141–142)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L141-L142)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.5 (Linhas 517–520)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L517-L520)
+- **Entrega:** Configuração do Uptime Kuma (ou container de monitoramento) e integração do backend com GlitchTip ou Sentry.
+- **Pronto quando:** Forçar a parada da API dispara notificação no canal de alerta em menos de 2 minutos.
 
 ---
 
-### Fase 65: Atualização da Ajuda e Documentação Comercial
-**Objetivo:** Refletir no sistema todas as inovações recentes (Fases 50 a 64) e gerar material de apresentação para captação e retenção de clientes.
+### [ ] T1.6 — Deploy Automatizado e Rollback
+- **Descrição:** Pipeline de deploy contínuo das imagens dos containers para a VPS via SSH/Registry com suporte a rollback com 1 comando.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 3: CI/CD (Linhas 142–143)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L142-L143)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.6 (Linhas 521–524)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L521-L524)
+- **Entrega:** GitHub Action de deploy com versionamento semântico de tags Docker e script `infra/scripts/rollback.sh`.
+- **Pronto quando:** Merge na branch `main` atualiza o ambiente de homologação e a execução do script de rollback restaura a versão anterior.
 
-#### 🔵 Escopo de Entregas
+---
 
-- [x] **65.1 — Atualização da Tela de Ajuda (`Ajuda.jsx`)**
-  - 🎯 **Ação:** Incluir tutoriais sobre NPS, Tracking Online, Lembretes de Manutenção, Self-Booking, Fotos Guiadas e Segurança. Adicionar novas categorias.
+## 🏢 FASE 2 — Núcleo Multitenant & Super Admin
 
-- [x] **65.2 — Criação do Documento Comercial (`Apresentacao_OsSystem.md`)**
-  - 🎯 **Ação:** Compilar e estruturar todos os recursos, módulos e vantagens do sistema (Gestão, Operação, Retenção, Segurança) num formato elegante para envio a clientes antigos e potenciais novos clientes.
+**Objetivo:** Construir o coração do SaaS multitenant (reaproveitando conceitos do OperaBeauty): isolamento por tenant no banco de dados com RLS, autenticação robusta, papéis (RBAC), quotas, MinIO para uploads e o painel do Super Admin.
+
+### [ ] T2.0 — Inventário e Mapeamento de Reúso (OperaBeauty)
+- **Descrição:** Mapear o código e as regras de negócio multitenant existentes (tenants, auth, planos e billing) para adaptação ao CarX.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 2: Decisão de Arquitetura (Linhas 94–96)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L94-L96)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.0 (Linhas 530–533)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L530-L533)
+- **Entrega:** Documento `docs/reuso-operabeauty.md` discriminando o que será aproveitado diretamente, o que precisa de adaptação e o que será descartado.
+- **Pronto quando:** Todos os módulos de autenticação e multitenancy do núcleo estiverem classificados.
+
+---
+
+### [ ] T2.1 — Migrations e Esquema Relacional do Núcleo
+- **Descrição:** Criação das migrations SQL versionadas para as tabelas centrais do SaaS.
+- **Tabelas do Núcleo:**
+  - `tenants` (id, slug/subdominio, cnpj, razao_social, status)
+  - `units` (filiais da oficina)
+  - `users` (id, email, password_hash com argon2id)
+  - `memberships` (user_id, tenant_id, role: `owner`, `gestor`, `atendente`, `tecnico`, `financeiro`)
+  - `plans`, `subscriptions`, `invoices`, `audit_log`, `api_keys`, `webhook_endpoints`
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Modelo de Dados (Linhas 151–152)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L151-L152)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.1 (Linhas 534–537)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L534-L537)
+  - [database.md](file:///d:/Repositorios/CarX/database.md)
+- **Entrega:** Ferramenta de migrations (Drizzle ou node-pg-migrate) com scripts de criação e reversão.
+- **Pronto quando:** Executar `pnpm migrate:up` cria todo o banco e `pnpm migrate:down` limpa com integridade referencial mantida.
+
+---
+
+### [ ] T2.2 — Contexto de Tenant e RLS (Row Level Security)
+- **Descrição:** Implementação de isolamento absoluto de dados entre oficinas: toda tabela de negócio possui `tenant_id` e a API injeta `SET LOCAL app.tenant_id = '...'` em cada transação/requisição.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 2: Stack Sugerida / Banco (Linhas 97–98)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L97-L98)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.2 (Linhas 538–541)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L538-L541)
+- **Entrega:** Middleware de extração de tenant por subdomínio/token JWT, injeção de variável de sessão no Postgres e políticas RLS em todas as tabelas. Usuário da aplicação sem privilégio de `BYPASSRLS`.
+- **Pronto quando:** A suíte de testes `tenant-isolation.test.ts` cria a Oficina A e Oficina B e comprova matematicamente que a Oficina A não consegue ler, atualizar ou deletar dados da Oficina B.
+
+---
+
+### [ ] T2.3 — Autenticação Segura (Argon2id + JWT Rotativo + 2FA)
+- **Descrição:** Backend próprio de autenticação eliminando a dependência do Supabase GoTrue.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.3 (Linhas 542–545)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L542-L545)
+- **Entrega:** Endpoints de login, refresh token rotativo, logout, solicitação de recuperação de senha, rate-limiting contra brute force e suporte a 2FA TOTP para proprietários.
+- **Pronto quando:** Testes automatizados cobrem expiração de token, reuso malicioso de refresh token (gerando revogação imediata) e restrição por excesso de tentativas.
+
+---
+
+### [ ] T2.4 — Matriz de Autorização RBAC por Papel
+- **Descrição:** Regras formais de permissão por cargo compartilhadas entre frontend e backend (`packages/shared/permissions.ts`).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.4 (Linhas 546–549)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L546-L549)
+- **Entrega:** Guards na API validando:
+  - `tecnico`: enxerga apenas OS atribuídas a ele na fila, não acessa relatórios financeiros nem pode excluir OS.
+  - `atendente`: cria clientes, veículos e orçamentos, mas não altera configurações fiscais ou planos.
+  - `gestor` / `owner`: acesso administrativo completo à oficina.
+- **Pronto quando:** Teste de integração comprova que um usuário com cargo `tecnico` recebe HTTP 403 Forbidden ao tentar invocar endpoints financeiros ou de deleção.
+
+---
+
+### [ ] T2.5 — Trilha de Auditoria Imutável (Audit Log)
+- **Descrição:** Tabela de auditoria para registrar todas as ações críticas da oficina e do Super Admin.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.5 (Linhas 550–553)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L550-L553)
+- **Entrega:** Registro com dados: `tenant_id`, `user_id`, `entidade`, `registro_id`, `acao` (`INSERT`, `UPDATE`, `DELETE`), `snapshot_anterior` e `snapshot_novo`.
+- **Pronto quando:** O estorno de um pagamento ou alteração de valor de OS gera um registro imutável consultável no painel.
+
+---
+
+### [ ] T2.6 — Gestão de Planos, Limites e Feature Flags
+- **Descrição:** Motor no backend para aplicar limites contratados por plano (número de colaboradores, unidades, limites de OS e franquia de WhatsApp).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 6: Planos e Preços (Linhas 243–256)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L243-L256)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.6 (Linhas 554–557)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L554-L557)
+- **Entrega:** Middleware de checagem de quotas com retorno de erro padronizado caso a oficina atinja o teto de usuários ou serviços do plano.
+- **Pronto quando:** Uma loja no plano Essencial é impedida pela API de cadastrar o 4º usuário simultâneo.
+
+---
+
+### [ ] T2.7 — Subdomínio por Loja e White Label Real
+- **Descrição:** Resolução dinâmica da oficina a partir do host da requisição (`minhaloja.carx.com.br`) e tabela `tenant_branding`.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 10.6: Marca da Loja / White Label (Linhas 362–365)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L362-L365)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.7 (Linhas 558–561)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L558-L561)
+- **Entrega:** Carregamento de logo, nome fantasia, cores secundárias e redes sociais no contexto da loja; geração dinâmica de `manifest.json` do PWA com o nome e ícone de cada oficina cliente.
+- **Pronto quando:** Acessar `loja1.carx.local` e `loja2.carx.local` exibe marcas e logos distintos no Monitor TV e no app do técnico instalado.
+
+---
+
+### [ ] T2.8 — Armazenamento de Arquivos com MinIO (Compatível S3)
+- **Descrição:** Sistema de upload de mídias de OS, laudos e fotos da oficina para o container `minio` com URLs pré-assinadas.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 2: Stack / Arquivos (Linha 101)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L101)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.8 (Linhas 562–565)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L562-L565)
+- **Entrega:** Serviço de upload com validação de magic bytes reais (não apenas extensão do arquivo), bloqueio de scripts/SVGs arbitrários, redimensionamento de fotos pesadas no servidor e estrutura de pastas `tenant/{id}/...`.
+- **Pronto quando:** Um arquivo executável renomeado para `.jpg` é rejeitado na API, e o link de uma imagem de uma oficina não é acessível por outra.
+
+---
+
+### [ ] T2.9 — Super Admin: Backend e Módulo `/admin`
+- **Descrição:** Módulo de gerenciamento global das oficinas clientes, com role de banco separada, bypass das regras de tenant isolado e auditoria imutável.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 11: Ambiente Super Admin (Linhas 367–402)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L367-L402)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.9 (Linhas 567–570)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L567-L570)
+- **Entrega:** Endpoints de métricas globais (MRR, churn, lojas ativas), CRUD de oficinas, suspensão/reativação, log de impersonação e planos.
+- **Pronto quando:** Token JWT emitido para usuário do Super Admin é sumariamente rejeitado no app das lojas e vice-versa.
+
+---
+
+### [ ] T2.10 — Super Admin: Frontend (`apps/admin`)
+- **Descrição:** Painel administrativo corporativo para o dono do SaaS operar contratos, ver faturamento e gerenciar licenças.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 11.1: Módulos do Super Admin (Linhas 371–386)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L371-L386)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.10 (Linhas 571–574)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L571-L574)
+- **Assets Visuais:** Estilo baseado no Design System CarX com foco em densidade de dados e gráficos corporativos.
+- **Entrega:** Aplicação `apps/admin` (container 5) com telas de: Visão Geral de MRR, Tabela de Oficinas, Contratos/Faturas, Gerenciador de WhatsApp e Trilha de Auditoria.
+- **Pronto quando:** O acesso é protegido por 2FA e ações destrutivas (suspensão de loja) exigem confirmação com senha.
+
+---
+
+### [ ] T2.11 — Assistente de Criação de Oficina e Provisionamento
+- **Descrição:** Wizard que cadastra uma nova oficina, provisiona o subdomínio, injeta o catálogo base do segmento escolhido e envia convite ao proprietário.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 11.4: Fluxos Principais (Linhas 393–398)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L393-L398)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.11 (Linhas 575–578)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L575-L578)
+- **Entrega:** Formulário em etapas: dados cadastrais (CNPJ/Razão Social), segmento (PPF, Insulfilm, Estética, Oficina), plano e criação automática da assinatura.
+- **Pronto quando:** Ao concluir o assistente, o proprietário recebe o e-mail de acesso e já encontra a loja com serviços pré-configurados do seu segmento.
+
+---
+
+### [ ] T2.12 — Contratos, Faturas e Régua de Cobrança (Manual/Regras)
+- **Descrição:** Máquina de estados de contratos de licença (`trial`, `ativo`, `inadimplente`, `suspenso`, `cancelado`) com bloqueio programado.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 11.2: Régua de Cobrança (Linhas 387–389)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L387-L389)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.12 (Linhas 579–582)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L579-L582)
+- **Entrega:** Rotina agendada (Worker) que verifica faturas vencidas, envia avisos, aplica restrição leve aos 7 dias e suspende em modo somente leitura aos 15 dias.
+- **Pronto quando:** Loja com fatura em atraso tem a escrita bloqueada na API, mantendo visualização dos dados históricos com banner informativo.
+
+---
+
+## 🚗 FASE 3 — Domínio Automotivo no Novo Backend
+
+**Objetivo:** Reimplementar todas as regras de negócio automotivas ricas do OsSystem no backend Node.js próprio, eliminando 100% das chamadas diretas ao Supabase e qualquer armazenamento de regras em `localStorage`.
+
+### [ ] T3.1 — Clientes e Veículos (Placa por Oficina)
+- **Descrição:** Gestão de clientes e frotas, com normalização de telefones (E.164), validação de CPF/CNPJ e placa única **por loja** (permitindo que duas oficinas atendam o mesmo veículo sem choque).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 1.4: Problema 1 (Linha 67)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L67)
+  - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linhas 154)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L154)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.1 (Linhas 587–590)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L587-L590)
+- **Assets Visuais:** [Gestor · Painel (Clientes e frotas)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
+- **Entrega:** Endpoints CRUD para `customers` e `vehicles` com busca paginada no servidor por nome, telefone, placa ou modelo.
+- **Pronto quando:** Duas lojas distintas cadastram a mesma placa `ABC1D23` com sucesso e sem violação de unicidade global.
+
+---
+
+### [ ] T3.2 — Catálogo de Serviços, Preços por Porte e Combos
+- **Descrição:** Tabela de serviços normalizada: tempo padrão por porte de veículo (Hatch, Sedan, SUV, Picape, Moto), preços específicos por classe e cálculo automático de combos.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linhas 155)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L155)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.2 (Linhas 591–594)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L591-L594)
+- **Entrega:** Tabelas `service_catalog`, `service_prices_by_class`, `packages` e `package_items`.
+- **Pronto quando:** A seleção de um serviço em um orçamento calcula o valor exato baseado no porte do veículo cadastrado, aplicando o desconto de combo no backend.
+
+---
+
+### [ ] T3.3 — Orçamentos e Ordens de Serviço (Máquina de Estados)
+- **Descrição:** A espinha dorsal do sistema. A OS deixa de ter status como texto solto e passa a operar como máquina de estados estrita no backend.
+- **Fluxo de Estados Obrigatório:**
+  `QUOTE` ➔ `APPROVED` ➔ `SCHEDULED` ➔ `CHECKED_IN` ➔ `IN_PROGRESS` ➔ `QA` ➔ `READY` ➔ `DELIVERED` (+ `PAUSED`, `CANCELED`).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Status da OS / Máquina de Estados (Linhas 164–165)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L164-L165)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.3 (Linhas 595–598)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L595-L598)
+- **Assets e Telas de Referência:**
+  - [Gestor · Nova OS (Formulário em etapas, serviços, peças, prazos)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Nova%20OS@2x.png)
+  - [Gestor · Painel (Pátio com colunas Aguardando, Em Execução e Prontas)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
+- **Entrega:**
+  - Tabela `work_orders` com número sequencial próprio por loja (`os_number` 1, 2, 3...).
+  - Tabelas `work_order_items` e `work_order_events` (histórico de auditoria de cada transição).
+  - Geração de token UUID seguro para acompanhamento público pelo cliente.
+- **Pronto quando:** Uma tentativa de mover uma OS diretamente de `QUOTE` para `DELIVERED` é rejeitada pela API com erro 422, e todas as transições válidas geram registro na linha do tempo.
+
+---
+
+### [ ] T3.4 — Pagamentos, Adiantamentos (Sinal) e Transações Atômicas
+- **Descrição:** Gestão financeira de pagamentos de OS realizada no banco em transação atômica, eliminando a antiga race condition do legado.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linha 157)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L157)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.4 (Linhas 599–602)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L599-L602)
+- **Entrega:** Tabelas `payments` e `deposits`, com cálculo de saldo devedor, estorno, método (Pix, Cartão, Dinheiro) e controle de sinal.
+- **Pronto quando:** Teste de concorrência disparando duas liquidações simultâneas na mesma OS calcula o saldo sem duplicidade ou valor negativo.
+
+---
+
+### [ ] T3.5 — Controle de Estoque e Bobinas de Película (PPF e Insulfilm)
+- **Descrição:** Controle granular de consumo de insumos por OS e gestão especializada de bobinas/rolos (metragem restante, lote e desperdício).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linhas 158)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L158)
+  - [CarX_Documento_Unico.md — Seção 6: Onda 2 / Item 6 (Linhas 215–216)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L215-L216)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.5 (Linhas 603–606)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L603-L606)
+- **Assets Visuais:** [Gestor · Painel (Card de Alerta: Bobina de película G20 abaixo do mínimo)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
+- **Entrega:** Tabelas `materials`, `stock_movements` e `material_rolls` (com campo de metros lineares gastos por OS e baixa idempotente ao concluir a ordem).
+- **Pronto quando:** Entregar a mesma OS múltiplas vezes abate o estoque apenas uma única vez e gera alerta visual quando a bobina atinge o nível crítico configurado.
+
+---
+
+### [ ] T3.6 — Agenda Inteligente por Box e Agendamento Online
+- **Descrição:** Agenda com alocação por box físico e profissional técnico, respeitando o tempo de serviço pelo porte do veículo para evitar choques de horário.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linha 159)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L159)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.6 (Linhas 607–610)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L607-L610)
+- **Assets e Telas de Referência:**
+  - [Gestor · Agenda (Ocupação por boxes, horários, status)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Agenda@2x.png)
+- **Entrega:** Tabelas `appointments` e `bays`, com endpoint público de agendamento online (com proteção anti-bot e rate limit) que insere a proposta no status `QUOTE` com origem `ONLINE`.
+- **Pronto quando:** Dois clientes são impedidos de agendar no mesmo box e mesmo horário simultaneamente.
+
+---
+
+### [ ] T3.7 — Laudo de Inspeção Digital (VCR), Checklist e Fotos
+- **Descrição:** Vistoria visual digital do veículo no celular/tablet: marcação touch dos pontos de avaria (riscos, amassados, trincas), fotos antes/depois por ângulo guiado e assinatura digital salva como arquivo.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 10.1: O que observei nas telas / Laudo (Linhas 312–313)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L312-L313)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.7 (Linhas 611–614)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L611-L614)
+- **Assets e Telas de Referência:**
+  - [Operador · Laudo de Inspeção (Mapa touch de avarias no celular, ângulos guiados)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Laudo%20de%20inspe%C3%A7%C3%A3o@2x.png)
+- **Entrega:** Tabela `inspections`, upload de imagens dos pontos para MinIO, geração de PDF do laudo no servidor com marcações gráficas e assinatura do cliente.
+- **Pronto quando:** O PDF gerado abre com os pontos plotados sobre a silhueta do veículo e fotos anexadas, sem armazenar dados em Base64 no banco.
+
+---
+
+### [ ] T3.8 — App do Técnico (PWA do Operador)
+- **Descrição:** Interface otimizada para o chão de oficina em tema escuro: botões grandes (56–60px), fila priorizada ("Minha fila" vs "Toda a loja"), cronômetro oficial calculado no backend e fluxo sem bloqueios.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 10.3: Princípios do App do Operador (Linhas 328–338)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L328-L338)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.8 (Linhas 615–618)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L615-L618)
+- **Assets e Telas de Referência:**
+  - [Operador · Fila (Cards de serviços, alvos de toque, badge de retrabalho)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Fila@2x.png)
+  - [Operador · Execução (Cronômetro Space Grotesk, stepper de etapas, botão gigante)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Execu%C3%A7%C3%A3o@2x.png)
+- **Entrega:**
+  - PWA com suporte a Screen Wake Lock (mantém tela ligada durante serviço).
+  - Ação inteligente "Fazer checklist e iniciar" caso a OS ainda não tenha checklist de entrada preenchido.
+  - Cronômetro calculado a partir do `timestamp` do banco (imune a alterações no relógio do aparelho).
+- **Pronto quando:** Fechar o navegador no meio da aplicação de película ou recarregar a página mantém o tempo decorrido sincronizado com exatidão.
+
+---
+
+### [ ] T3.9 — Controle de Qualidade (QA), Garantia e Certificado com QR
+- **Descrição:** Gate de validação pós-serviço (QA Audit) para liberação de entrega e emissão de Certificado de Garantia com QR Code público de autenticidade (Passaporte do Veículo).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 6: Onda 2 / Item 7 (Linhas 216–217)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L216-L217)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.9 (Linhas 619–622)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L619-L622)
+- **Entrega:** Tabelas `qa_audits` e `warranties`. Geração de PDF do certificado e página pública (`/v/{token}`) para qualquer pessoa escanear o QR e validar a garantia e o lote do material aplicado sem expor dados pessoais do cliente.
+- **Pronto quando:** Escanear o QR Code impresso no certificado abre a página pública autenticada mostrando data de vencimento e lote da película/vitrificador.
+
+---
+
+### [ ] T3.10 — Pesquisa NPS, Pós-Venda e Lembretes de Revisão
+- **Descrição:** Coleta de NPS por token único (sem necessidade de login do cliente), classificação em Promotor/Neutro/Detrator e alertas de revisões de garantia periódicas.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linha 161)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L161)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.10 (Linhas 623–626)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L623-L626)
+- **Assets e Telas de Referência:**
+  - [Gestor · Relatórios NPS (Score NPS, detratores, promotores, satisfação)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Relat%C3%B3rios%20NPS@2x.png)
+- **Entrega:** Tabela `nps_surveys` persistida, jobs agendados de disparo e tela do Gestor com métricas reais (eliminando o antigo mock de NPS).
+- **Pronto quando:** O cliente responde o NPS via link seguro e os dados atualizam o scorecard do gestor instantaneamente; responder ao mesmo link duas vezes é bloqueado.
+
+---
+
+### [ ] T3.11 — Financeiro, Comissões e Relatórios no Servidor
+- **Descrição:** Cálculo de DRE, margem real por serviço, comissões de técnicos e ranking de produtividade (streak baseado em histórico de QA) calculado exclusivamente por SQL no backend.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 1.3: O que o código faz hoje / Comissões e Ranking (Linhas 55–57)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L55-L57)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.11 (Linhas 627–630)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L627-L630)
+- **Assets Visuais:** [Gestor · Painel (Faturamento convertido, pátio ao vivo)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
+- **Entrega:** Endpoints para DRE e extrato de comissões (`commissions_rules`, `commissions_entries`), com streak de dias sem retrabalho calculado de fatos auditados.
+- **Pronto quando:** O valor de faturamento do dashboard bate rigorosamente com a soma dos pagamentos e custos de materiais, sem depender de agregação em memória no browser.
+
+---
+
+### [ ] T3.12 — Atualização em Tempo Real (SSE / WebSockets)
+- **Descrição:** Barramento de eventos pontuais leves para atualização em tempo real do Monitor TV e da Fila do Operador, eliminando o padrão ineficiente de "refetch de lista inteira".
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 1.4: Problema 5 (Linha 71)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L71)
+  - [CarX_Documento_Unico.md — Seção 2: Stack / Tempo Real (Linha 100)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L100)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.12 (Linhas 631–634)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L631-L634)
+- **Assets e Telas de Referência:**
+  - [TV da Loja (Monitor de produção com veículos em execução, horários e barra inferior)](file:///d:/Repositorios/CarX/rebraind/TV%20da%20loja@2x.png)
+- **Entrega:** Canal SSE (Server-Sent Events) ou WebSocket autenticado emitindo payloads compactos (`work_order.updated`, `work_order.ready`).
+- **Pronto quando:** Concluir uma etapa no celular do operador move o card correspondente na TV em menos de 500ms sem recarregar a página inteira, e a TV de uma loja nunca recebe eventos de outra.
+
+---
+
+### [ ] T3.13 — Portal do Cliente Seguro ("Meu Veículo")
+- **Descrição:** Reestruturação do portal do cliente com login seguro via OTP (código temporário via WhatsApp ou e-mail), eliminando a vulnerabilidade de login apenas por telefone e o antigo modo demonstração com dados fictícios.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 1.3: Portal Meu Veículo (Linha 61)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L61)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.13 (Linhas 635–638)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L635-L638)
+- **Entrega:** Fluxo de login com desafio OTP, visualização filtrada no backend das OS do cliente, linha do tempo dos serviços e galeria de fotos antes/depois.
+- **Pronto quando:** Inserir o telefone de terceiros não expõe nenhum dado sem o código numérico validado; modo de demonstração falso é completamente extinto em produção.
+
+---
+
+### [ ] T3.14 — API Pública e Webhooks Reais
+- **Descrição:** Substituição do antigo mock em localStorage por uma camada de integração real com autenticação por chave de API (com hash no banco) e webhooks assinados com HMAC.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 1.3: API Pública e Webhooks (Linha 54)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L54)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.14 (Linhas 639–642)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L639-L642)
+- **Entrega:** Tabelas `api_keys`, `webhook_endpoints`, `webhook_deliveries`, fila de reentrega com backoff exponencial e documentação interativa OpenAPI/Swagger.
+- **Pronto quando:** Um evento de OS aprovada dispara um webhook para uma URL externa de teste com cabeçalho `X-CarX-Signature` válido.
+
+---
+
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System
+- **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.15 (Linhas 643–646)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L643-L646)
+- **Assets de Telas:** Todos os mockups de [rebraind/](file:///d:/Repositorios/CarX/rebraind/).
+- **Entrega:** Telas migradas para TypeScript consumindo a nova API: Painel do Gestor, Nova OS, Agenda, Fila do Operador, Execução, Laudo, Relatórios e Monitor TV.
+- **Pronto quando:** O comando `grep -r "supabase" apps/web` retorna 0 ocorrências e o `localStorage` armazena exclusivamente preferências de tema ou UI.
+
+---
+
+### [ ] T3.16 — Testes de Ponta a Ponta (E2E) dos Fluxos Críticos
+- **Descrição:** Suíte de testes automatizados com Playwright cobrindo todo o ciclo operacional automotivo e o isolamento entre tenants.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 7: Fase 7 (Linhas 231–234)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L231-L234)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.16 (Linhas 647–650)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L647-L650)
+- **Entrega:** Teste E2E cobrindo: Criação da OS ➔ Agendamento ➔ Checklist/VCR ➔ Execução pelo Técnico ➔ QA ➔ Pagamento ➔ Emissão do Certificado ➔ NPS.
+- **Pronto quando:** A suíte de testes executa com sucesso no CI e bloqueia PRs em caso de quebra em qualquer transição de tela.
+
+---
+
+### [ ] T3.17 — Gateway de WhatsApp Próprio e Mensagens Transacionais
+- **Descrição:** Integração com o container `carx-wa` através de uma interface de canal desacoplada (`MessageChannel`), permitindo disparo de mensagens da oficina e recebimento de respostas (NPS e aceite de orçamento).
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 13: Gateway de WhatsApp Próprio (Linhas 436–456)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L436-L456)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.17 (Linhas 651–654)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L651-L654)
+- **Entrega:** Driver `own-gateway` com fila BullMQ, pareamento via QR Code no painel da loja, limite de taxa por número, templates de mensagem parametrizados e opt-out automático ("SAIR").
+- **Pronto quando:** Concluir uma OS dispara notificação com link para o cliente no WhatsApp, e a parada forçada do container do WhatsApp não derruba a API (mensagens aguardam na fila).
+
+---
+
+## 🔄 FASE 4 — Migração de Dados do Legado (ETL)
+
+**Objetivo:** Script de migração para transportar com segurança o histórico das instâncias em produção do Supabase legado para o novo banco de dados relacional multitenant do CarX.
+
+### [ ] T4.1 — Script de ETL e Ensaio de Carga
+- **Descrição:** Script automatizado para ler tabelas do Supabase, normalizar campos JSONB em tabelas relacionais (`work_order_items`, `payments`), fazer upload das fotos antigas para o MinIO e atribuir o `tenant_id` da oficina.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 5: Fase 4 — Migração dos Dados (Linhas 191–196)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L191-L196)
+- **Entrega:** Script `packages/etl/migrate.ts` com validação de consistência: contagem total de OS migradas, conciliação de valores financeiros e integridade de mídias.
+- **Pronto quando:** O ensaio de migração em banco de staging replica 100% dos dados dos clientes atuais sem distorções de saldo ou orçamentos.
+
+---
+
+## 💰 FASE 5 — Produto SaaS Comercial & Faturamento
+
+**Objetivo:** Habilitar os canais de aquisição de novas oficinas, cobrança recorrente e processo de onboarding self-service.
+
+### [ ] T5.1 — Landing Page de Vendas de Alta Conversão
+- **Descrição:** Landing page corporativa com build estático (SSG), SEO focado nos segmentos automotivos e captura de leads integrada ao Super Admin.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 12: Landing Page de Vendas (Linhas 404–434)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L404-L434)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T5.1 (Linhas 667–670)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L667-L670)
+- **Assets Visuais:** Design com identidade Volt `#C8F52E` e Asfalto `#0E1116`, incorporando screenshots dos mockups de `rebraind/`.
+- **Entrega:** Páginas `/`, `/precos`, `/recursos` e páginas verticais (`/para/ppf`, `/para/insulfilm`, `/para/estetica`, `/para/oficina`), com formulário de lead que consome `POST /public/leads`.
+- **Pronto quando:** Um lead preenchido na landing page aparece imediatamente na aba de Leads do Super Admin com o botão "Converter em Oficina".
+
+---
+
+### [ ] T5.2 — Cobrança Recorrente Automática de Licenças
+- **Descrição:** Integração do backend com gateway de pagamentos (Asaas, Mercado Pago ou Stripe) para cobrança automática das mensalidades do SaaS via Pix dinâmico, boleto e cartão de crédito recorrente.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T5.2 (Linhas 671–674)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L671-L674)
+- **Entrega:** Geração de faturas periódicas, webhook seguro para liquidação de Pix em tempo real e atualização automática do contrato da loja.
+- **Pronto quando:** O pagamento de uma fatura de teste via webhook reativa uma loja suspensa instantaneamente sem intervenção manual.
+
+---
+
+### [ ] T5.3 — Onboarding Self-Service Guiado por Segmento
+- **Descrição:** Experiência de boas-vindas na qual o novo dono de oficina cria sua conta, escolhe seu nicho e inicia o período de testes de 14 dias com checklists e catálogo prontos.
+- **Onde ler no Documento Único:**
+  - [CarX_Documento_Unico.md — Seção 5: Fase 5 (Linhas 197–204)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L197-L204)
+  - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T5.3 (Linhas 675–678)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L675-L678)
+- **Entrega:** Fluxo inicial guiado com checklist de primeiros passos (ex: "Cadastre seu primeiro veículo", "Abra sua primeira OS").
+- **Pronto quando:** Um novo usuário realiza o cadastro e cria sua primeira OS completa em menos de 5 minutos sem auxílio de suporte.
+
+---
+
+## ⚡ FASE 6 — Diferenciais Competitivos em Ondas
+
+**Onde ler no Documento Único:** [CarX_Documento_Unico.md — Seção 5: Fase 6 (Linhas 205–229)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L205-L229).
+
+### [ ] Onda 1 — Impacto Imediato (Primeiro Mês)
+1. **WhatsApp Automático Transacional:** Mensagens de confirmação de agenda, envio de fotos de progresso e aviso de retirada.
+2. **Orçamento Digital com Aceite Online:** Link exclusivo onde o dono do carro aprova os itens com registro de IP e paga sinal via Pix dinâmico.
+3. **Pix Integrado para Ordens de Serviço:** Baixa instantânea na OS via conciliação por webhook.
+4. **Consulta Automática de Placa:** Preenchimento instantâneo de marca, modelo, cor e ano ao digitar a placa.
+5. **Portal do Cliente Seguro com OTP:** Acesso histórico e acompanhamento em tempo real sem senhas decoradas.
+
+### [ ] Onda 2 — Domínio Especializado Automotivo
+6. **Controle Fino de Bobinas (PPF/Insulfilm):** Associação do número de série do rolo ao certificado de garantia do cliente e cálculo de margem real por metro.
+7. **Passaporte Digital do Veículo:** Certificado de garantia transferível com histórico de manutenções e QR Code antifraude.
+8. **Agenda Inteligente com Ocupação por Box:** Previsão automática de horários baseada no histórico de tempo dos técnicos por porte de veículo.
+9. **Motor de Reputação no Google:** Disparo automático de link para avaliação 5 estrelas no Google para clientes que deram NPS 9 ou 10.
+10. **Mini-Site Institucional da Oficina (`minhaloja.carx.com.br`):** Portfólio de trabalhos recentes, fotos antes/depois e captação de orçamentos para o cliente.
+
+### [ ] Onda 3 — Escala e Funcionalidades Avançadas
+11. **Módulo Fiscal (NFS-e Automática):** Emissão automática da nota fiscal de serviço ao liquidar a OS.
+12. **DRE Gerencial e Fluxo de Caixa Avançado:** Previsão de fluxo de caixa e cálculo consolidado de comissões por colaborador.
+13. **Painel de Redes e Franquias (Multiunidade):** Visão corporativa unificada para gestores de múltiplas lojas.
+14. **App do Técnico Offline-First Completo:** Operação total em galpões sem internet com sincronização em segundo plano.
+15. **IA Aplicada:** Pré-detecção de avarias através de fotos de entrada e sugestão automática de orçamento.
+
+---
+
+## 🛡️ FASE 7 — Qualidade Contínua, Testes & Hardening
+
+**Onde ler no Documento Único:** [CarX_Documento_Unico.md — Seção 5: Fase 7 (Linhas 230–234)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L230-L234).
+
+- [ ] **Testes de Isolamento Multitenant (CI Obrigatório):** Teste gerado dinamicamente para garantir que nenhuma query consulte dados sem o filtro de `tenant_id`.
+- [ ] **Testes de Carga com k6:** Simulação de 100 conexões simultâneas enviando eventos de OS e atualizando telas de TV.
+- [ ] **Auditoria de Segurança OWASP:** Validação contra Injeção de SQL, Cross-Site Scripting (XSS), IDOR e vazamento de segredos em logs.
+- [ ] **Simulação Mensal de Desastre e Restauração:** Procedimento validado de recuperação de banco a partir de backup externo.
+
+---
+
+## 🚀 FASE 8 — Go-To-Market & Beta Fechado
+
+**Onde ler no Documento Único:** [CarX_Documento_Unico.md — Seção 5: Fase 8 (Linhas 235–240)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L235-L240).
+
+- [ ] **Seleção do Grupo Beta:** Recrutamento de 3 a 5 oficinas parceiras em condições especiais em troca de homologação e feedbacks semanais.
+- [ ] **Base de Conhecimento e Suporte:** Criação de tutoriais guiados em vídeo para o Operador e Gestor.
+- [ ] **Validação dos Planos e Preços:** Homologação prática das faixas de preço sugeridas na Seção 6 de `CarX_Documento_Unico.md`.
+- [ ] **Lançamento Oficial:** Abertura das inscrições públicas e transição do status de beta para produção.

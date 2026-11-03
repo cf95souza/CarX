@@ -215,3 +215,81 @@ Para garantir a estabilidade do sistema em produção no nosso cliente e manter 
 
 ---
 *Última revisão da documentação: 27/07/2026 - Fase 63 100% concluída + Gestão de Acesso e Redefinição de Senhas da Equipe Técnica (Build 100% OK).*
+
+
+---
+
+## 🚀 CarX SaaS — Nova Arquitetura Monorepo e Backend Próprio
+
+### Concluído: Fase 0 — Fundação do Projeto & Monorepo
+#### Tarefa T0.1: Repositório e Monorepo (pnpm workspaces) 📦
+Iniciada a grande transformação estrutural do **CarX** (evolução do legado para SaaS multitenant automotivo):
+- **Arquitetura de Monorepo com `pnpm` workspaces (`pnpm-workspace.yaml`)**:
+  - `apps/web`: Frontend React/Vite (Gestor, Operador PWA e Portal do Cliente).
+  - `apps/api`: Backend Node.js + TypeScript Fastify com endpoint `/health`.
+  - `apps/admin`: Painel do Super Admin (React + Vite + TypeScript).
+  - `packages/shared`: Pacote isolado com enums de status da OS, matriz RBAC de permissões e esquemas Zod (`WorkOrder`, `Customer`, `Vehicle`).
+  - `packages/ui`: Design System com tokens de marca oficiais (Volt `#C8F52E`, Asfalto `#0E1116`, Grafite `#171C24`, Aço `#232A35`).
+  - `infra/`: Diretório base para topologia Docker e proxy Caddy.
+- **Padronização e Qualidade**:
+  - `TypeScript`: Configuração estrita com `tsconfig.base.json` (`strict: true`).
+  - `ESLint 9 Flat Config`: Suporte unificado para ECMAScript e TypeScript em todo o monorepo.
+  - `.editorconfig` e `.prettierrc` padronizados.
+- **Critérios de Validação Atendidos**:
+  - `pnpm install` executa em terminal limpo com linking de workspaces.
+  - `pnpm typecheck` (`tsc -b`) compila e valida todos os pacotes e apps sem erros.
+  - `pnpm lint` valida todas as pastas sem erros impeditivos.
+
+#### Tarefa T0.2: Pipeline de CI (GitHub Actions) 🤖
+Configurado o motor de automação de testes e validação contínua em `.github/workflows/ci.yml`:
+- **Gatilhos**: Disparo a cada `push` e `pull_request` nas branches `main` e `dev`.
+- **Concorrência Inteligente**: Grupo de concorrência com `cancel-in-progress: true` para cancelar builds redundantes a cada novo commit no mesmo PR.
+- **Segurança (Least Privilege)**: Permissões estritas no container de execução com `contents: read`.
+- **Etapa de Validação (`validate`)**:
+  - `pnpm install --frozen-lockfile` (garantia de fidelidade matemática das versões de pacotes instaladas).
+  - Execução de `pnpm lint` (bloqueia PR se houver erros de linting).
+  - Execução de `pnpm typecheck` (`tsc -b`, bloqueia PR se houver erro de tipagem no TypeScript estrito).
+- **Etapa de Build (`build`)**:
+  - Compilação dos pacotes compartilhados (`@carx/shared`, `@carx/ui`) e das aplicações (`@carx/web`, `@carx/api`, `@carx/admin`).
+
+#### Tarefa T0.3: Convenções e Documentação Base 📑
+Criado o pacote de especificações técnicas, padrões de engenharia e runbooks de onboarding:
+- **`README.md`**: Guia executivo de instalação, requisitos de runtime (Node.js 20+, pnpm 12+, Docker) e comandos de desenvolvimento monorepo.
+- **`docs/arquitetura.md`**: Topologia de microsserviços enxutos (os 5 blocos da aplicação + proxy Caddy, Redis e MinIO) e isolamento em 4 redes Docker (`public`, `app`, `data`, `wa`).
+- **`docs/decisoes.md`**: Arquivo de registro de decisões arquiteturais (ADR) contendo as 10 decisões fechadas e matriz de decisões em aberto.
+- **`docs/glossario.md`**: Unificação dos conceitos e regras de negócio de oficina automotiva (máquina de estados da OS, laudo VCR, precificação por porte, bobinas de PPF/Insulfilm, QA, streak e passaporte digital).
+- **`.env.example`**: Modelo oficial de variáveis de ambiente sem segredos reais expostos, configurado para banco PostgreSQL 16, Redis, MinIO, JWT e WhatsApp.
+
+#### Tarefa T0.4: Higiene do Legado e Segurança 🧹
+Concluído o saneamento e congelamento do código herdado do OsSystem:
+- **Criação da Tag Git `legacy-final`**: Ponto de restauração histórico no commit final do OsSystem (`475f348`).
+- **Expurgo de Arquivos Obsoletos e Temporários**:
+  - Removidos scripts de teste com caminhos locais: `debug_config.js`, `debug_console.cjs`, `tmp_test.cjs`.
+  - Removidos arquivos duplicados: `avaliacao_ossystem.md.resolved` e `supabase/.temp/linked-project.json`.
+  - Removidas pastas clonadas/redundantes: `_1code-maturity-assessor`, `_1dashboard-layout`, `_1responsive-design`, `_1ui-design-system`, `ui-design-system` e `_skills` (suíte consolidada e preservada em `/skills`).
+- **Endurecimento do `.gitignore`**: Regras adicionadas para ignorar `supabase/.temp`, caches locais, relatórios de cobertura, saídas de build em todos os pacotes e arquivos de debug.
+- **Auditoria de Segredos**: Varredura via `git grep` certificando que nenhuma credencial ou chave privada permaneça hardcoded no código rastreado.
+
+#### Tarefa T0.5: Design System, Tokens e Biblioteca de Componentes (`@carx/ui`) 🎨
+Implementado o pacote compartilhado `packages/ui` em total harmonia com a nova identidade visual e os mockups de `rebraind/`:
+- **Tokens Visuais Oficiais (`tokens.ts` e `tailwind-preset.ts`)**:
+  - **Paleta de Cores Oficial**: Volt (`#C8F52E`), Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`), Alerta (`#FFB020`), Info (`#5CC8FF`), Erro (`#FF6B5E`).
+  - **Garantia de Contraste WCAG 4.5:1**: Qualquer texto ou ícone sobre a cor primária Volt é forçado estritamente para Asfalto (`#0E1116`), assegurando legibilidade sob iluminação de galpão e sol pleno.
+  - **Alvos de Toque Ergonômicos (Oficina / Luva)**: Botões e controles com mínimo de 56px no mobile e 48px no desktop para evitar cliques acidentais com mãos oleosas ou enluvadas.
+  - **Tipografia Técnica**: `Space Grotesk` (títulos, contadores numéricos e cronômetros) e `Inter` (corpo de texto, formulários e tabelas).
+- **Biblioteca de Componentes Ergonômicos**:
+  - **`Button`**: Variantes primária (Volt com texto Asfalto), secundária, outline, ghost e danger; suporte a estados de carregamento e alvos de toque adaptativos.
+  - **`Badge`**: Indicadores de status da OS, etapas e alertas com ponto pulsante animado opcional (`pulse`).
+  - **`Card`**: Containers com cantos arredondados generosos de 20px a 24px (`rounded-2xl`, `rounded-3xl`), variantes visualmente integradas com os fundos Asfalto e Grafite.
+  - **`Input` & `Select`**: Entradas com raio de 14px, anel de foco em Volt e suporte completo a ícones de prefixo e sufixo.
+  - **`Stopwatch`**: Cronômetro de alta precisão com dígitos monoespaçados (`tabular-nums`) e indicador de pulso para medição de tempo de execução na bancada.
+  - **`Stepper`**: Linha do tempo visual de etapas da ordem de serviço com marcação de concluído, em andamento e pendente.
+  - **`PhotoGalleryBar`**: Barra de slots guiados por ângulo veicular (frontal, traseira, laterais, teto, etc.), facilitando o checklist padronizado.
+  - **`BottomNav`**: Barra inferior de navegação rápida para polegar (thumb-reach) em dispositivos móveis, com suporte a 3 a 5 ações principais.
+  - **`Modal`**: Janela modal acessível com backdrop blur escurecido e suporte a fechamento por tecla Escape.
+  - **`EmptyState`**: Exibição elegante para listas sem dados com ícone, título descritivo e botão de ação primária.
+  - **`OfflineIndicator`**: Barra persistente com detecção de perda de conexão de rede, garantindo resiliência na oficina.
+- **Validação de Qualidade e Compilação**:
+  - `pnpm typecheck` validado com zero erros em todo o monorepo.
+  - `pnpm lint` executado com zero erros impeditivos.
+  - `pnpm build` executou com sucesso gerando bundles otimizados de produção para todas as aplicações (`@carx/web`, `@carx/api`, `@carx/admin`, `@carx/shared`, `@carx/ui`).

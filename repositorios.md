@@ -1,39 +1,39 @@
-# 🌐 Controle de Repositórios e Fluxo de Deploy Git
+# 🌐 Controle de Repositórios e Fluxo de Deploy Git — CarX
 
-Este arquivo define a estrutura de versionamento e as regras obrigatórias de deploy para o ecossistema **OsSystem / LucasSystem**.
+Este arquivo define a estrutura de versionamento e as regras obrigatórias de deploy para o ecossistema **CarX**.
 
 ---
 
 ## 🔗 Mapeamento de Repositórios
 
-Existem **2 (dois) repositórios Git** distintos e separados no projeto:
+Existem **2 (dois) repositórios Git** no projeto:
 
-### 1. 🛠️ Nosso Ambiente de Desenvolvimento (OsSystem)
-* **URL:** `https://github.com/cf95souza/OsSystem.git`
-* **Tipo:** Ambiente de Desenvolvimento e Testes (Homologação Interna).
-* **Função:** É o nosso laboratório principal. **Toda e qualquer alteração de código, nova skill, correção de bug ou melhoria DEVE ser enviada (pushed) primeiro para este repositório.**
+### 1. 🛠️ Repositório Principal de Desenvolvimento (CarX)
+* **URL:** `https://github.com/cf95souza/CarX.git`
+* **Tipo:** Ambiente Principal de Desenvolvimento e Homologação Multitenant.
+* **Função:** É o novo repositório oficial do CarX. **Toda e qualquer alteração de código, nova funcionalidade do monorepo, pacotes, CI/CD ou melhoria DEVE ser enviada (pushed) para este repositório (`origin`).**
 
 ---
 
-### 2. 🏢 Ambiente Produtivo do Cliente (Lucas Envelopamento / LucasSystem)
+### 2. 🏢 Repositório do Cliente Piloto / Legado (Lucas Envelopamento)
 * **URL:** `https://github.com/LucasEnvelopamento/LucasSystem.git`
-* **Tipo:** Ambiente de PRODUÇÃO ATIVO.
-* **Função:** Este repositório atende diretamente a loja do cliente (*Lucas Envelopamento*) e já está em funcionamento em ambiente produtivo com usuários reais.
+* **Tipo:** Ambiente Legado de Produção do Cliente Piloto.
+* **Função:** Atende a operação legado da loja do Lucas Envelopamento até a conclusão da migração total (Fase 4 - ETL) para a nova plataforma CarX.
 
 ---
 
 ## 🚨 REGRA DE OURO DO FLUXO DE TRABALHO (NÃO VIOLAR)
 
 > [!CAUTION]
-> **NOSSO CLIENTE SO VAMOS ENVIAR DEPOIS DE TUDO PRONTO E TESTADO!**
+> **NOSSO CLIENTE SÓ VAMOS ENVIAR DEPOIS DE TUDO PRONTO E TESTADO!**
 
-1. **Primeira Etapa (Desenvolvimento):** Sobe-se o código **exclusivamente** para o repositório de desenvolvimento (`https://github.com/cf95souza/OsSystem.git`).
-2. **Segunda Etapa (Validação):** O código é testado rigorosamente localmente e em nosso ambiente de homologação.
-3. **Terceira Etapa (Deploy Cliente):** **Somente** após a validação e confirmação de que tudo está 100% testado, sem bugs ou regressões, é que as alterações podem ser sincronizadas e enviadas (pushed) para o repositório produtivo do cliente (`https://github.com/LucasEnvelopamento/LucasSystem.git`).
+1. **Primeira Etapa (Desenvolvimento CarX):** Sobe-se o código **exclusivamente** para o novo repositório oficial (`https://github.com/cf95souza/CarX.git`).
+2. **Segunda Etapa (Validação):** O código é testado rigorosamente localmente (Docker Desktop) e em homologação (VPS).
+3. **Terceira Etapa (Deploy Cliente / Migração):** Somente após a validação completa da Fase 4 (ETL) e homologação pelo usuário, a loja piloto é migrada.
 
 ---
 
 ## 📋 Resumo de Comandos Git
 
-* **Atualizar nosso desenvolvimento:** `git push origin main` (onde `origin` aponta para `cf95souza/OsSystem.git`).
-* **Enviar para o cliente (apenas quando 100% testado e aprovado):** `git push client main` (onde `client` aponta para `LucasEnvelopamento/LucasSystem.git`).
+* **Atualizar nosso desenvolvimento:** `git push origin main` (onde `origin` aponta para `https://github.com/cf95souza/CarX.git`).
+* **Deploy/Migração do piloto:** Executado somente após homologação formal das Fases 0 a 4.
