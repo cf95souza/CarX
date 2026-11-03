@@ -56,3 +56,4 @@ export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   className,
   ...props
 }) => <div className={cn('flex items-center pt-4 border-t border-aco/50 mt-4', className)} {...props} />;
+

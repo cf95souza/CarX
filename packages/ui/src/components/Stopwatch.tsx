@@ -67,3 +67,4 @@ export const Stopwatch: React.FC<StopwatchProps> = ({
 };
 
 Stopwatch.displayName = 'Stopwatch';
+

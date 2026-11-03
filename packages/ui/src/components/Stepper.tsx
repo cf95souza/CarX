@@ -78,3 +78,4 @@ export const Stepper: React.FC<StepperProps> = ({
 };
 
 Stepper.displayName = 'Stepper';
+

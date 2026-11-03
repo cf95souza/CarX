@@ -42,3 +42,4 @@ export const OfflineIndicator: React.FC<OfflineIndicatorProps> = ({ className })
 };
 
 OfflineIndicator.displayName = 'OfflineIndicator';
+

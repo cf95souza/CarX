@@ -36,3 +36,4 @@ export const carxTailwindPreset = {
 };
 
 export default carxTailwindPreset;
+

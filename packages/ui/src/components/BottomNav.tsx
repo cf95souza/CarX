@@ -63,3 +63,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 };
 
 BottomNav.displayName = 'BottomNav';
+

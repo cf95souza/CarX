@@ -45,3 +45,4 @@ export const Badge: React.FC<BadgeProps> = ({
 };
 
 Badge.displayName = 'Badge';
+

@@ -13,7 +13,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 | Fase | Descrição | Status | Dependências |
 |---|---|---|---|
 | **Fase 0** | Fundação do Projeto, Monorepo e Design System | `[x] Concluído` | Nenhuma |
-| **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[ ] Não Iniciado` | Fase 0 |
+| **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[~] Em Andamento` | Fase 0 |
 | **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[ ] Não Iniciado` | Fase 1 |
 | **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[ ] Não Iniciado` | Fase 2 |
 | **Fase 4** | Migração de Dados e Clientes Legados (ETL) | `[ ] Não Iniciado` | Fase 3 |
@@ -143,13 +143,23 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 **Objetivo:** Configurar a topologia de containers em Docker Desktop (local) e VPS Ubuntu Server, garantindo isolamento de redes, persistência de volumes, certificado SSL e rotinas de backup.
 
-### [ ] T1.1 — Endurecimento e Segurança do Servidor (VPS)
+### [x] T1.1 — Endurecimento e Segurança do Servidor (VPS) `(Concluído)`
 - **Descrição:** Regras de segurança de borda na VPS: usuário restrito sem permissão direta de root por senha, firewall e prevenção de brute-force.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 3: Infraestrutura na VPS (Linhas 138–144)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L138-L144)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.1 (Linhas 500–503)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L500-L503)
 - **Entrega:** Script de bootstrap da VPS configurando `ufw` (apenas portas 22, 80 e 443 expostas), SSH com autenticação exclusiva por chave pública, `fail2ban` ativo e `unattended-upgrades`.
 - **Pronto quando:** Acesso por senha e login com usuário `root` são rejeitados; varredura externa de portas acusa apenas 80 e 443 públicas.
+- **Status da Validação:**
+  - Script mestre idempotente `infra/scripts/bootstrap-vps.sh` desenvolvido para Ubuntu 22.04 e 24.04 LTS.
+  - Usuário não-root `carx` provisionado com sudo sem senha e importação segura de chaves SSH (`chmod 700/600`).
+  - OpenSSH endurecido com drop-in `/etc/ssh/sshd_config.d/99-carx-hardening.conf` desativando `PermitRootLogin` e `PasswordAuthentication`, com validação prévia de sintaxe (`sshd -t`).
+  - Firewall UFW configurado em modo fail-closed: negação de entrada por padrão, liberação estrita das portas 22/tcp (com rate limiting), 80/tcp e 443/tcp, e bloqueio explícito de portas internas (PostgreSQL 5432, Redis 6379, MinIO 9000/9001).
+  - Jail SSH configurado no Fail2ban (`/etc/fail2ban/jail.d/carx-sshd.local`) com banimento automático de 1h para 3 tentativas incorretas.
+  - Atualizações de segurança automáticas configuradas via `unattended-upgrades` com reboot programado para 04:00 quando exigido pelo kernel.
+  - Swap de 4GB ativado e parâmetros de kernel otimizados via `/etc/sysctl.d/99-carx-sysctl.conf` (`vm.swappiness = 10`, SYN cookies ativos, anti-spoofing).
+  - Docker CE e Compose instalados com daemon configurado para rotação obrigatória de logs (`max-size: 50m`, `max-file: 3`) e `live-restore`.
+  - Script de auditoria automatizada `infra/scripts/verify-vps-security.sh` e manual operacional documentado em `infra/README.md`.
 
 ---
 

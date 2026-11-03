@@ -71,3 +71,4 @@ export const PhotoGalleryBar: React.FC<PhotoGalleryBarProps> = ({
 };
 
 PhotoGalleryBar.displayName = 'PhotoGalleryBar';
+

@@ -293,3 +293,22 @@ Implementado o pacote compartilhado `packages/ui` em total harmonia com a nova i
   - `pnpm typecheck` validado com zero erros em todo o monorepo.
   - `pnpm lint` executado com zero erros impeditivos.
   - `pnpm build` executou com sucesso gerando bundles otimizados de produção para todas as aplicações (`@carx/web`, `@carx/api`, `@carx/admin`, `@carx/shared`, `@carx/ui`).
+
+---
+
+### Fase 1 — Infraestrutura na VPS & Docker 🐳
+
+#### Tarefa T1.1: Endurecimento e Segurança do Servidor (VPS) 🛡️
+Implementado o ferramental automatizado de provisionamento e proteção perimetral para servidores Linux Ubuntu Server (22.04 e 24.04 LTS):
+- **Script de Bootstrap Idempotente (`infra/scripts/bootstrap-vps.sh`)**:
+  - **Acesso Não-Root Obrigatório**: Criação do usuário de sistema `carx` pertencente aos grupos `sudo` e `docker`, com replicação segura das chaves públicas SSH autorizadas (`chmod 700/600`).
+  - **Blindagem do OpenSSH (`sshd_config.d/99-carx-hardening.conf`)**: Bloqueio irrestrito de login direto do usuário `root` (`PermitRootLogin no`) e desativação total de autenticação por senha (`PasswordAuthentication no`), aceitando unicamente chaves criptográficas públicas.
+  - **Firewall Fail-Closed (`ufw`)**: Negação padrão para qualquer conexão entrante. Liberação restrita das portas `22/tcp` (com limitador de taxa contra força bruta), `80/tcp` (HTTP para ACME e redirecionamento) e `443/tcp` (HTTPS criptografado). Bloqueio formal de portas de infraestrutura interna (PostgreSQL 5432, Redis 6379, MinIO 9000/9001).
+  - **Defesa Ativa contra Brute-Force (`fail2ban`)**: Criação da jail `carx-sshd.local` banindo por 1 hora (`bantime = 3600`) qualquer IP com mais de 3 falhas de autenticação em uma janela de 10 minutos.
+  - **Automação de Patches de Segurança (`unattended-upgrades`)**: Aplicação silenciosa e diária de atualizações críticas do Debian/Ubuntu, com agendamento de reboot para as 04:00 da manhã quando estritamente exigido por atualizações de kernel.
+  - **Swap e Proteção de Memória do Banco**: Alocação de 4GB de Swap e ajuste fino de kernel em `/etc/sysctl.d/99-carx-sysctl.conf` (`vm.swappiness = 10` e `vm.vfs_cache_pressure = 50`) para priorizar a permanência do PostgreSQL e Redis na RAM física, além de proteção contra IP spoofing e SYN floods.
+  - **Hardening do Daemon Docker (`/etc/docker/daemon.json`)**: Configuração compulsória de rotação de logs (`max-size: 50m`, `max-file: 3`) para evitar o esgotamento do disco NVMe por containers falantes, com `live-restore: true` para manter a aplicação online durante manutenções do serviço Docker.
+- **Auditoria Automatizada (`infra/scripts/verify-vps-security.sh`)**:
+  - Script executável que audita localmente ou remotamente os 7 pilares de conformidade de segurança e gera relatório de status com saída em código de erro (fail-closed).
+- **Runbook Operacional (`infra/README.md`)**:
+  - Documentação completa com comandos de execução em 1 linha via SSH e passos de validação pré-deploy.
