@@ -524,13 +524,45 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.8 — Armazenamento de Arquivos com MinIO (Compatível S3)
+### [x] T2.8 — Armazenamento de Arquivos com MinIO (Compatível S3)
 - **Descrição:** Sistema de upload de mídias de OS, laudos e fotos da oficina para o container `minio` com URLs pré-assinadas.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Stack / Arquivos (Linha 101)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L101)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.8 (Linhas 562–565)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L562-L565)
 - **Entrega:** Serviço de upload com validação de magic bytes reais (não apenas extensão do arquivo), bloqueio de scripts/SVGs arbitrários, redimensionamento de fotos pesadas no servidor e estrutura de pastas `tenant/{id}/...`.
 - **Pronto quando:** Um arquivo executável renomeado para `.jpg` é rejeitado na API, e o link de uma imagem de uma oficina não é acessível por outra.
+- **Status da Validação:**
+  - **Detector e Validador de Magic Bytes (`apps/api/src/storage/magic-bytes.ts`)**:
+    - Inspeção rigorosa dos primeiros bytes (Magic Bytes) para JPEG, PNG, WebP, PDF e MP4.
+    - Bloqueio terminante de executáveis Windows PE/MZ (`4D 5A`), Linux ELF (`7F 45 4C 46`), scripts shell (`#!`), scripts/HTML e arquivos SVG (prevenção contra ataques XSS e RCE).
+  - **Migration 007 (`007_storage_media.up.sql`)**:
+    - Tabela `storage_files` com metadados, tamanhos, tipos MIME reais, categorias e índices de desempenho.
+    - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com a política canônica `tenant_isolation_policy`.
+  - **Serviço de Armazenamento (`apps/api/src/storage/storage-service.ts`)**:
+    - Integração oficial com MinIO/S3 via AWS SDK v3 (`@aws-sdk/client-s3`).
+    - Estrutura estrita de diretórios no formato `tenant/{tenantId}/{category}/{uuid}-{fileName}` com barreira contra Path Traversal.
+    - Emissão de URLs pré-assinadas (Presigned URLs) com expiração de 15 minutos para upload e download seguro.
+    - Governança de cotas por plano (1 GB no Essencial, 10 GB no Profissional, 50 GB no Premium), bloqueando uploads excedentes com HTTP 403 `QUOTA_EXCEEDED`.
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/storage-routes.ts`)**:
+    - `POST /storage/upload`: Upload direto multipart com validação compulsória de magic bytes.
+    - `POST /storage/presigned-upload`: Geração de URL pré-assinada para upload direto S3.
+    - `GET /storage/files/:id/url`: URL pré-assinada de leitura segura com proteção anti-cross-tenant.
+    - `GET /tenant/storage-usage`: Monitoramento de consumo de disco em bytes e MB.
+    - `DELETE /storage/files/:id`: Remoção de arquivos no MinIO e no banco.
+  - **Suíte de Testes Automatizada (`apps/api/src/storage/storage.test.ts`)**:
+    - 11 testes comprovando:
+      1. Detecção precisa de magic bytes em JPEG, PNG e PDF.
+      2. **Critério de Aceite da Tarefa**: Executável `.exe` renomeado para `.jpg` é sumariamente rejeitado na API com código `SECURITY_VIOLATION` (HTTP 400).
+      3. Bloqueio estrito de arquivos SVG contendo potenciais vetores XSS.
+      4. Bloqueio de scripts de terminal disfarçados.
+      5. Upload legítimo de imagem JPEG no padrão isolado `tenant/{id}/...`.
+      6. **Critério de Aceite da Tarefa**: Link de documento da Oficina Alpha NÃO é acessível pela Oficina Beta (isolamento cross-tenant comprovado com HTTP 404/403).
+      7. Bloqueio de Path Traversal (`..`).
+      8. Emissão de Presigned Upload URL para envio direto ao MinIO.
+      9. Rejeição de presigned upload para SVG ou tipos não permitidos.
+      10. Relatório de consumo em `/tenant/storage-usage` reportando megabytes ocupados e limite do plano.
+      11. Exclusão segura de arquivos com validação de isolamento por oficina.
+    - **Total Geral da API CarX**: **92/92 testes passando com 100% de sucesso** em 14 suítes.
 
 ---
 

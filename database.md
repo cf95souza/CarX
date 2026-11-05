@@ -456,6 +456,42 @@ CREATE TABLE IF NOT EXISTS tenant_branding (
 
 ---
 
+## 📦 Migração 007: Armazenamento de Arquivos e Mídias com MinIO (`007_storage_media.up.sql`)
+
+### 1. Tabela `storage_files`
+```sql
+CREATE TABLE IF NOT EXISTS storage_files (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    file_key VARCHAR(500) NOT NULL,
+    bucket_name VARCHAR(100) NOT NULL DEFAULT 'carx-media',
+    original_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    real_mime_type VARCHAR(100) NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    category VARCHAR(50) NOT NULL DEFAULT 'general',
+    entity_id UUID,
+    uploader_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 2. Índices de Desempenho
+```sql
+CREATE INDEX IF NOT EXISTS idx_storage_files_tenant_id ON storage_files(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_storage_files_tenant_category ON storage_files(tenant_id, category);
+CREATE INDEX IF NOT EXISTS idx_storage_files_file_key ON storage_files(file_key);
+```
+
+### 3. RLS Canônico e Isolamento Rigoroso
+- `ALTER TABLE storage_files ENABLE ROW LEVEL SECURITY;`
+- `ALTER TABLE storage_files FORCE ROW LEVEL SECURITY;`
+- Política canônica `tenant_isolation_policy` (impedindo que qualquer consulta ou comando acesse arquivos de outras oficinas).
+- Trigger `trg_storage_files_updated_at` acionando `update_updated_at_column()`.
+- Permissões concedidas para `carx_app`.
+
 ---
 
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)

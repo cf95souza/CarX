@@ -9,7 +9,9 @@ import tenantPlugin from './plugins/tenant.js';
 import authRoutes from './routes/auth-routes.js';
 import auditRoutes from './routes/audit-routes.js';
 import planRoutes from './routes/plan-routes.js';
+import multipart from '@fastify/multipart';
 import brandingRoutes from './routes/branding-routes.js';
+import storageRoutes from './routes/storage-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -47,6 +49,14 @@ export function buildServer() {
 
   // Subdomínio por Loja e Identidade Visual White Label
   app.register(brandingRoutes);
+
+  // Upload e Armazenamento de Arquivos com MinIO (Compatível S3)
+  app.register(multipart, {
+    limits: {
+      fileSize: 25 * 1024 * 1024,
+    },
+  });
+  app.register(storageRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

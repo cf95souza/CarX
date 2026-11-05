@@ -3,5 +3,6 @@ export * from './permissions.js';
 export * from './schemas.js';
 export * from './plans.js';
 export * from './branding.js';
+export * from './storage.js';
 
 

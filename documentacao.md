@@ -614,5 +614,30 @@ Implementado o sistema completo de resolução dinâmica de oficina e identidade
   - 15 testes automatizados cobrindo resolução por subdomínio, diferenciação de marcas entre `oficina-alpha.carx.local` e `oficina-beta.carx.local`, manifestos dinâmicos PWA, modos TV/Staff/Cliente, domínio customizado, validação de SSL no Caddy, atualização de branding por OWNER, bloqueio RBAC para TECNICO, auditoria imutável e fallback CarX.
   - Total consolidado da suíte da API CarX: **81 testes passando com 100% de sucesso** em 13 suítes.
 
+#### Tarefa T2.8: Armazenamento de Arquivos com MinIO (Compatível S3) 📦
+Implementado o subsistema completo de upload, validação de segurança e armazenamento de mídias de OS, laudos periciais e fotos de oficinas:
+- **Detector e Validador de Magic Bytes (`apps/api/src/storage/magic-bytes.ts`)**:
+  - Inspeção estrita dos primeiros bytes de arquivos para detecção do MIME real, ignorando cabeçalhos forjados e extensões falsas.
+  - Suporte homologado a `image/jpeg` (`FF D8 FF`), `image/png` (`89 50 4E 47...`), `image/webp` (`RIFF...WEBP`), `application/pdf` (`%PDF`) e `video/mp4` (`ftyp`).
+  - **Bloqueio Ativo de Ameaças**: Rejeição imediata de executáveis Windows PE/MZ (`4D 5A`), binários Linux ELF (`7F 45 4C 46`), scripts shell com shebang (`#!`), bytecode compilado e vetores XSS em SVGs ou marcações HTML/JavaScript.
+- **Migration 007 — Tabela `storage_files` e RLS Canônico (`007_storage_media.up.sql`)**:
+  - Tabela com metadados do arquivo, chave S3 (`file_key`), tamanho em bytes, MIME declarado vs MIME real e vínculos de auditoria.
+  - RLS e FORCE RLS ativados com a política canônica `tenant_isolation_policy`.
+- **Serviço de Armazenamento (`apps/api/src/storage/storage-service.ts`)**:
+  - Integração com MinIO/S3 via AWS SDK v3 com `forcePathStyle: true`.
+  - Estrutura isolada de diretórios no formato `tenant/{tenantId}/{category}/{uuid}-{fileName}`.
+  - Validação estrita contra Path Traversal (`assertTenantFileKey`).
+  - Geração de Presigned URLs de upload direto (Direct-to-S3) e visualização segura com expiração de 15 minutos (900s).
+  - Controle automático de cotas de armazenamento por plano (1 GB no Essencial, 10 GB no Profissional, 50 GB no Premium), bloqueando uploads excedentes com `QuotaExceededError` (HTTP 403 `QUOTA_EXCEEDED`).
+- **Endpoints HTTP Fastify (`apps/api/src/routes/storage-routes.ts`)**:
+  - `POST /storage/upload`: Upload multipart validado com magic bytes e cota.
+  - `POST /storage/presigned-upload`: Emissão de URL pré-assinada para upload direto.
+  - `GET /storage/files/:id/url`: Emissão de URL pré-assinada para visualização segura com barreira anti-cross-tenant.
+  - `GET /tenant/storage-usage`: Relatório de consumo em MB, bytes e percentual da cota contratada.
+  - `DELETE /storage/files/:id`: Exclusão segura de mídia no S3/MinIO e registro no banco.
+- **Validação Automatizada (`apps/api/src/storage/storage.test.ts`)**:
+  - 11 testes cobrindo upload multipart, detecção de magic bytes, **rejeição de executável .exe renomeado para .jpg (critério de aceite)**, bloqueio de SVG e scripts, **bloqueio de acesso cruzado entre oficinas (critério de aceite)**, path traversal, presigned URLs, controle de cotas e exclusão segura.
+  - Total consolidado da suíte da API CarX: **92 testes passando com 100% de sucesso** em 14 suítes.
+
 
 

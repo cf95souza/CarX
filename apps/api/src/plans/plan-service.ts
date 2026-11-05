@@ -68,6 +68,8 @@ export interface PlanRow {
 export interface TenantPlanUsage {
   users: number;
   units: number;
+  storage_bytes?: number;
+  storage_mb?: number;
 }
 
 export interface TenantPlanDetails {
@@ -142,7 +144,7 @@ export class PlanService {
     };
 
     // 3. Medir uso real no banco através de tenantQuery (RLS garantido)
-    const [usersCountRes, unitsCountRes] = await Promise.all([
+    const [usersCountRes, unitsCountRes, storageCountRes] = await Promise.all([
       tenantQuery<{ count: string }>(
         tenantId,
         'SELECT COUNT(*)::int as count FROM memberships WHERE tenant_id = $1 AND is_active = true;',
@@ -153,11 +155,19 @@ export class PlanService {
         'SELECT COUNT(*)::int as count FROM units WHERE tenant_id = $1;',
         [tenantId]
       ),
+      tenantQuery<{ total_bytes: string }>(
+        tenantId,
+        'SELECT COALESCE(SUM(size_bytes), 0)::text as total_bytes FROM storage_files WHERE tenant_id = $1;',
+        [tenantId]
+      ),
     ]);
 
+    const totalStorageBytes = Number(storageCountRes.rows[0]?.total_bytes || '0');
     const usage: TenantPlanUsage = {
       users: parseInt(usersCountRes.rows[0]?.count || '0', 10),
       units: parseInt(unitsCountRes.rows[0]?.count || '0', 10),
+      storage_bytes: totalStorageBytes,
+      storage_mb: Math.round((totalStorageBytes / (1024 * 1024)) * 100) / 100,
     };
 
     // 4. Calcular features ativas (Features do plano ponderadas com overrides do tenant)
@@ -181,9 +191,13 @@ export class PlanService {
   }
 
   /**
-   * Valida cota antes de uma inserção crítica (ex: adicionar usuário ou filial)
+   * Valida cota antes de uma inserção crítica (ex: adicionar usuário, filial ou arquivo de mídia)
    */
-  async assertQuota(tenantId: string, resource: 'users' | 'units'): Promise<void> {
+  async assertQuota(
+    tenantId: string,
+    resource: 'users' | 'units' | 'storage',
+    additionalAmount = 0
+  ): Promise<void> {
     const details = await this.getTenantPlanDetails(tenantId);
 
     if (resource === 'users') {
@@ -197,6 +211,18 @@ export class PlanService {
       const current = details.usage.units;
       if (current >= limit) {
         throw new QuotaExceededError('units', limit, current, details.plan.name);
+      }
+    } else if (resource === 'storage') {
+      const limitMb = details.effectiveLimits.max_storage_mb || 1024;
+      const limitBytes = limitMb * 1024 * 1024;
+      const currentBytes = details.usage.storage_bytes || 0;
+      if (currentBytes + additionalAmount > limitBytes) {
+        throw new QuotaExceededError(
+          'storage',
+          limitMb,
+          Math.ceil((currentBytes + additionalAmount) / (1024 * 1024)),
+          details.plan.name
+        );
       }
     }
   }
