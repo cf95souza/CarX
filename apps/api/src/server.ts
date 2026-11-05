@@ -8,6 +8,7 @@ import { registerHealthRoutes } from './observability/health.js';
 import tenantPlugin from './plugins/tenant.js';
 import authRoutes from './routes/auth-routes.js';
 import auditRoutes from './routes/audit-routes.js';
+import planRoutes from './routes/plan-routes.js';
 
 export function buildServer() {
   // Inicialização opcional do Sentry/GlitchTip
@@ -38,6 +39,9 @@ export function buildServer() {
 
   // Trilha de Auditoria Imutável
   app.register(auditRoutes);
+
+  // Gestão de Planos, Limites e Feature Flags
+  app.register(planRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

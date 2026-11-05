@@ -36,3 +36,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 
 -- 4. CONCEDER PRIVILÉGIOS À ROLE carx_app
 GRANT SELECT, INSERT ON TABLE audit_logs TO carx_app;
+

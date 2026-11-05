@@ -451,13 +451,47 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.6 — Gestão de Planos, Limites e Feature Flags
-- **Descrição:** Motor no backend para aplicar limites contratados por plano (número de colaboradores, unidades, limites de OS e franquia de WhatsApp).
+### [x] T2.6 — Gestão de Planos, Limites e Feature Flags `(Concluído)`
+- **Descrição:** Motor no backend para aplicar limites contratados por plano (número de colaboradores, unidades, limites de OS e franquia de WhatsApp) e controle de funcionalidades ativas/desativadas por oficina.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 6: Planos e Preços (Linhas 243–256)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L243-L256)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.6 (Linhas 554–557)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L554-L557)
 - **Entrega:** Middleware de checagem de quotas com retorno de erro padronizado caso a oficina atinja o teto de usuários ou serviços do plano.
 - **Pronto quando:** Uma loja no plano Essencial é impedida pela API de cadastrar o 4º usuário simultâneo.
+- **Status da Validação:**
+  - **Migration 005 (`005_seed_plans.up.sql`)**: Seed oficial dos 3 planos canônicos no PostgreSQL 16:
+    - `Essencial` (R$ 149/mês): 1 unidade, 3 colaboradores, 100 OS/mês, 1 GB MinIO, WhatsApp básico.
+    - `Profissional` (R$ 299/mês): 2 unidades, 10 colaboradores, 500 OS/mês, 10 GB MinIO, WhatsApp automático, financeiro, comissões, estoque, checklist e controle de bobinas PPF.
+    - `Premium` (R$ 499/mês): 10 unidades, 50 colaboradores, OS ilimitadas, 50 GB MinIO, NFS-e, multiunidade, API e domínio White-Label.
+  - **Serviço de Planos e Cotas (`apps/api/src/plans/plan-service.ts`)**:
+    - `assertQuota()`: Intercepta cadastros críticos e calcula o uso em tempo real contra o limite contratado.
+    - `assertFeature()` e `isFeatureEnabled()`: Avalia se uma capacidade está liberada para o inquilino, combinando as features nativas do plano com as flags granulares armazenadas em `tenants.settings->feature_flags`.
+    - `setTenantFeatureFlag()`: Permite ligar ou desligar qualquer funcionalidade específica por oficina (com emissão compulsória de log de auditoria `FEATURE_FLAG_TOGGLED`).
+    - `assignPlanToTenant()`: Atualiza o plano comercial da loja (com auditoria `PLAN_CHANGED`).
+  - **Middlewares / Guards Fastify (`apps/api/src/middlewares/plan-guards.ts`)**:
+    - `requireQuota('users' | 'units')`: Aborta com HTTP 403 `QUOTA_EXCEEDED` caso o teto contratado seja atingido.
+    - `requireFeature(featureName)`: Aborta com HTTP 403 `FEATURE_DISABLED` se a oficina não possuir a funcionalidade liberada.
+    - Bypass autorizado mantido para usuários com papel `SUPERADMIN`.
+  - **Rotas HTTP Fastify (`apps/api/src/routes/plan-routes.ts`)**:
+    - `GET /plans`: Listagem pública de planos, limites e preços.
+    - `GET /tenant/plan`: Exibe plano ativo da loja, limites efetivos, uso atual de usuários/unidades e array de features habilitadas.
+    - `PATCH /tenant/features`: Modifica feature flags por loja (restrito a `owner` e `superadmin`).
+    - `POST /tenant/plan/change`: Migração e upgrade de plano contratado.
+  - **Suíte de Testes Automatizada (`apps/api/src/plans/plans.test.ts`)**:
+    - 12 testes validando:
+      1. Listagem pública de planos e seus respectivos limites.
+      2. Consulta de limites e uso atual da loja.
+      3. Cadastro de até 3 colaboradores no plano Essencial.
+      4. **Comprovação do Critério de Aceite da Tarefa**: 4º usuário simultâneo é terminantemente bloqueado no plano Essencial com HTTP 403 `QUOTA_EXCEEDED`.
+      5. Upgrade para o plano Profissional libera imediatamente o 4º colaborador.
+      6. Bloqueio de 2ª filial no plano Essencial (limite de 1 unidade).
+      7. Bloqueio de funcionalidade ausente no plano (HTTP 403 `FEATURE_DISABLED`).
+      8. Liberação de funcionalidade nativa do plano (HTTP 200).
+      9. Ativação de funcionalidade por loja (Add-on) libera acesso a rota bloqueada.
+      10. Desativação de funcionalidade por loja bloqueia acesso mesmo sendo nativa do plano.
+      11. Gravação imutável de trilha de auditoria para troca de planos e feature flags.
+      12. Bypass autorizado para Super Administradores.
+    - Suíte geral de testes da API CarX consolidada em **66/66 testes passando com 100% de sucesso** (12 suítes, 0 falhas).
 
 ---
 

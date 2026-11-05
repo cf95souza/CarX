@@ -555,4 +555,34 @@ Implementado o subsistema de auditoria append-only para conformidade fiscal, int
     10. Busca por ID e resposta 404 para identificador inexistente.
   - Suíte consolidada da API CarX: **54/54 testes passando com 100% de sucesso**.
 
+#### Tarefa T2.6: Gestão de Planos, Limites e Feature Flags 💎
+Implementado o motor central de monetização SaaS e governança de recursos da plataforma CarX, controlando quotas por plano e liberação seletiva de funcionalidades por oficina:
+- **Catálogo Compartilhado de Planos (`packages/shared/src/plans.ts`)**:
+  - Definição canônica dos 3 planos comerciais:
+    - `Essencial` (R$ 149/mês): Focado em estéticas automotivas em fase inicial. Limite de 1 filial, 3 colaboradores simultâneos, 100 OS/mês, 1 GB no MinIO e disparos WhatsApp básicos.
+    - `Profissional` (R$ 299/mês): Focado em centros automotivos consolidados. Limite de 2 filiais, 10 colaboradores, 500 OS/mês, 10 GB no MinIO, disparos automáticos via WhatsApp, gestão financeira completa, comissões, inventário e controle de bobinas PPF.
+    - `Premium` (R$ 499/mês): Focado em redes e franquias. 10 filiais, 50 colaboradores, ordens de serviço ilimitadas, 50 GB no MinIO, emissão de NFS-e, multiunidade, API e subdomínio próprio White-Label.
+- **Migration 005 — Seed dos Planos Canônicos (`005_seed_plans.up.sql`)**:
+  - Inserção dos 3 planos com cotas estruturadas em JSONB (`limits`) e matriz de recursos (`features`).
+  - Associação de todos os tenants sem plano ativo ao plano padrão `Essencial`.
+- **Motor de Planos e Cotas (`apps/api/src/plans/plan-service.ts`)**:
+  - `getTenantPlanDetails()`: Medição dinâmica em tempo real sobre o banco (via `tenantQuery` com RLS ativo) confrontando a utilização atual de usuários e filiais contra as cotas efetivas contratadas.
+  - `assertQuota()`: Trava transacional com lançamento de erro estruturado `QuotaExceededError` (HTTP 403 / `QUOTA_EXCEEDED`).
+  - `assertFeature()` e `isFeatureEnabled()`: Sistema híbrido de Feature Flags que avalia a assinatura da oficina combinando as capacidades base do plano com flags granulares ativadas ou desativadas sob medida em `tenants.settings->feature_flags`.
+  - `setTenantFeatureFlag()`: Permite ligar recursos exclusivos (Add-ons) ou suspender funcionalidades específicas por loja, emitindo registro compulsório em `audit_logs` (`FEATURE_FLAG_TOGGLED`).
+  - `assignPlanToTenant()`: Migração e upgrade de planos com auditoria (`PLAN_CHANGED`).
+- **Guards e Middlewares Fastify (`apps/api/src/middlewares/plan-guards.ts`)**:
+  - `requireQuota('users' | 'units')`: Interceptador de rota para cadastro de colaboradores e filiais, bloqueando requisições com código padronizado quando o teto do plano for alcançado.
+  - `requireFeature(featureName)`: Bloqueador de endpoints para funcionalidades desativadas ou indisponíveis no plano (retornando HTTP 403 `FEATURE_DISABLED`).
+  - Suporte nativo a bypass para Super Administradores da plataforma (`isSuperadmin: true`).
+- **Endpoints HTTP Fastify (`apps/api/src/routes/plan-routes.ts`)**:
+  - `GET /plans`: Catálogo público de planos.
+  - `GET /tenant/plan`: Resumo completo de status, limites, utilização e features ativas da oficina.
+  - `PATCH /tenant/features`: Modificação de feature flags por loja (restrito a `owner` e `superadmin`).
+  - `POST /tenant/plan/change`: Alteração de plano da oficina.
+- **Validação Automatizada (`apps/api/src/plans/plans.test.ts`)**:
+  - 12 testes cobrindo catálogo, consulta de uso, cota de 3 usuários, **bloqueio do 4º usuário simultâneo no plano Essencial (critério de aceite)**, liberação imediata após upgrade para o plano Profissional, cota de filiais, bloqueio e liberação de feature flags, toggle de add-ons por loja e trilha de auditoria.
+  - Total consolidado da suíte da API CarX: **66 testes passando com 100% de sucesso**.
+
+
 

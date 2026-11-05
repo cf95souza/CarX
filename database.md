@@ -403,6 +403,20 @@ GRANT SELECT, INSERT ON TABLE audit_logs TO carx_app;
 
 ---
 
+## 💎 Migração 005: Seed dos Planos Canônicos e Cotas (`005_seed_plans.up.sql`)
+
+### 1. Planos Canônicos Inseridos
+```sql
+-- Essencial (R$ 149,00/mês): 1 unidade, 3 usuários (regra rígida), WhatsApp básico, 100 OS/mês, 1 GB MinIO
+-- Profissional (R$ 299,00/mês): 2 unidades, 10 usuários, WhatsApp auto, financeiro, comissões, estoque, checklist, NPS, bobinas de PPF, 500 OS/mês, 10 GB MinIO
+-- Premium (R$ 499,00/mês): 10 unidades, 50 usuários, multi-loja, NFS-e, API de integração, domínio customizado White-Label, 50 GB MinIO
+```
+
+### 2. Vinculação Padrão de Inquilinos
+Inquilinos sem plano contratado explicitamente recebem vinculação automática ao plano `Essencial`.
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).
