@@ -417,6 +417,47 @@ Inquilinos sem plano contratado explicitamente recebem vinculação automática 
 
 ---
 
+## 🎨 Migração 006: Subdomínio por Loja e White Label Real (`006_tenant_branding.up.sql`)
+
+### 1. Tabela `tenant_branding`
+```sql
+CREATE TABLE IF NOT EXISTS tenant_branding (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+    trade_name VARCHAR(255),
+    tagline VARCHAR(255),
+    logo_url TEXT,
+    logo_icon_url TEXT,
+    cover_url TEXT,
+    primary_color VARCHAR(30) NOT NULL DEFAULT '#E63946',
+    secondary_color VARCHAR(30) NOT NULL DEFAULT '#1D3557',
+    accent_color VARCHAR(30) NOT NULL DEFAULT '#457B9D',
+    app_title VARCHAR(255),
+    app_short_name VARCHAR(50),
+    description TEXT,
+    whatsapp_phone VARCHAR(30),
+    social_instagram VARCHAR(100),
+    social_facebook VARCHAR(100),
+    website_url VARCHAR(255),
+    receipt_footer_notes TEXT,
+    theme_mode VARCHAR(20) NOT NULL DEFAULT 'system',
+    custom_css TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 2. RLS Canônico e Segurança
+- `ALTER TABLE tenant_branding ENABLE ROW LEVEL SECURITY;`
+- `ALTER TABLE tenant_branding FORCE ROW LEVEL SECURITY;`
+- Política `tenant_isolation_policy` vinculando isolamento a `app.current_tenant_id = tenant_id::text` com bypass autorizado para superadmin e resolução pública.
+- Trigger de criação automática de branding padrão na inserção de novos tenants (`trg_tenants_auto_create_branding`).
+- Permissões concedidas a `carx_app`.
+
+---
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).

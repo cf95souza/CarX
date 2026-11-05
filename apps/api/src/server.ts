@@ -9,6 +9,8 @@ import tenantPlugin from './plugins/tenant.js';
 import authRoutes from './routes/auth-routes.js';
 import auditRoutes from './routes/audit-routes.js';
 import planRoutes from './routes/plan-routes.js';
+import brandingRoutes from './routes/branding-routes.js';
+import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
   // Inicialização opcional do Sentry/GlitchTip
@@ -42,6 +44,9 @@ export function buildServer() {
 
   // Gestão de Planos, Limites e Feature Flags
   app.register(planRoutes);
+
+  // Subdomínio por Loja e Identidade Visual White Label
+  app.register(brandingRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);
@@ -94,8 +99,22 @@ export function buildServer() {
     }
 
     // 3. Validação de Domínio Customizado (White-Label)
-    // Na Fase 2/3, aqui consultaremos a tabela 'tenants' buscando por custom_domain
-    // Por enquanto, bloqueamos domínios desconhecidos para evitar ataques de DoS no Let's Encrypt
+    try {
+      const customDomainRes = await tenantQuery<{ id: string }>(
+        null,
+        "SELECT id FROM tenants WHERE custom_domain = $1 AND status = 'active' LIMIT 1",
+        [cleanDomain],
+        { bypassRls: true }
+      );
+
+      if (customDomainRes.rows.length > 0) {
+        return reply.code(200).send({ allowed: true, domain: cleanDomain, customDomain: true });
+      }
+    } catch (err) {
+      app.log.error({ err, cleanDomain }, 'Erro ao consultar custom_domain no banco');
+    }
+
+    // Bloqueia domínios desconhecidos para evitar abuso no Let''s Encrypt
     return reply.code(403).send({
       allowed: false,
       reason: 'Domínio não autorizado para emissão de certificado SSL',

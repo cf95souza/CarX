@@ -495,13 +495,32 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.7 — Subdomínio por Loja e White Label Real
+### [x] T2.7 — Subdomínio por Loja e White Label Real
 - **Descrição:** Resolução dinâmica da oficina a partir do host da requisição (`minhaloja.carx.com.br`) e tabela `tenant_branding`.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 10.6: Marca da Loja / White Label (Linhas 362–365)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L362-L365)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.7 (Linhas 558–561)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L558-L561)
 - **Entrega:** Carregamento de logo, nome fantasia, cores secundárias e redes sociais no contexto da loja; geração dinâmica de `manifest.json` do PWA com o nome e ícone de cada oficina cliente.
 - **Pronto quando:** Acessar `loja1.carx.local` e `loja2.carx.local` exibe marcas e logos distintos no Monitor TV e no app do técnico instalado.
+- **Status da Validação:**
+  - **Migration 006 (`006_tenant_branding.up.sql`)**: Tabela `tenant_branding` com RLS, `FORCE ROW LEVEL SECURITY`, política canônica `tenant_isolation_policy` e trigger `trg_tenants_auto_create_branding` para preenchimento de branding inicial automático.
+  - **Contratos e Schemas (`packages/shared/src/branding.ts`)**: Tipos TypeScript e esquemas Zod para `TenantBrandingDto`, `UpdateTenantBrandingDto` e especificação W3C `PwaManifestDto`.
+  - **Serviço de Branding (`apps/api/src/branding/branding-service.ts`)**:
+    - `getBrandingByTenantId()` e `getBrandingBySlug()` com isolamento RLS e fallback gracioso CarX.
+    - `updateBranding()` com validação e registro imutável em `audit_logs` (`BRANDING_UPDATED`).
+    - `generatePwaManifest()` com suporte dinâmico a modos `tv` (`fullscreen`, `landscape`), `staff` (`standalone`) e `customer`.
+  - **Plugin de Resolução de Tenant (`apps/api/src/plugins/tenant.ts`)**:
+    - Resolução automática por subdomínio (`loja.carx.local`, `loja.carx.com.br`), cabeçalhos (`X-Tenant-Slug`, `X-Tenant-Host`) e suporte a domínios próprios (`custom_domain`).
+  - **Caddy On-Demand TLS (`/internal/caddy-check`)**:
+    - Autorização dinâmica de emissão de certificados SSL para domínios próprios de oficinas clientes ativas.
+  - **Rotas Fastify (`apps/api/src/routes/branding-routes.ts`)**:
+    - `GET /tenant/branding`: Dados da marca e tokens de cores da oficina.
+    - `GET /tenant/manifest.json`: Manifesto Web App Manifest dinâmico para PWA.
+    - `GET /branding/:slug`: Rota pública de identidade visual.
+    - `PUT /tenant/branding`: Atualização de identidade visual restrita a `OWNER` e `GESTOR`.
+  - **Suíte de Testes Automatizada (`apps/api/src/branding/branding.test.ts`)**:
+    - 15 testes cobrindo diferenciação visual entre lojas, manifestos, modos PWA, domínios customizados, Caddy TLS, atualização por gestores, bloqueio de técnicos e auditoria imutável.
+    - **Total Geral da API CarX**: **81/81 testes passando com 100% de sucesso** em 13 suítes.
 
 ---
 

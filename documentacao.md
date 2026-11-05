@@ -584,5 +584,35 @@ Implementado o motor central de monetização SaaS e governança de recursos da 
   - 12 testes cobrindo catálogo, consulta de uso, cota de 3 usuários, **bloqueio do 4º usuário simultâneo no plano Essencial (critério de aceite)**, liberação imediata após upgrade para o plano Profissional, cota de filiais, bloqueio e liberação de feature flags, toggle de add-ons por loja e trilha de auditoria.
   - Total consolidado da suíte da API CarX: **66 testes passando com 100% de sucesso**.
 
+#### Tarefa T2.7: Subdomínio por Loja e White Label Real 🎨
+Implementado o sistema completo de resolução dinâmica de oficina e identidade visual customizada (White Label) por inquilino:
+- **Contratos e Schemas Compartilhados (`packages/shared/src/branding.ts`)**:
+  - `TenantBrandingDto` e schema Zod `TenantBrandingSchema` com validação de cores hexadecimais, URLs seguras e modos de tema (`dark`, `light`, `system`).
+  - `PwaManifestDto` e schema Zod `PwaManifestSchema` compatível com a especificação oficial W3C Web App Manifest.
+  - Constantes canônicas `DEFAULT_CARX_BRANDING` para fallback gracioso.
+- **Migration 006 — Tabela `tenant_branding` e Isolamento RLS (`006_tenant_branding.up.sql`)**:
+  - Criação da tabela `tenant_branding` com `trade_name`, `tagline`, `logo_url`, `logo_icon_url`, `primary_color`, `secondary_color`, `accent_color`, `app_title`, `app_short_name`, `whatsapp_phone`, `social_instagram`, `receipt_footer_notes`, `custom_css`.
+  - Ativação rigorosa de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY`.
+  - Política canônica `tenant_isolation_policy` garantindo isolamento total por loja e compatibilidade com a suíte de conformidade de isolamento.
+  - Trigger automático `trg_tenants_auto_create_branding` populando identidade visual inicial no cadastro de novos inquilinos.
+- **Serviço de Branding (`apps/api/src/branding/branding-service.ts`)**:
+  - `getBrandingByTenantId()`: Busca identidade visual da oficina com contexto RLS ou fallback estruturado.
+  - `getBrandingBySlug()`: Resolução pública por subdomínio para telas de carregamento, splash, monitor TV e Meu Veículo.
+  - `updateBranding()`: Atualização de cores, marcas e redes sociais por gestores, com gravação compulsória em `audit_logs` (`BRANDING_UPDATED`).
+  - `generatePwaManifest()`: Geração dinâmica de manifesto PWA adaptando nome da oficina, theme color, display mode (`fullscreen` para Monitor TV de oficina, `standalone` para app do técnico ou portal do cliente).
+- **Resolução de Tenant Dinâmica (`apps/api/src/plugins/tenant.ts`)**:
+  - Suporte a subdomínios locais (`loja1.carx.local`) e de produção (`loja1.carx.com.br`).
+  - Suporte a domínios customizados completos via campo `custom_domain` de `tenants` (ex: `estetica-beta.local`).
+- **Validação Caddy On-Demand TLS (`/internal/caddy-check`)**:
+  - Consulta dinâmica à tabela `tenants` para autorizar a emissão de certificados SSL apenas para domínios customizados registrados e ativos.
+- **Endpoints HTTP Fastify (`apps/api/src/routes/branding-routes.ts`)**:
+  - `GET /tenant/branding`: Identidade visual da oficina resolvida a partir do Host da requisição ou cabeçalhos.
+  - `GET /tenant/manifest.json`: Manifesto dinâmico do PWA com suporte a `?mode=tv`, `?mode=staff` e `?mode=customer`.
+  - `GET /branding/:slug`: Consulta pública direta de branding.
+  - `PUT /tenant/branding` e `PATCH /tenant/branding`: Atualização de identidade visual restrita a `OWNER` e `GESTOR` via RBAC.
+- **Validação Automatizada (`apps/api/src/branding/branding.test.ts`)**:
+  - 15 testes automatizados cobrindo resolução por subdomínio, diferenciação de marcas entre `oficina-alpha.carx.local` e `oficina-beta.carx.local`, manifestos dinâmicos PWA, modos TV/Staff/Cliente, domínio customizado, validação de SSL no Caddy, atualização de branding por OWNER, bloqueio RBAC para TECNICO, auditoria imutável e fallback CarX.
+  - Total consolidado da suíte da API CarX: **81 testes passando com 100% de sucesso** em 13 suítes.
+
 
 
