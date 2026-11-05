@@ -275,10 +275,65 @@ CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX idx_api_keys_tenant_id ON api_keys(tenant_id);
 CREATE INDEX idx_api_keys_key_hash ON api_keys(key_hash);
 
+CREATE INDEX idx_webhook_deliveries_tenant_id ON webhook_deliveries(tenant_id);
 CREATE INDEX idx_webhook_endpoints_tenant_id ON webhook_endpoints(tenant_id);
 CREATE INDEX idx_webhook_deliveries_endpoint_id ON webhook_deliveries(endpoint_id);
 CREATE INDEX idx_webhook_deliveries_created_at ON webhook_deliveries(created_at DESC);
 ```
+
+---
+
+## 🛡️ Migração 002: Isolamento por Tenant em Profundidade e RLS (`002_tenant_rls.up.sql`)
+
+Para garantir isolamento rigoroso entre oficinas a nível de motor de banco de dados, todas as tabelas contendo `tenant_id` e a tabela `tenants` possuem **Row Level Security (RLS)** ativado e forçado (`FORCE ROW LEVEL SECURITY`).
+
+### 1. Papel da Aplicação (`carx_app`)
+- O usuário `carx_app` opera com o atributo `NOBYPASSRLS`.
+- O pool da aplicação (`DATABASE_URL`) conecta-se obrigatoriamente através do papel `carx_app`.
+- Apenas migrações e rotinas de manutenção utilizam `DATABASE_ADMIN_URL` (`adminPool`).
+
+### 2. Política de Isolamento Canônica (`tenant_isolation_policy`)
+Aplicada a todas as tabelas com `tenant_id` (`units`, `memberships`, `subscriptions`, `invoices`, `audit_logs`, `api_keys`, `webhook_endpoints`, `webhook_deliveries`):
+
+```sql
+CREATE POLICY tenant_isolation_policy ON <table>
+AS PERMISSIVE
+FOR ALL
+TO public
+USING (
+    current_setting('app.current_tenant_id', true) = tenant_id::text
+    OR current_setting('app.is_superadmin', true) = 'true'
+    OR current_setting('app.bypass_rls', true) = 'true'
+)
+WITH CHECK (
+    current_setting('app.current_tenant_id', true) = tenant_id::text
+    OR current_setting('app.is_superadmin', true) = 'true'
+    OR current_setting('app.bypass_rls', true) = 'true'
+);
+```
+
+### 3. Política de Auto-Isolamento de Tenants (`tenant_self_isolation_policy`)
+Aplicada na tabela `tenants`:
+
+```sql
+CREATE POLICY tenant_self_isolation_policy ON public.tenants
+AS PERMISSIVE
+FOR ALL
+TO public
+USING (
+    current_setting('app.current_tenant_id', true) = id::text
+    OR current_setting('app.is_superadmin', true) = 'true'
+    OR current_setting('app.bypass_rls', true) = 'true'
+)
+WITH CHECK (
+    current_setting('app.current_tenant_id', true) = id::text
+    OR current_setting('app.is_superadmin', true) = 'true'
+    OR current_setting('app.bypass_rls', true) = 'true'
+);
+```
+
+### 4. Padrão Fail-Closed (Default Deny)
+As funções utilitárias `tenantQuery` e `tenantTransaction` ([`apps/api/src/database/tenant-query.ts`](file:///d:/Repositorios/CarX/apps/api/src/database/tenant-query.ts)) bloqueiam sumariamente qualquer consulta sem `tenant_id` válido, lançando `TenantIsolationError` (HTTP 403) antes de tocar o banco.
 
 ---
 

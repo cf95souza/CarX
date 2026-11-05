@@ -5,6 +5,7 @@ import { loggerConfig, generateRequestId } from './observability/logger.js';
 import { initSentry, registerSentryErrorHandler } from './observability/sentry.js';
 import { registerMetricsHooks, getPrometheusMetrics, getJsonMetrics } from './observability/metrics.js';
 import { registerHealthRoutes } from './observability/health.js';
+import tenantPlugin from './plugins/tenant.js';
 
 export function buildServer() {
   // Inicialização opcional do Sentry/GlitchTip
@@ -26,6 +27,9 @@ export function buildServer() {
   app.register(cors, {
     origin: true,
   });
+
+  // Plugin de Isolamento e Resolução de Contexto Multi-Tenant
+  app.register(tenantPlugin);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

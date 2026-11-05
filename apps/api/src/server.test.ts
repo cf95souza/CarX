@@ -96,4 +96,64 @@ describe('Observabilidade e Endpoints da API CarX', () => {
 
     assert.equal(res.statusCode, 200);
   });
+
+  it('deve extrair o slug do tenant a partir do Host header corretamente', async () => {
+    const { extractTenantSlugFromHost } = await import('./plugins/tenant.js');
+
+    assert.equal(extractTenantSlugFromHost('oficina-elite.carx.com.br'), 'oficina-elite');
+    assert.equal(extractTenantSlugFromHost('oficina-elite.carx.com.br:443'), 'oficina-elite');
+    assert.equal(extractTenantSlugFromHost('app.carx.com.br'), null); // reservado
+    assert.equal(extractTenantSlugFromHost('admin.carx.com.br'), null); // reservado
+    assert.equal(extractTenantSlugFromHost('api.carx.com.br'), null); // reservado
+    assert.equal(extractTenantSlugFromHost('oficina1.carx.local'), 'oficina1');
+    assert.equal(extractTenantSlugFromHost(undefined), null);
+  });
+
+  it('deve processar cabeçalhos de tenant e aplicar guarda requireTenantContext', async () => {
+    const { requireTenantContext } = await import('./plugins/tenant.js');
+    const localApp = buildServer();
+
+    localApp.get('/test/tenant-guarded', { preHandler: [requireTenantContext] }, async (request) => {
+      return {
+        tenantId: request.tenantId,
+        tenantSlug: request.tenantSlug,
+        isSuperadmin: request.isSuperadmin,
+      };
+    });
+
+    try {
+      // 1. Sem contexto de tenant: deve rejeitar com 400
+      const resNoTenant = await localApp.inject({
+        method: 'GET',
+        url: '/test/tenant-guarded',
+      });
+      assert.equal(resNoTenant.statusCode, 400);
+
+      // 2. Com X-Tenant-ID: deve aceitar e expor no request
+      const resWithTenant = await localApp.inject({
+        method: 'GET',
+        url: '/test/tenant-guarded',
+        headers: {
+          'x-tenant-id': '11111111-2222-3333-4444-555555555555',
+        },
+      });
+      assert.equal(resWithTenant.statusCode, 200);
+      const body = JSON.parse(resWithTenant.body);
+      assert.equal(body.tenantId, '11111111-2222-3333-4444-555555555555');
+
+      // 3. Com Superadmin bypass: deve aceitar mesmo sem tenantId
+      const resSuperadmin = await localApp.inject({
+        method: 'GET',
+        url: '/test/tenant-guarded',
+        headers: {
+          'x-is-superadmin': 'true',
+        },
+      });
+      assert.equal(resSuperadmin.statusCode, 200);
+      const bodySuper = JSON.parse(resSuperadmin.body);
+      assert.equal(bodySuper.isSuperadmin, true);
+    } finally {
+      await localApp.close();
+    }
+  });
 });

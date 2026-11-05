@@ -349,13 +349,33 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.2 — Contexto de Tenant e RLS (Row Level Security)
-- **Descrição:** Implementação de isolamento absoluto de dados entre oficinas: toda tabela de negócio possui `tenant_id` e a API injeta `SET LOCAL app.tenant_id = '...'` em cada transação/requisição.
+### [x] T2.2 — Contexto de Tenant e RLS (Row Level Security) `(Concluído)`
+- **Descrição:** Implementação de isolamento absoluto de dados entre oficinas: toda tabela de negócio possui `tenant_id` e a API injeta `SET LOCAL app.current_tenant_id = '...'` em cada transação/requisição.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Stack Sugerida / Banco (Linhas 97–98)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L97-L98)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.2 (Linhas 538–541)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L538-L541)
 - **Entrega:** Middleware de extração de tenant por subdomínio/token JWT, injeção de variável de sessão no Postgres e políticas RLS em todas as tabelas. Usuário da aplicação sem privilégio de `BYPASSRLS`.
 - **Pronto quando:** A suíte de testes `tenant-isolation.test.ts` cria a Oficina A e Oficina B e comprova matematicamente que a Oficina A não consegue ler, atualizar ou deletar dados da Oficina B.
+- **Status da Validação:**
+  - Migration versionada `002_tenant_rls.up.sql` e `002_tenant_rls.down.sql` implementada e homologada no PostgreSQL 16:
+    - Ativação de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` em todas as tabelas com `tenant_id` (`units`, `memberships`, `subscriptions`, `invoices`, `audit_logs`, `api_keys`, `webhook_endpoints`, `webhook_deliveries`) e na tabela `tenants`.
+    - Criação e configuração da role `carx_app` com privilégio estrito `NOBYPASSRLS`.
+    - Políticas de RLS `tenant_isolation_policy` e `tenant_self_isolation_policy` aplicadas com verificação de `app.current_tenant_id`, suporte a bypass exclusivo para Super Admin (`app.is_superadmin`) e flags auditáveis.
+  - Helper seguro de consulta `tenantQuery` e `tenantTransaction` (`apps/api/src/database/tenant-query.ts`):
+    - Princípio Fail-Closed (Default Deny): consultas sem `tenant_id` são abortadas imediatamente com `TenantIsolationError` (HTTP 403) antes do toque no banco.
+    - Sessão de conexão parametrizada com `SELECT set_config('app.current_tenant_id', $1, true)` com escopo estrito à transação atual (`is_local = true`), garantindo contaminação zero no pool.
+  - Plugin Fastify para contexto de inquilino (`apps/api/src/plugins/tenant.ts`):
+    - Resolução do tenant via `X-Tenant-ID`, `X-Tenant-Slug`, cabeçalho `Host` / `X-Tenant-Host` com suporte a subdomínios ({oficina}.carx.com.br e locais) com filtro de slugs reservados.
+    - Bloqueio automático de tenants suspensos ou inativos (HTTP 403).
+    - Guarda de rota `requireTenantContext` para validação declarativa em endpoints protegidos.
+  - Suíte de testes automatizados `src/database/tenant-isolation.test.ts`:
+    - Criação de 2 inquilinos reais (`test-oficina-alpha` e `test-oficina-beta`).
+    - Varredura dinâmica sobre o catálogo de tabelas (`information_schema.columns`).
+    - Comprovação matemática de que a Oficina A não lê (`rows.length === 0`), não altera (`rowCount === 0`) e não deleta (`rowCount === 0`) dados da Oficina B em nenhuma tabela do sistema, com dados da Oficina B permanecendo íntegros.
+    - Validação de isolamento na própria tabela `tenants` (Oficina A só enxerga seu próprio registro).
+    - Validação de leitura cruzada autorizada via Superadmin bypass.
+    - Execução de 16/16 testes passando com 100% de sucesso (`pnpm test` e `pnpm test:rls`).
+  - Documentação viva sincronizada em `database.md`.
 
 ---
 

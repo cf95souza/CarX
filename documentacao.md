@@ -458,3 +458,23 @@ Implementado o sistema de migrações transacionais versionadas e o esquema rela
 - **Validação Prática**:
   - Testes de aplicação (`up`), rollback completo (`down`) e reaplicação (`up`) executados com 100% de integridade referencial contra o container PostgreSQL 16 (`carx-dev-db`).
   - Dicionário de dados mestre e documentação viva sincronizados em `database.md`.
+
+#### Tarefa T2.2: Contexto de Tenant e RLS (Row Level Security em Profundidade) 🛡️
+Implementado o isolamento multicamadas de dados garantindo que nenhuma oficina consiga acessar, modificar ou excluir informações de outra:
+- **Migration 002 — Row Level Security (`002_tenant_rls.up.sql` e `002_tenant_rls.down.sql`)**:
+  - Ativação de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` em todas as tabelas com `tenant_id` e na tabela `tenants`.
+  - Configuração do papel da aplicação `carx_app` com restrição inegociável `NOBYPASSRLS`.
+  - Criação das políticas de segurança `tenant_isolation_policy` e `tenant_self_isolation_policy` verificando `current_setting('app.current_tenant_id', true) = tenant_id::text`, além de suporte a auditoria/bypass exclusivo para Super Admin (`app.is_superadmin = 'true'`).
+- **Helpers de Consulta Segura (`apps/api/src/database/tenant-query.ts`)**:
+  - Funções `tenantQuery` e `tenantTransaction` estruturadas sob o princípio Fail-Closed (Default Deny): consultas sem `tenant_id` lançam `TenantIsolationError` (HTTP 403) antes de tocar no banco.
+  - Injeção atômica de contexto de sessão através de `SELECT set_config('app.current_tenant_id', $1, true)` com escopo transacional local (`is_local = true`), garantindo contaminação zero de conexões no pool.
+- **Plugin de Resolução de Tenant para Fastify (`apps/api/src/plugins/tenant.ts`)**:
+  - Resolução automática do inquilino a partir de cabeçalhos (`X-Tenant-ID`, `X-Tenant-Slug`) ou do host da requisição (`{slug}.carx.com.br`, `{slug}.carx.local`), ignorando subdomínios reservados do sistema (`app`, `admin`, `api`, `status`).
+  - Bloqueio preventivo com HTTP 403 para oficinas com status `suspended` ou `cancelled`.
+  - Guarda declarativa de rota `requireTenantContext` para rejeitar requisições anônimas ou sem oficina definida.
+  - Decoradores `request.tenantId`, `request.tenantSlug`, `request.tenantQuery` e `request.tenantTransaction`.
+- **Suíte de Testes de Isolamento (`apps/api/src/database/tenant-isolation.test.ts`)**:
+  - 8 testes cobrindo todas as tabelas isoladas do catálogo relacional.
+  - Comprovação matemática de que a Oficina A não consegue ler (0 registros), alterar (0 linhas afetadas) nem deletar (0 linhas afetadas) dados da Oficina B, mesmo conhecendo os IDs das entidades.
+  - Validação de RLS ativo e forçado em todas as tabelas dinamicamente via catálogo PostgreSQL.
+  - Suíte completa executada com 16/16 testes passando com sucesso.

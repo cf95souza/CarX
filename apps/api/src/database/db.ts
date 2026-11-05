@@ -11,17 +11,32 @@ pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
 
 const { Pool } = pg;
 
+const appConnectionString =
+  process.env.DATABASE_URL ||
+  'postgresql://carx_app:carx_local_secret_password@127.0.0.1:5433/carx_dev';
+
+const adminConnectionString =
+  process.env.DATABASE_ADMIN_URL ||
+  'postgresql://carx_dev_user:carx_dev_password@127.0.0.1:5433/carx_dev';
+
+/**
+ * Pool principal da aplicação (Usuário carx_app COM NOBYPASSRLS)
+ * Garante que nenhuma query consiga furar o isolamento das políticas de RLS.
+ */
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_ADMIN_URL || process.env.DATABASE_URL || 'postgresql://carx_dev_user:carx_dev_password@localhost:5433/carx_dev?schema=public',
+  connectionString: appConnectionString,
   max: Number(process.env.DB_POOL_MAX) || 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });
 
-pool.on('connect', (client) => {
-  client.query("SET TIME ZONE 'America/Sao_Paulo'").catch((err) => {
-    console.error('[ERRO] Falha ao configurar fuso America/Sao_Paulo na conexão:', err);
-  });
+/**
+ * Pool administrativo exclusivo para migrations, setup ou manutenção do sistema
+ */
+export const adminPool = new Pool({
+  connectionString: adminConnectionString,
+  max: 5,
+  connectionTimeoutMillis: 10000,
 });
 
 /**

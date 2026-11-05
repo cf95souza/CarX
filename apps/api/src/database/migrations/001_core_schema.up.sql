@@ -299,3 +299,4 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER set_timestamp_webhook_endpoints
 BEFORE UPDATE ON webhook_endpoints
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+

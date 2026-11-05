@@ -39,3 +39,4 @@ DROP TYPE IF EXISTS tenant_status CASCADE;
 
 -- 4. REMOVER FUNÇÃO AUXILIAR
 DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
+

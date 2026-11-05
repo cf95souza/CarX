@@ -169,3 +169,4 @@ CREATE TABLE IF NOT EXISTS public.qa_auditorias (
     status TEXT DEFAULT 'APROVADO',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
