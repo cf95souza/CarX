@@ -331,3 +331,4 @@ describe('T2.3 — Autenticação Segura (Argon2id/Bcryptjs + JWT Rotativo + 2FA
     assert.equal(bodyMe.user.role, 'owner');
   });
 });
+

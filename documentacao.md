@@ -503,3 +503,24 @@ Implementado o subsistema proprietário completo de autenticação e gerenciamen
   - Hook `authenticateBearer` para proteção de rotas privadas.
 - **Validação Automatizada (`apps/api/src/auth/auth.test.ts`)**:
   - 10 testes cobrindo cadastro, login, rejeição de duplicados, bloqueio por força bruta, rotação, detecção de replay de token, ativação/desativação de 2FA e redefinição de senha com 100% de sucesso.
+
+#### Tarefa T2.4: Matriz de Autorização RBAC por Papel 🛡️
+Implementado o controle de acesso baseado em papéis (RBAC - Role-Based Access Control) granular no nível de aplicação, definindo permissões estritas para cada perfil operacional da oficina automotiva:
+- **Catálogo de Permissões Compartilhado (`packages/shared/src/permissions.ts`)**:
+  - Definição formal de 5 papéis: `owner`, `gestor`, `atendente`, `tecnico`, `financeiro`.
+  - Mapeamento granular de permissões por domínio de negócio: `os:*`, `checklist:*`, `client:*`, `inventory:*`, `financial:*`, `admin:*`, `users:*`, `reports:*`, `settings:*`.
+  - Mapeamento de privilégios por papel:
+    - `owner`: Acesso irrestrito a todas as funcionalidades, finanças e configurações da oficina.
+    - `gestor`: Gestão operacional completa, ordens de serviço, clientes, estoque e relatórios, sem permissão para alteração de plano ou exclusão da conta matriz.
+    - `atendente`: Atendimento inicial, criação e acompanhamento de orçamentos e cadastros de clientes, sem acesso a custos internos ou deleção de registros financeiros.
+    - `tecnico`: Focado estritamente na execução do serviço, checklist visual de entrada/saída e upload de fotos/laudos; **bloqueio total a dados financeiros e faturamento**, impossibilitado de deletar ordens de serviço e restrito às suas ordens atribuídas.
+    - `financeiro`: Gestão de contas, emissão de cobranças, conciliação e relatórios de fluxo de caixa, sem acesso à esteira de produção e checklists.
+  - Funções de avaliação pura: `hasPermission`, `hasAnyPermission` e `hasAllPermissions`.
+- **Guards e Middlewares Fastify (`apps/api/src/middlewares/rbac.ts`)**:
+  - `requireRole(...roles)`: Validador declarativo de rota que rejeita com HTTP 403 usuários sem os papéis autorizados.
+  - `requirePermission(...permissions)`: Validador granular baseado em capacidades específicas.
+  - `requireAssignedTechnician(resolver)`: Trava de integridade operacional que impede um técnico de visualizar ou alterar ordens de serviço atribuídas a outro profissional (`FORBIDDEN_NOT_ASSIGNED`), enquanto `owner` e `gestor` mantêm supervisão irrestrita.
+- **Suíte de Testes Automatizada (`apps/api/src/middlewares/rbac.test.ts`)**:
+  - 16 testes unitários e de integração cobrindo todas as matrizes de permissão e cenários de acesso concorrente entre técnicos.
+  - Total da suíte de testes do CarX consolidada em **42 testes passando com 100% de sucesso**.
+

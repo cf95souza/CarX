@@ -66,6 +66,24 @@ export const RolePermissions: Record<UserRoleType, readonly PermissionType[]> = 
 };
 
 export function hasPermission(role: UserRoleType, permission: PermissionType): boolean {
+  if (role === UserRole.SUPERADMIN || role === UserRole.OWNER) {
+    return true;
+  }
   return RolePermissions[role]?.includes(permission) ?? false;
 }
+
+export function hasAnyPermission(role: UserRoleType, permissions: readonly PermissionType[]): boolean {
+  if (role === UserRole.SUPERADMIN || role === UserRole.OWNER) {
+    return true;
+  }
+  return permissions.some((p) => hasPermission(role, p));
+}
+
+export function hasAllPermissions(role: UserRoleType, permissions: readonly PermissionType[]): boolean {
+  if (role === UserRole.SUPERADMIN || role === UserRole.OWNER) {
+    return true;
+  }
+  return permissions.every((p) => hasPermission(role, p));
+}
+
 

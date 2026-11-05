@@ -13,3 +13,4 @@ export function generateRandomToken(bytes = 32): string {
 export function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token.trim()).digest('hex');
 }
+

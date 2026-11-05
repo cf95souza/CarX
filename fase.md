@@ -402,15 +402,28 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.4 — Matriz de Autorização RBAC por Papel
+### [x] T2.4 — Matriz de Autorização RBAC por Papel `(Concluído)`
 - **Descrição:** Regras formais de permissão por cargo compartilhadas entre frontend e backend (`packages/shared/permissions.ts`).
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.4 (Linhas 546–549)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L546-L549)
 - **Entrega:** Guards na API validando:
   - `tecnico`: enxerga apenas OS atribuídas a ele na fila, não acessa relatórios financeiros nem pode excluir OS.
   - `atendente`: cria clientes, veículos e orçamentos, mas não altera configurações fiscais ou planos.
-  - `gestor` / `owner`: acesso administrativo completo à oficina.
+  - `gestor`: visão gerencial e operacional ampla, sem permissão para exclusão destrutiva de OS.
+  - `owner` / `superadmin`: acesso administrativo irrestrito à oficina.
 - **Pronto quando:** Teste de integração comprova que um usuário com cargo `tecnico` recebe HTTP 403 Forbidden ao tentar invocar endpoints financeiros ou de deleção.
+- **Status da Validação:**
+  - Matriz de permissões canônica refinada em [`packages/shared/src/permissions.ts`](file:///d:/Repositorios/CarX/packages/shared/src/permissions.ts) com funções utilitárias compartilháveis `hasPermission`, `hasAnyPermission` e `hasAllPermissions`.
+  - Guards declarativos de rota implementados em [`apps/api/src/middlewares/rbac.ts`](file:///d:/Repositorios/CarX/apps/api/src/middlewares/rbac.ts):
+    - `requireRole`: Bloqueia requisições de papéis não autorizados com HTTP 403.
+    - `requirePermission`: Valida a matriz de permissões requerida para o endpoint.
+    - `requireAssignedTechnician`: Aplica o escopo estrito para profissionais do tipo `tecnico`, garantindo que um técnico só possa acessar e atualizar ordens de serviço atribuídas explicitamente a ele.
+  - Suíte de integração [`apps/api/src/middlewares/rbac.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/middlewares/rbac.test.ts):
+    - 16 testes cobrindo a matriz completa de papéis (`tecnico`, `atendente`, `financeiro`, `gestor`, `owner`, `superadmin`).
+    - Comprovação prática de que `tecnico` recebe HTTP 403 Forbidden ao tentar ler relatórios financeiros, deletar OS, alterar configurações ou modificar OS de terceiros, mas recebe HTTP 200 ao alterar OS atribuída a ele.
+    - Comprovação prática de que `atendente` e `financeiro` recebem HTTP 403 ao tentar deletar OS.
+    - Comprovação prática de que `gestor` tem acesso gerencial pleno, mas não pode deletar OS (deleção exclusiva de `owner` e `superadmin`).
+    - Total de testes da API elevado para **42/42 testes passando com 100% de sucesso**.
 
 ---
 

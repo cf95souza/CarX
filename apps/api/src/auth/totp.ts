@@ -139,3 +139,4 @@ export function generateOtpAuthUri(label: string, issuer: string, base32Secret: 
   const encodedLabel = encodeURIComponent(label);
   return `otpauth://totp/${encodedIssuer}:${encodedLabel}?secret=${base32Secret}&issuer=${encodedIssuer}&algorithm=SHA1&digits=6&period=30`;
 }
+

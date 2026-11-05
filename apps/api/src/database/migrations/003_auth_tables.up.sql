@@ -20,3 +20,4 @@ CREATE INDEX IF NOT EXISTS idx_password_resets_token_hash ON password_resets(tok
 
 -- Conceder permissões para a role carx_app
 GRANT ALL ON TABLE password_resets TO carx_app;
+
