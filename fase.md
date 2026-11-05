@@ -427,12 +427,27 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.5 — Trilha de Auditoria Imutável (Audit Log)
+### [x] T2.5 — Trilha de Auditoria Imutável (Audit Log) `(Concluído)`
 - **Descrição:** Tabela de auditoria para registrar todas as ações críticas da oficina e do Super Admin.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.5 (Linhas 550–553)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L550-L553)
 - **Entrega:** Registro com dados: `tenant_id`, `user_id`, `entidade`, `registro_id`, `acao` (`INSERT`, `UPDATE`, `DELETE`), `snapshot_anterior` e `snapshot_novo`.
 - **Pronto quando:** O estorno de um pagamento ou alteração de valor de OS gera um registro imutável consultável no painel.
+- **Status da Validação:**
+  - **Migration 004 (`004_audit_immutability.up.sql`)**:
+    - Trigger `trg_audit_logs_immutable` e função PL/pgSQL `prevent_audit_log_modification()` interceptando qualquer tentativa de `UPDATE` ou `DELETE` em `audit_logs` e disparando exceção `55000` (`Audit logs are immutable`).
+    - Índices de performance para busca rápida: `idx_audit_logs_tenant_entity`, `idx_audit_logs_tenant_action`, `idx_audit_logs_action`, `idx_audit_logs_created_at`.
+  - **Serviço de Auditoria (`apps/api/src/audit/audit-service.ts`)**:
+    - `record()`: Gravação atômica com suporte a transação existente (`client`) ou execução isolada via pool com injeção automática de contexto de tenant.
+    - Helpers especializados de domínio: `recordWorkOrderPriceChange()` (valores e motivo), `recordPaymentRefund()` (estorno/reembolso financeiro) e `recordRoleChange()` (alteração de papel).
+    - `list()`: Consulta paginada com isolamento multi-tenant (RLS) e filtros por entidade, ID do registro, ação, usuário e período.
+    - `getById()`: Busca detalhada do registro com garantia de isolamento por inquilino.
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/audit-routes.ts`)**:
+    - `GET /audit-logs`: Listagem com autenticação Bearer, contexto de tenant obrigatório e permissões RBAC (`owner`, `gestor`, `superadmin`).
+    - `GET /audit-logs/:id`: Consulta individual de log e seus respectivos snapshots `old_values` e `new_values`.
+  - **Suíte de Testes Automatizados (`apps/api/src/audit/audit.test.ts`)**:
+    - 12 testes cobrindo rejeição de mutabilidade no Postgres, registro de estorno financeiro, alteração de valor em OS, mudança de papéis, isolamento multi-inquilinos (Oficina Alpha vs Oficina Beta), filtros e permissões de acesso (401 sem token, 403 para técnico e atendente, 200 para gestor e owner).
+    - Suíte geral de testes da API CarX elevada para **54/54 testes passando com 100% de sucesso** (11 suítes, 0 falhas).
 
 ---
 

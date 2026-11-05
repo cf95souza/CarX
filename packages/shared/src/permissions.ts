@@ -24,6 +24,10 @@ export const Permissions = {
   // Configurações e Planos
   TENANT_SETTINGS: 'tenant:settings',
   USERS_MANAGE: 'users:manage',
+
+  // Auditoria
+  AUDIT_VIEW: 'audit:view',
+  AUDIT_EXPORT: 'audit:export',
 } as const;
 
 export type PermissionType = (typeof Permissions)[keyof typeof Permissions];
@@ -43,6 +47,7 @@ export const RolePermissions: Record<UserRoleType, readonly PermissionType[]> = 
     Permissions.INVENTORY_MANAGE,
     Permissions.TENANT_SETTINGS,
     Permissions.USERS_MANAGE,
+    Permissions.AUDIT_VIEW,
   ],
   [UserRole.ATENDENTE]: [
     Permissions.WORK_ORDER_VIEW_ALL,

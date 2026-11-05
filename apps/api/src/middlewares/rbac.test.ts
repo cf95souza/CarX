@@ -299,3 +299,4 @@ describe('T2.4 — Matriz de Autorização RBAC por Papel', () => {
     });
   });
 });
+

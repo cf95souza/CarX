@@ -9,8 +9,10 @@ import {
 /**
  * Guard para validar se o usuário autenticado possui o(s) papel(éis) exigido(s)
  */
-export function requireRole(allowedRoles: UserRoleType | readonly UserRoleType[]): preHandlerHookHandler {
-  const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+export function requireRole(
+  ...allowedRoles: (UserRoleType | readonly UserRoleType[])[]
+): preHandlerHookHandler {
+  const rolesArray = allowedRoles.flat() as UserRoleType[];
 
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;
@@ -43,11 +45,9 @@ export function requireRole(allowedRoles: UserRoleType | readonly UserRoleType[]
  * Guard para validar se o papel do usuário possui a(s) permissão(ões) exigida(s)
  */
 export function requirePermission(
-  requiredPermissions: PermissionType | readonly PermissionType[]
+  ...requiredPermissions: (PermissionType | readonly PermissionType[])[]
 ): preHandlerHookHandler {
-  const permissionsArray = Array.isArray(requiredPermissions)
-    ? requiredPermissions
-    : [requiredPermissions];
+  const permissionsArray = requiredPermissions.flat() as PermissionType[];
 
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const user = request.user;

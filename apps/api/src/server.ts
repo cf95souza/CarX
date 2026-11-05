@@ -7,6 +7,7 @@ import { registerMetricsHooks, getPrometheusMetrics, getJsonMetrics } from './ob
 import { registerHealthRoutes } from './observability/health.js';
 import tenantPlugin from './plugins/tenant.js';
 import authRoutes from './routes/auth-routes.js';
+import auditRoutes from './routes/audit-routes.js';
 
 export function buildServer() {
   // Inicialização opcional do Sentry/GlitchTip
@@ -34,6 +35,9 @@ export function buildServer() {
 
   // Rotas de Autenticação, 2FA e Sessões
   app.register(authRoutes);
+
+  // Trilha de Auditoria Imutável
+  app.register(auditRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

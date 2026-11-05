@@ -524,3 +524,35 @@ Implementado o controle de acesso baseado em papéis (RBAC - Role-Based Access C
   - 16 testes unitários e de integração cobrindo todas as matrizes de permissão e cenários de acesso concorrente entre técnicos.
   - Total da suíte de testes do CarX consolidada em **42 testes passando com 100% de sucesso**.
 
+#### Tarefa T2.5: Trilha de Auditoria Imutável (Audit Log) 📜
+Implementado o subsistema de auditoria append-only para conformidade fiscal, integridade operacional e LGPD, garantindo rastreabilidade histórica completa sobre mutações críticas no ecossistema:
+- **Migration 004 — Bloqueio de Mutabilidade e Índices de Auditoria (`004_audit_immutability.up.sql`)**:
+  - Função PL/pgSQL `prevent_audit_log_modification()` e trigger `trg_audit_logs_immutable` acoplada à tabela `audit_logs`: qualquer tentativa de `UPDATE` ou `DELETE` é abortada imediatamente com código SQLSTATE `55000` (`Audit logs are immutable: records cannot be updated or deleted`).
+  - Índices otimizados para relatórios e investigações forenses: `idx_audit_logs_tenant_entity`, `idx_audit_logs_tenant_action`, `idx_audit_logs_action` e `idx_audit_logs_created_at`.
+- **Serviço de Auditoria (`apps/api/src/audit/audit-service.ts`)**:
+  - `record()`: Gravação estruturada contendo `tenant_id`, `user_id`, `action`, `entity`, `entity_id`, `old_values` (JSONB), `new_values` (JSONB), `ip_address` e `user_agent`.
+  - Injeção de contexto RLS automática tanto em consultas diretas no pool quanto em transações abertas (`client`).
+  - Métodos de domínio convenientes:
+    - `recordWorkOrderPriceChange()`: Registra alterações no valor total da OS e justificativa técnica.
+    - `recordPaymentRefund()`: Registra estornos e reembolsos com valor em centavos, status prévio e motivo da devolução.
+    - `recordRoleChange()`: Registra promoções ou rebaixamentos de cargo no RBAC (`memberships`).
+  - `list()`: Busca paginada isolada por inquilino com filtros flexíveis por entidade, ID do recurso, ação, usuário e período.
+  - `getById()`: Inspeção unitária de log com validação estrita de pertencimento ao inquilino solicitante.
+- **Rotas Fastify (`apps/api/src/routes/audit-routes.ts`)**:
+  - `GET /audit-logs`: Listagem protegida por `authenticateBearer`, `requireTenantContext` e restrita a papéis de liderança (`owner`, `gestor`, `superadmin`). Retorna HTTP 403 para `tecnico` e `atendente`.
+  - `GET /audit-logs/:id`: Detalhamento e inspeção completa de snapshots anteriores e posteriores.
+- **Suíte de Testes Automatizada (`apps/api/src/audit/audit.test.ts`)**:
+  - 12 testes validando:
+    1. Bloqueio de mutabilidade (PostgreSQL rejeita `UPDATE` e `DELETE`).
+    2. Registro e recuperação de estorno/reembolso financeiro.
+    3. Registro e recuperação de alteração de preço em Ordem de Serviço.
+    4. Registro de alteração de papel de colaborador.
+    5. Isolamento matemático multitenant (Oficina Alpha nunca acessa logs da Oficina Beta).
+    6. Rejeição de requisições anônimas (HTTP 401).
+    7. Bloqueio de acesso para técnicos e atendentes (HTTP 403).
+    8. Permissão de consulta para gestor e proprietário (HTTP 200).
+    9. Filtros e paginação da API HTTP.
+    10. Busca por ID e resposta 404 para identificador inexistente.
+  - Suíte consolidada da API CarX: **54/54 testes passando com 100% de sucesso**.
+
+

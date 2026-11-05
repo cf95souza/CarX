@@ -363,6 +363,46 @@ CREATE INDEX idx_password_resets_token_hash ON password_resets(token_hash);
 
 ---
 
+## 🛡️ Migração 004: Trilha de Auditoria Imutável (`004_audit_immutability.up.sql`)
+
+### 1. Bloqueio Rigoroso de Mutabilidade (Append-Only)
+Para conformidade com normas fiscais, LGPD e rastreabilidade da oficina, a tabela `audit_logs` é estritamente imutável: qualquer tentativa de `UPDATE` ou `DELETE` no banco de dados é interceptada e abortada por trigger:
+
+```sql
+CREATE OR REPLACE FUNCTION prevent_audit_log_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF current_setting('app.bypass_audit_immutability', true) = 'true' THEN
+        IF TG_OP = 'DELETE' THEN RETURN OLD; ELSE RETURN NEW; END IF;
+    END IF;
+
+    RAISE EXCEPTION 'Audit logs are immutable: records cannot be updated or deleted (action: %, entity: %, id: %)',
+        OLD.action, OLD.entity, OLD.id
+        USING ERRCODE = '55000';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_logs_immutable
+BEFORE UPDATE OR DELETE ON audit_logs
+FOR EACH ROW
+EXECUTE FUNCTION prevent_audit_log_modification();
+```
+
+### 2. Índices de Performance para Auditoria e Filtros
+```sql
+CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_entity ON audit_logs(tenant_id, entity, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_action ON audit_logs(tenant_id, action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+```
+
+### 3. Permissões
+```sql
+GRANT SELECT, INSERT ON TABLE audit_logs TO carx_app;
+```
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).
