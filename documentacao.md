@@ -365,3 +365,25 @@ Implementada rotina completa de cópias de segurança locais e em nuvem com scri
   - Procedimento validado no Docker Desktop com aprovação de 100% de integridade.
 - **Procedimento Operacional Padrão (`docs/runbook-backup.md`)**:
   - Runbook de contingência detalhando o passo a passo de restauração emergencial em caso de corrupção ou perda total de servidor, com comandos reproduzíveis e checklist de integridade pós-restauro.
+
+#### Tarefa T1.5: Monitoramento e Observabilidade 📊
+Implementado o ecossistema completo de telemetria, logs estruturados em JSON, rastreamento de erros e monitoramento de disponibilidade:
+- **Logs Estruturados JSON e Correlação de Requisições (`apps/api/src/observability/logger.ts`)**:
+  - Padronização do Pino no Fastify emitindo eventos em formato estritamente estruturado em JSON com carimbos ISO.
+  - Correlação de ponta a ponta com `x-request-id` ou geração automática de UUID para cada chamada HTTP.
+  - Redação compulsória de dados sensíveis e credenciais em conformidade com a LGPD (`authorization`, `cookie`, `password`, `token`, `cartao`, `cvv`, `cpf`, `rg`, etc.).
+- **Rastreamento de Exceções com GlitchTip / Sentry (`apps/api/src/observability/sentry.ts`)**:
+  - Integração via SDK oficial `@sentry/node` com inicialização controlada por `SENTRY_DSN`.
+  - Captura inteligente de exceções de servidor (códigos HTTP 5xx) enriquecidas com contexto de request, ID da requisição e identificação do tenant.
+  - Prevenção de vazamento de stack traces e detalhes internos de banco em produção.
+- **Endpoints de Telemetria e Probes (`apps/api/src/observability/health.ts` e `metrics.ts`)**:
+  - `GET /health`: Liveness probe de execução instantânea para validação de processo ativo.
+  - `GET /health/ready`: Readiness probe com auditoria profunda de conectividade e latência TCP com PostgreSQL (porta 5432), Redis (porta 6379) e MinIO Storage (porta 9000). Retorna HTTP 200 quando todos os serviços estão saudáveis ou HTTP 503 quando há degradação.
+  - `GET /metrics`: Telemetria no padrão oficial do Prometheus (OpenMetrics) e exportação em JSON (`?format=json`).
+- **Orquestração do Uptime Kuma (`infra/compose.*.yml` e `infra/caddy/Caddyfile`)**:
+  - Container `uptime` conectado às redes `public` e `app` para acesso externo via proxy Caddy (`status.carx.com.br`) e sondagem direta das portas internas dos containers.
+  - Matriz de checagens para API Liveness, API Readiness, PostgreSQL, Redis, MinIO e WhatsApp Gateway.
+- **Script de Validação de Alertas e Incidentes (`infra/scripts/test-alert.sh` e `infra/scripts/test-alert.ps1`)**:
+  - Validação executada com sucesso contra o Docker Desktop: a parada forçada do container da API foi detectada em **2 segundos** (limite exigido: $\le 120$ segundos / 2 minutos), e a recuperação ocorreu em **1 segundo** após o religamento.
+- **Manual de Operações (`docs/observabilidade.md`)**:
+  - Documentação da arquitetura, matriz de monitores, formato de logs e configuração de canais de notificação (Discord, Telegram, Slack).

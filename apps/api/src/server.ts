@@ -1,23 +1,51 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { RESERVED_SUBDOMAINS } from '@carx/shared';
+import { loggerConfig, generateRequestId } from './observability/logger.js';
+import { initSentry, registerSentryErrorHandler } from './observability/sentry.js';
+import { registerMetricsHooks, getPrometheusMetrics, getJsonMetrics } from './observability/metrics.js';
+import { registerHealthRoutes } from './observability/health.js';
 
 export function buildServer() {
+  // Inicialização opcional do Sentry/GlitchTip
+  initSentry();
+
   const app = Fastify({
-    logger: true,
+    logger: process.env.NODE_ENV === 'test' ? false : loggerConfig,
+    genReqId: generateRequestId,
+    requestIdHeader: 'x-request-id',
+    disableRequestLogging: false,
   });
+
+  // Handler de Erros com captura estruturada e integração com Sentry/GlitchTip
+  registerSentryErrorHandler(app);
+
+  // Coleta de métricas leves de requisições e latência
+  registerMetricsHooks(app);
 
   app.register(cors, {
     origin: true,
   });
 
-  // Healthcheck geral da aplicação
-  app.get('/health', async () => {
-    return {
-      status: 'ok',
-      service: 'carx-api',
-      timestamp: new Date().toISOString(),
-    };
+  // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
+  registerHealthRoutes(app);
+
+  /**
+   * Endpoint de Métricas (/metrics)
+   * Suporta padrão Prometheus OpenMetrics e JSON estruturado
+   */
+  app.get('/metrics', async (request, reply) => {
+    const accept = request.headers['accept'] || '';
+    const { format } = request.query as { format?: string };
+
+    if (format === 'json' || accept.includes('application/json')) {
+      return reply.code(200).type('application/json').send(getJsonMetrics());
+    }
+
+    return reply
+      .code(200)
+      .type('text/plain; version=0.0.4; charset=utf-8')
+      .send(getPrometheusMetrics());
   });
 
   /**
@@ -61,16 +89,22 @@ export function buildServer() {
   return app;
 }
 
-if (process.env.NODE_ENV !== 'test') {
+const isDirectExecution = Boolean(
+  process.argv[1] &&
+  (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.js')) &&
+  !process.env.NODE_TEST_CONTEXT &&
+  !process.argv.includes('--test')
+);
+
+if (process.env.NODE_ENV !== 'test' && isDirectExecution) {
   const app = buildServer();
-  const PORT = Number(process.env.PORT) || 3333;
+  const PORT = Number(process.env.PORT) || 3000;
 
   app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
     if (err) {
       app.log.error(err);
       process.exit(1);
     }
-    app.log.info(`CarX API running on ${address}`);
+    app.log.info({ msg: `CarX API online`, address, port: PORT });
   });
 }
-

@@ -388,6 +388,7 @@ services:
       - uptime_data:/app/data
     networks:
       - public
+      - app
     deploy:
       resources:
         limits:

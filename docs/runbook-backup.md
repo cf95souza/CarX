@@ -120,3 +120,4 @@ Todo primeiro domingo do mês, o script `infra/scripts/restore-test.sh` deve ser
 2. Quantidade de tabelas conferidas (`SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'`).
 3. Ausência de corrupção de índices.
 4. Registro do teste com data e responsável na planilha/canal de auditoria.
+

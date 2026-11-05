@@ -114,3 +114,4 @@ log_ok "  BACKUP CONCLUÍDO E SINCRONIZADO COM SUCESSO!"
 log_ok "======================================================================"
 send_alert "SUCCESS" "Backup do CarX (${DATE}) concluído com sucesso. Tamanho: ${ARCHIVE_SIZE}"
 exit 0
+

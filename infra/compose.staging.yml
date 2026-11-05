@@ -36,6 +36,8 @@ volumes:
     name: carx_staging_wa_sessions
   backups_data:
     name: carx_staging_backups_data
+  uptime_data:
+    name: carx_staging_uptime_data
 
 services:
   carx-web:
@@ -264,3 +266,21 @@ services:
         limits:
           cpus: "0.5"
           memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # Apoio: Uptime Kuma (Monitoramento e Página de Status Homologação)
+  # ----------------------------------------------------------------------------
+  uptime:
+    image: louislam/uptime-kuma:1-alpine
+    container_name: carx-staging-uptime
+    restart: unless-stopped
+    volumes:
+      - uptime_data:/app/data
+    networks:
+      - public
+      - app
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M

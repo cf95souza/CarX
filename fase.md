@@ -249,13 +249,27 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T1.5 — Monitoramento e Observabilidade
+### [x] T1.5 — Monitoramento e Observabilidade `(Concluído)`
 - **Descrição:** Observabilidade básica com logs estruturados em JSON, página de status pública e rastreamento de exceções.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 3: Observabilidade (Linhas 141–142)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L141-L142)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.5 (Linhas 517–520)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L517-L520)
 - **Entrega:** Configuração do Uptime Kuma (ou container de monitoramento) e integração do backend com GlitchTip ou Sentry.
 - **Pronto quando:** Forçar a parada da API dispara notificação no canal de alerta em menos de 2 minutos.
+- **Status da Validação:**
+  - **Logs Estruturados JSON (Pino / Fastify)**: Logger configurado com `reqId`, `service: 'carx-api'`, ambiente, latência de resposta em ms e redação compulsória de campos confidenciais (senhas, tokens, CPF, cartões).
+  - **Rastreamento de Exceções**: Integração com GlitchTip / Sentry SDK (`@sentry/node`) ativada via variável `SENTRY_DSN`, capturando erros 5xx com tags contextuais de rota, tenant e request ID, sem vazar stack trace em produção.
+  - **Endpoints de Telemetria e Probes**:
+    - `GET /health`: Liveness probe rápido (código HTTP 200).
+    - `GET /health/ready`: Readiness probe que audita conectividade e latência TCP com PostgreSQL (porta 5432), Redis (porta 6379) e MinIO Storage (porta 9000). Retorna HTTP 200 quando saudável ou HTTP 503 quando degradado.
+    - `GET /metrics`: Telemetria em formato OpenMetrics (Prometheus) e JSON (`uptimeSeconds`, `memory`, `requestsTotal`, `statusCodes`, `errorsTotal`, `avgLatencyMs`).
+  - **Uptime Kuma e Roteamento de Status**:
+    - Container `uptime` configurado no `infra/compose.prod.yml`, `infra/compose.staging.yml` e `infra/compose.dev.yml` conectado às redes `public` e `app`.
+    - Roteamento configurado no proxy Caddy para `status.carx.com.br` com página pública de status e suporte a canais de alerta (Discord, Slack, Telegram, E-mail).
+  - **Validação de Incidentes e Alerta em Tempo Real**:
+    - Scripts executáveis `infra/scripts/test-alert.sh` (Bash) e `infra/scripts/test-alert.ps1` (PowerShell).
+    - Simulação de queda executada no Docker Desktop: a parada forçada da API foi detectada em **2 segundos** (muito abaixo do limite exigido de 2 minutos / 120s), e o serviço recuperou-se com saúde em **1 segundo** após restabelecimento.
+  - **Documentação Operacional**: Guia completo de monitoramento e arquitetura registrado em `docs/observabilidade.md`.
 
 ---
 
@@ -271,7 +285,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ## 🏢 FASE 2 — Núcleo Multitenant & Super Admin
 
-**Objetivo:** Construir o coração do SaaS multitenant (reaproveitando conceitos do OperaBeauty): isolamento por tenant no banco de dados com RLS, autenticação robusta, papéis (RBAC), quotas, MinIO para uploads e o painel do Super Admin.
+**Objetivo:** Construir o coração do SaaS multitenant (reaproveitando conceitos do OperaBeauty): isolamento por tenant no banco de dados com RLS, autenticação robusta, papéis (RBAC), quotas, MinIO para uploads e o painel do Super Admin. (Se quiser olhar o sistema ele esta no file:///d:/Repositorios/OperaBeauty)
 
 ### [ ] T2.0 — Inventário e Mapeamento de Reúso (OperaBeauty)
 - **Descrição:** Mapear o código e as regras de negócio multitenant existentes (tenants, auth, planos e billing) para adaptação ao CarX.
@@ -605,7 +619,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 ---
 
 ### [ ] T3.17 — Gateway de WhatsApp Próprio e Mensagens Transacionais
-- **Descrição:** Integração com o container `carx-wa` através de uma interface de canal desacoplada (`MessageChannel`), permitindo disparo de mensagens da oficina e recebimento de respostas (NPS e aceite de orçamento).
+- **Descrição:** Integração com o container `carx-wa` através de uma interface de canal desacoplada (`MessageChannel`), permitindo disparo de mensagens da oficina e recebimento de respostas (NPS e aceite de orçamento). "No OperaBeauty fizemos um gateway copie ele para usar aqui se chama operabeauty-wa-gateway file:///d:/Repositorios/OperaBeauty"
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 13: Gateway de WhatsApp Próprio (Linhas 436–456)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L436-L456)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.17 (Linhas 651–654)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L651-L654)

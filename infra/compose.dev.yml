@@ -30,6 +30,8 @@ volumes:
     name: carx_dev_minio_data
   wa_sessions_dev:
     name: carx_dev_wa_sessions
+  uptime_data_dev:
+    name: carx_dev_uptime_data
 
 services:
   # ----------------------------------------------------------------------------
@@ -159,3 +161,18 @@ services:
       interval: 10s
       timeout: 3s
       retries: 3
+
+  # ----------------------------------------------------------------------------
+  # Apoio: Uptime Kuma Local (Monitoramento e Status)
+  # ----------------------------------------------------------------------------
+  uptime:
+    image: louislam/uptime-kuma:1-alpine
+    container_name: carx-dev-uptime
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime_data_dev:/app/data
+    networks:
+      - app
+      - public
