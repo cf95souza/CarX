@@ -154,3 +154,4 @@ Com o mapeamento concluído, a sequência de execução das próximas tarefas da
    - Portar os endpoints de métricas de MRR, listagem de tenants e impersonation para `apps/api` e `apps/admin`.
 5. **T2.5 — Billing Recorrente e Integração com Gateway:**
    - Implementar serviços de faturamento, emissão de faturas PIX e webhooks de baixa.
+

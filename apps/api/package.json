@@ -10,19 +10,27 @@
     "test": "tsx --test src/server.test.ts",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "migrate:up": "tsx src/database/migrate.ts up",
+    "migrate:down": "tsx src/database/migrate.ts down",
+    "migrate:status": "tsx src/database/migrate.ts status",
+    "migrate:reset": "tsx src/database/migrate.ts reset"
   },
   "dependencies": {
     "@carx/shared": "workspace:*",
     "@fastify/cors": "^9.0.1",
     "@fastify/jwt": "^8.0.0",
     "@sentry/node": "^11.10.0",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
+    "pg": "^8.23.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.11.24",
+    "@types/pg": "^8.23.1",
     "tsx": "^4.7.1",
     "typescript": "^5.4.2"
   }

@@ -430,3 +430,31 @@ Realizada análise aprofundada da base de código do SaaS multitenant de referê
   - Descarte definitivo de fichas de anamnese corporal/facial, cardápios de espera, pacotes de procedimentos de beleza e vales-presente.
 - **Manual de Engenharia**:
   - Mapeamento documentado detalhadamente em `docs/reuso-operabeauty.md`.
+
+#### Tarefa T2.1: Migrations e Esquema Relacional do Núcleo 🗄️
+Implementado o sistema de migrações transacionais versionadas e o esquema relacional das entidades centrais do CarX SaaS sobre PostgreSQL 16 Alpine:
+- **Executor de Migrações em TypeScript (`apps/api/src/database/migrate.ts`)**:
+  - Mecanismo transacional próprio gerenciado via scripts CLI (`pnpm db:migrate`, `pnpm db:migrate:down`, `pnpm db:migrate:status`, `pnpm db:migrate:reset`).
+  - Registro de auditoria de migrações aplicadas na tabela `_carx_migrations` com timestamps UTC.
+- **Migration 001 — Esquema Relacional do Núcleo (`001_core_schema.up.sql` e `001_core_schema.down.sql`)**:
+  - **Extensões**: `uuid-ossp`, `pgcrypto`, `btree_gist`.
+  - **Enums**: `tenant_status`, `membership_role`, `billing_interval`, `subscription_status`, `invoice_status`, `payment_method`.
+  - **Tabelas do Núcleo**:
+    - `plans`: Planos comerciais do SaaS com precificação em centavos e cotas em JSONB.
+    - `tenants`: Inquilinos/oficinas com slug único (subdomínio), dados fiscais (CNPJ) e suporte a domínio personalizado White-Label.
+    - `units`: Filiais e centros operacionais de cada oficina (matriz e filiais).
+    - `users`: Identidade global unificada com hash de senha, flag de 2FA e status.
+    - `memberships`: Papéis RBAC vinculando usuário, oficina e unidade (`owner`, `gestor`, `atendente`, `tecnico`, `financeiro`).
+    - `subscriptions`: Assinaturas comerciais vinculadas ao gateway de faturamento recorrente.
+    - `invoices`: Faturas de mensalidade geradas com suporte a PIX, Boleto e Cartão.
+    - `refresh_tokens`: Sessões JWT rotativas com rastreamento por `family_id` (detecção compulsória de reutilização maliciosa).
+    - `platform_admins`: Gestão de Super Administradores da plataforma CarX.
+    - `platform_settings`: Configurações e parâmetros globais do ecossistema.
+    - `audit_logs`: Trilha imutável para compliance, auditoria e LGPD.
+    - `api_keys`: Autenticação e chaves de API com prefixo e permissões para integrações externas.
+    - `webhook_endpoints` e `webhook_deliveries`: Mensageria em tempo real para disparo de webhooks a sistemas externos dos tenants.
+  - **Integridade e Triggers**: Função `update_updated_at_column()` aplicada a todas as tabelas modificáveis.
+  - **Índices de Performance**: 18 índices cobrindo todas as chaves estrangeiras, buscas por slug, e-mail e ordenações por data.
+- **Validação Prática**:
+  - Testes de aplicação (`up`), rollback completo (`down`) e reaplicação (`up`) executados com 100% de integridade referencial contra o container PostgreSQL 16 (`carx-dev-db`).
+  - Dicionário de dados mestre e documentação viva sincronizados em `database.md`.

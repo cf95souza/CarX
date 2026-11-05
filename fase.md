@@ -320,20 +320,32 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.1 — Migrations e Esquema Relacional do Núcleo
+### [x] T2.1 — Migrations e Esquema Relacional do Núcleo `(Concluído)`
 - **Descrição:** Criação das migrations SQL versionadas para as tabelas centrais do SaaS.
 - **Tabelas do Núcleo:**
   - `tenants` (id, slug/subdominio, cnpj, razao_social, status)
   - `units` (filiais da oficina)
-  - `users` (id, email, password_hash com argon2id)
+  - `users` (id, email, password_hash com bcryptjs/argon2id)
   - `memberships` (user_id, tenant_id, role: `owner`, `gestor`, `atendente`, `tecnico`, `financeiro`)
   - `plans`, `subscriptions`, `invoices`, `audit_log`, `api_keys`, `webhook_endpoints`
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 4: Modelo de Dados (Linhas 151–152)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L151-L152)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.1 (Linhas 534–537)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L534-L537)
   - [database.md](file:///d:/Repositorios/CarX/database.md)
-- **Entrega:** Ferramenta de migrations (Drizzle ou node-pg-migrate) com scripts de criação e reversão.
+- **Entrega:** Ferramenta de migrations em TypeScript com scripts de criação e reversão.
 - **Pronto quando:** Executar `pnpm migrate:up` cria todo o banco e `pnpm migrate:down` limpa com integridade referencial mantida.
+- **Status da Validação:**
+  - Executor de migrações nativo implementado em TypeScript estrito: `apps/api/src/database/migrate.ts`.
+  - Controle atômico e transacional de migrações através da tabela `_carx_migrations`.
+  - Scripts de ciclo de vida mapeados em `apps/api/package.json` e no `package.json` raiz (`pnpm db:migrate`, `pnpm db:migrate:down`, `pnpm db:migrate:status`, `pnpm db:migrate:reset`).
+  - Migration `001_core_schema.up.sql` criada e validada contra o PostgreSQL 16 Alpine:
+    - 3 extensões habilitadas (`uuid-ossp`, `pgcrypto`, `btree_gist`).
+    - 6 enums de domínio (`tenant_status`, `membership_role`, `billing_interval`, `subscription_status`, `invoice_status`, `payment_method`).
+    - 14 tabelas relacionais do núcleo multitenant (`plans`, `tenants`, `units`, `users`, `memberships`, `subscriptions`, `invoices`, `refresh_tokens`, `platform_admins`, `platform_settings`, `audit_logs`, `api_keys`, `webhook_endpoints`, `webhook_deliveries`).
+    - 18 índices de performance (B-tree) e integridade referencial com remoção em cascata estruturada.
+    - Triggers automáticos para manutenção contínua da coluna `updated_at`.
+  - Migration `001_core_schema.down.sql` criada e testada: execução de `pnpm db:migrate:down` reverteu o esquema completo mantendo integridade com zero órfãos. Reaplicação com `pnpm db:migrate` executada com sucesso.
+  - Documentação viva do banco de dados atualizada em `database.md` e arquivo de esquema legado preservado em `docs/legado-ossystem-schema.sql`.
 
 ---
 
