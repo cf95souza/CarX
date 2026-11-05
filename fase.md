@@ -460,9 +460,9 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 - **Pronto quando:** Uma loja no plano Essencial é impedida pela API de cadastrar o 4º usuário simultâneo.
 - **Status da Validação:**
   - **Migration 005 (`005_seed_plans.up.sql`)**: Seed oficial dos 3 planos canônicos no PostgreSQL 16:
-    - `Essencial` (R$ 149/mês): 1 unidade, 3 colaboradores, 100 OS/mês, 1 GB MinIO, WhatsApp básico.
-    - `Profissional` (R$ 299/mês): 2 unidades, 10 colaboradores, 500 OS/mês, 10 GB MinIO, WhatsApp automático, financeiro, comissões, estoque, checklist e controle de bobinas PPF.
-    - `Premium` (R$ 499/mês): 10 unidades, 50 colaboradores, OS ilimitadas, 50 GB MinIO, NFS-e, multiunidade, API e domínio White-Label.
+    - `Essencial` (R$ 69,90/mês): 1 unidade, 3 colaboradores, 100 OS/mês, 1 GB MinIO, WhatsApp básico.
+    - `Profissional` (R$ 149,90/mês): 2 unidades, 10 colaboradores, 500 OS/mês, 10 GB MinIO, WhatsApp automático, financeiro, comissões, estoque, checklist e controle de bobinas PPF.
+    - `Premium` (R$ 299,90/mês): 10 unidades, 50 colaboradores, OS ilimitadas, 50 GB MinIO, NFS-e, multiunidade, API e domínio White-Label.
   - **Serviço de Planos e Cotas (`apps/api/src/plans/plan-service.ts`)**:
     - `assertQuota()`: Intercepta cadastros críticos e calcula o uso em tempo real contra o limite contratado.
     - `assertFeature()` e `isFeatureEnabled()`: Avalia se uma capacidade está liberada para o inquilino, combinando as features nativas do plano com as flags granulares armazenadas em `tenants.settings->feature_flags`.

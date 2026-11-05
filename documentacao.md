@@ -559,9 +559,9 @@ Implementado o subsistema de auditoria append-only para conformidade fiscal, int
 Implementado o motor central de monetização SaaS e governança de recursos da plataforma CarX, controlando quotas por plano e liberação seletiva de funcionalidades por oficina:
 - **Catálogo Compartilhado de Planos (`packages/shared/src/plans.ts`)**:
   - Definição canônica dos 3 planos comerciais:
-    - `Essencial` (R$ 149/mês): Focado em estéticas automotivas em fase inicial. Limite de 1 filial, 3 colaboradores simultâneos, 100 OS/mês, 1 GB no MinIO e disparos WhatsApp básicos.
-    - `Profissional` (R$ 299/mês): Focado em centros automotivos consolidados. Limite de 2 filiais, 10 colaboradores, 500 OS/mês, 10 GB no MinIO, disparos automáticos via WhatsApp, gestão financeira completa, comissões, inventário e controle de bobinas PPF.
-    - `Premium` (R$ 499/mês): Focado em redes e franquias. 10 filiais, 50 colaboradores, ordens de serviço ilimitadas, 50 GB no MinIO, emissão de NFS-e, multiunidade, API e subdomínio próprio White-Label.
+    - `Essencial` (R$ 69,90/mês): Focado em estéticas automotivas em fase inicial. Limite de 1 filial, 3 colaboradores simultâneos, 100 OS/mês, 1 GB no MinIO e disparos WhatsApp básicos.
+    - `Profissional` (R$ 149,90/mês): Focado em centros automotivos consolidados. Limite de 2 filiais, 10 colaboradores, 500 OS/mês, 10 GB no MinIO, disparos automáticos via WhatsApp, gestão financeira completa, comissões, inventário e controle de bobinas PPF.
+    - `Premium` (R$ 299,90/mês): Focado em redes e franquias. 10 filiais, 50 colaboradores, ordens de serviço ilimitadas, 50 GB no MinIO, emissão de NFS-e, multiunidade, API e subdomínio próprio White-Label.
 - **Migration 005 — Seed dos Planos Canônicos (`005_seed_plans.up.sql`)**:
   - Inserção dos 3 planos com cotas estruturadas em JSONB (`limits`) e matriz de recursos (`features`).
   - Associação de todos os tenants sem plano ativo ao plano padrão `Essencial`.

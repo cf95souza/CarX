@@ -55,7 +55,7 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
     name: 'Essencial',
     slug: PlanSlug.ESSENCIAL,
     description: 'Para lojas e estéticas automotivas em fase inicial',
-    price_cents: 14900, // R$ 149,00/mês
+    price_cents: 6990, // R$ 69,90/mês
     interval: 'monthly',
     limits: {
       max_units: 1,
@@ -77,7 +77,7 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
     name: 'Profissional',
     slug: PlanSlug.PROFISSIONAL,
     description: 'Para centros automotivos com equipe estruturada e alto volume de produção',
-    price_cents: 29900, // R$ 299,00/mês
+    price_cents: 14990, // R$ 149,90/mês
     interval: 'monthly',
     limits: {
       max_units: 2,
@@ -105,7 +105,7 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
     name: 'Premium',
     slug: PlanSlug.PREMIUM,
     description: 'Para redes de oficinas, franquias e operações multiloja de grande porte',
-    price_cents: 49900, // R$ 499,00/mês
+    price_cents: 29990, // R$ 299,90/mês
     interval: 'monthly',
     limits: {
       max_units: 10,
@@ -134,3 +134,4 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
     ],
   },
 };
+

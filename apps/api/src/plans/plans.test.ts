@@ -417,3 +417,4 @@ describe('T2.6 — Gestão de Planos, Limites e Feature Flags', () => {
     assert.equal(featRes.statusCode, 200);
   });
 });
+

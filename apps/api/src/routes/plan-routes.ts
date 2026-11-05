@@ -144,3 +144,4 @@ export async function planRoutes(fastify: FastifyInstance) {
 }
 
 export default planRoutes;
+

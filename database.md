@@ -407,9 +407,9 @@ GRANT SELECT, INSERT ON TABLE audit_logs TO carx_app;
 
 ### 1. Planos Canônicos Inseridos
 ```sql
--- Essencial (R$ 149,00/mês): 1 unidade, 3 usuários (regra rígida), WhatsApp básico, 100 OS/mês, 1 GB MinIO
--- Profissional (R$ 299,00/mês): 2 unidades, 10 usuários, WhatsApp auto, financeiro, comissões, estoque, checklist, NPS, bobinas de PPF, 500 OS/mês, 10 GB MinIO
--- Premium (R$ 499,00/mês): 10 unidades, 50 usuários, multi-loja, NFS-e, API de integração, domínio customizado White-Label, 50 GB MinIO
+-- Essencial (R$ 69,90/mês): 1 unidade, 3 usuários (regra rígida), WhatsApp básico, 100 OS/mês, 1 GB MinIO
+-- Profissional (R$ 149,90/mês): 2 unidades, 10 usuários, WhatsApp auto, financeiro, comissões, estoque, checklist, NPS, bobinas de PPF, 500 OS/mês, 10 GB MinIO
+-- Premium (R$ 299,90/mês): 10 unidades, 50 usuários, multi-loja, NFS-e, API de integração, domínio customizado White-Label, 50 GB MinIO
 ```
 
 ### 2. Vinculação Padrão de Inquilinos
