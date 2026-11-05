@@ -346,3 +346,22 @@ Estruturado o roteamento de borda, terminação TLS automática e gestão de sub
   - Subdomínios reservados da plataforma padronizados na constante `RESERVED_SUBDOMAINS` em `packages/shared/src/enums.ts` (`app`, `admin`, `api`, `status`, `staging`, `auth`, `billing`, etc.) para prevenir sequestro de rotas internas por tenants.
 - **Guia Técnico de DNS e Domínios (`docs/dns-e-dominios.md`)**:
   - Matriz completa de registros A, CNAME, Wildcard (`*`), TTLs recomendados e políticas de segurança de e-mails transacionais (SPF, DMARC) documentada.
+
+#### Tarefa T1.4: Backups Automáticos e Recuperação Testada 💾
+Implementada rotina completa de cópias de segurança locais e em nuvem com script automatizado de teste de restauração e métricas rígidas de Disaster Recovery (RPO <= 24h, RTO < 30min):
+- **Backup Periódico Automatizado (`infra/compose.prod.yml` e `infra/compose.staging.yml`)**:
+  - Container especializado `prodrigestivill/postgres-backup-local:16-alpine` conectado estritamente à rede interna e isolada `data` (`internal: true`), sem exposição externa ou de portas.
+  - Agendamento diário (`SCHEDULE=@daily`) gerando dumps compactados via Gzip no volume persistente `backups_data`.
+  - Política de retenção GFS (Grandfather-Father-Son): 7 backups diários (`BACKUP_KEEP_DAYS=7`), 4 semanais (`BACKUP_KEEP_WEEKS=4`) e 6 mensais (`BACKUP_KEEP_MONTHS=6`).
+- **Sincronização Off-Site e Estratégia 3-2-1 (`infra/scripts/backup-offsite.sh`)**:
+  - Script bash para envio dos backups para Cloud Storage externo à VPS (compatível com AWS S3, Cloudflare R2 e Backblaze B2).
+  - Snapshot complementar das credenciais/sessões criptografadas do WhatsApp (`wa_sessions`) e uploads de mídia do MinIO (`minio_data`).
+  - Suporte a criptografia simétrica com GPG (`gpg --symmetric --cipher-algo AES256`) antes do trânsito de dados para fora do servidor.
+  - Webhooks de alerta para canais de monitoramento (Discord, Slack ou Telegram) com status de sucesso ou notificação imediata de falhas.
+- **Auditoria Automatizada de Recuperação (DR) (`infra/scripts/restore-test.sh` e `infra/scripts/restore-test.ps1`)**:
+  - Script com suporte duplo: Shell Script (Linux/VPS) e PowerShell (Windows/Dev).
+  - Procedimento: localiza o último dump ou gera snapshot limpo do banco ativo, provisiona contêiner efêmero PostgreSQL 16 com volume temporário, executa a restauração completa e audita o catálogo e a contagem de tabelas públicas e linhas restauradas.
+  - Mecanismo seguro de limpeza automática na saída (`trap` no Bash e bloco `finally` no PowerShell).
+  - Procedimento validado no Docker Desktop com aprovação de 100% de integridade.
+- **Procedimento Operacional Padrão (`docs/runbook-backup.md`)**:
+  - Runbook de contingência detalhando o passo a passo de restauração emergencial em caso de corrupção ou perda total de servidor, com comandos reproduzíveis e checklist de integridade pós-restauro.

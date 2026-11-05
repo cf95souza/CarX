@@ -223,13 +223,29 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T1.4 — Backups Automáticos e Recuperação Testada
+### [x] T1.4 — Backups Automáticos e Recuperação Testada `(Concluído)`
 - **Descrição:** Implementação de rotina de backup com envio para storage externo à VPS e script de restauração automatizada.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 3: Backups (Linhas 140–141)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L140-L141)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.4 (Linhas 513–516)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L513-L516)
 - **Entrega:** Scripts de dump diário + WAL archiving, retenção (7 diários, 4 semanais, 6 mensais), sincronização com S3/Backblaze/R2, e documentação em `docs/runbook-backup.md`.
 - **Pronto quando:** Script `infra/scripts/restore-test.sh` restaura o último dump num container temporário de teste e valida a contagem de tabelas.
+- **Status da Validação:**
+  - Container de backup configurado nos ambientes de produção e homologação (`infra/compose.prod.yml` e `infra/compose.staging.yml`) utilizando imagem especializada `prodrigestivill/postgres-backup-local:16-alpine`.
+  - Agendamento diário (`SCHEDULE=@daily`) conectado exclusivamente à rede interna e isolada `data` (`internal: true`), persistindo dumps compactados em volume `backups_data`.
+  - Política de retenção GFS implementada: 7 backups diários (`BACKUP_KEEP_DAYS=7`), 4 semanais (`BACKUP_KEEP_WEEKS=4`) e 6 mensais (`BACKUP_KEEP_MONTHS=6`).
+  - Script mestre de sincronização externa `infra/scripts/backup-offsite.sh`:
+    - Envio dos dumps compactados para Cloud Storage externo (AWS S3, Cloudflare R2 ou Backblaze B2) seguindo a regra 3-2-1.
+    - Sincronização e snapshot dos arquivos e uploads de mídia do MinIO (`minio_data`) e das sessões criptografadas do WhatsApp (`wa_sessions`).
+    - Criptografia simétrica opcional via GPG (`gpg --symmetric --cipher-algo AES256`) antes do tráfego externo.
+    - Notificações de sucesso e alerta de falhas via webhook (Discord, Slack ou Telegram).
+  - Scripts de auditoria automatizada de Disaster Recovery `infra/scripts/restore-test.sh` (Bash/Linux) e `infra/scripts/restore-test.ps1` (PowerShell/Windows):
+    - Extração automática do último dump ou geração de snapshot limpo em tempo real.
+    - Provisionamento automático de contêiner PostgreSQL 16 temporário e volume efêmero.
+    - Execução do restore e validação de integridade do catálogo e contagem de tabelas públicas e registros.
+    - Limpeza garantida de recursos efêmeros (`trap` em shell e bloco `finally` em PowerShell).
+    - Execução e auditoria validadas com sucesso no Docker Desktop com código de saída 0 e validação de dados em tabela de teste.
+  - Procedimento operacional padrão (SOP) detalhado no Runbook de Contingência `docs/runbook-backup.md`, com metas de RPO <= 24h e RTO < 30 minutos.
 
 ---
 

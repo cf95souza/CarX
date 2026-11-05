@@ -162,3 +162,4 @@ Para simular o roteamento de subdomínios e domínios de oficinas na sua máquin
    curl "http://localhost:3000/internal/caddy-check?domain=site-malicioso.com"
    # Retorno esperado: HTTP 403 {"allowed":false,"reason":"Domínio não autorizado para emissão de certificado SSL"}
    ```
+
