@@ -337,6 +337,32 @@ As funções utilitárias `tenantQuery` e `tenantTransaction` ([`apps/api/src/da
 
 ---
 
+## 🔑 Migração 003: Tabelas de Suporte a Autenticação e 2FA (`003_auth_tables.up.sql`)
+
+### 1. Extensão da Tabela `users`
+- `two_factor_temp_secret` (VARCHAR(64)): Armazena o segredo TOTP gerado durante a etapa de configuração até a confirmação com código de 6 dígitos.
+
+### 2. Tabela `password_resets` (Recuperação Segura de Senha)
+Armazena tokens descartáveis com expiração de 1 hora para redefinição de credenciais:
+```sql
+CREATE TABLE IF NOT EXISTS password_resets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 3. Índices de Suporte
+```sql
+CREATE INDEX idx_password_resets_user_id ON password_resets(user_id);
+CREATE INDEX idx_password_resets_token_hash ON password_resets(token_hash);
+```
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).

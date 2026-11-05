@@ -77,3 +77,4 @@ WITH CHECK (
     OR current_setting('app.is_superadmin', true) = 'true'
     OR current_setting('app.bypass_rls', true) = 'true'
 );
+

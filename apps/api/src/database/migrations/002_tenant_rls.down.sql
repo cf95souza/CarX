@@ -29,3 +29,4 @@ END $$;
 -- 3. REMOVER COLUNA tenant_id DE webhook_deliveries
 DROP INDEX IF EXISTS idx_webhook_deliveries_tenant_id;
 ALTER TABLE webhook_deliveries DROP COLUMN IF EXISTS tenant_id;
+

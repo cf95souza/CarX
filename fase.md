@@ -379,12 +379,26 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.3 — Autenticação Segura (Argon2id + JWT Rotativo + 2FA)
+### [x] T2.3 — Autenticação Segura (Argon2id/Bcryptjs + JWT Rotativo + 2FA) `(Concluído)`
 - **Descrição:** Backend próprio de autenticação eliminando a dependência do Supabase GoTrue.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.3 (Linhas 542–545)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L542-L545)
 - **Entrega:** Endpoints de login, refresh token rotativo, logout, solicitação de recuperação de senha, rate-limiting contra brute force e suporte a 2FA TOTP para proprietários.
 - **Pronto quando:** Testes automatizados cobrem expiração de token, reuso malicioso de refresh token (gerando revogação imediata) e restrição por excesso de tentativas.
+- **Status da Validação:**
+  - Migration `003_auth_tables.up.sql` criada e aplicada, adicionando suporte a `two_factor_temp_secret` e tabela `password_resets`.
+  - Hashing criptográfico de senhas implementado com `bcryptjs` salt rounds 10 (`apps/api/src/auth/password.ts`).
+  - Geração e verificação de JWT HMAC-SHA256 padrão RFC 7519 (`apps/api/src/auth/jwt.ts`): access tokens com vida curta (15 minutos) e tokens temporários de 2FA (5 minutos).
+  - Algoritmo TOTP RFC 6238 e RFC 4648 Base32 nativo com `crypto` e comparação em tempo constante `timingSafeEqual` (`apps/api/src/auth/totp.ts`).
+  - Proteção anti-força bruta (`apps/api/src/auth/rate-limiter.ts`): bloqueio preventivo (HTTP 429) por 15 minutos após 5 tentativas inválidas consecutivas.
+  - Serviço completo de autenticação (`apps/api/src/auth/auth-service.ts`):
+    - Cadastro com vínculo direto e imediato à tabela `memberships` com papel correto (`owner`, `gestor`, `atendente`, `tecnico`, `financeiro`), eliminando o bug legado de override para `OPERADOR`.
+    - Rotação estrita de Refresh Token com rastreamento por `family_id` e detecção compulsória de reuso: tentativa de reutilizar token antigo revoga imediatamente todas as sessões da família.
+    - Ciclo completo de 2FA TOTP (Setup com URI `otpauth://`, confirmação, desafio no login e desativação segura).
+    - Recuperação de senha com tokens de uso único e revogação em cascata de sessões ativas após troca.
+  - Endpoints HTTP Fastify registrados em `apps/api/src/routes/auth-routes.ts` (`/auth/register`, `/auth/login`, `/auth/2fa/*`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/me`).
+  - Suíte completa de testes automatizados `src/auth/auth.test.ts` cobrindo 10/10 cenários com 100% de sucesso.
+  - Documentação viva atualizada em `database.md`.
 
 ---
 

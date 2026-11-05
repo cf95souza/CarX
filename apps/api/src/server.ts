@@ -6,6 +6,7 @@ import { initSentry, registerSentryErrorHandler } from './observability/sentry.j
 import { registerMetricsHooks, getPrometheusMetrics, getJsonMetrics } from './observability/metrics.js';
 import { registerHealthRoutes } from './observability/health.js';
 import tenantPlugin from './plugins/tenant.js';
+import authRoutes from './routes/auth-routes.js';
 
 export function buildServer() {
   // Inicialização opcional do Sentry/GlitchTip
@@ -30,6 +31,9 @@ export function buildServer() {
 
   // Plugin de Isolamento e Resolução de Contexto Multi-Tenant
   app.register(tenantPlugin);
+
+  // Rotas de Autenticação, 2FA e Sessões
+  app.register(authRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

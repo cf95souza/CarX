@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test src/server.test.ts src/database/tenant-isolation.test.ts",
+    "test": "tsx --test src/server.test.ts src/database/tenant-isolation.test.ts src/auth/auth.test.ts",
     "test:rls": "tsx --test src/database/tenant-isolation.test.ts",
+    "test:auth": "tsx --test src/auth/auth.test.ts",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext ts",

@@ -478,3 +478,28 @@ Implementado o isolamento multicamadas de dados garantindo que nenhuma oficina c
   - Comprovação matemática de que a Oficina A não consegue ler (0 registros), alterar (0 linhas afetadas) nem deletar (0 linhas afetadas) dados da Oficina B, mesmo conhecendo os IDs das entidades.
   - Validação de RLS ativo e forçado em todas as tabelas dinamicamente via catálogo PostgreSQL.
   - Suíte completa executada com 16/16 testes passando com sucesso.
+
+#### Tarefa T2.3: Autenticação Segura (Bcryptjs + JWT Rotativo + 2FA TOTP) 🔑
+Implementado o subsistema proprietário completo de autenticação e gerenciamento de sessões do CarX, eliminando qualquer dependência do Supabase GoTrue:
+- **Migration 003 — Tabelas de Suporte à Autenticação (`003_auth_tables.up.sql`)**:
+  - Coluna `two_factor_temp_secret` adicionada à tabela `users` para armazenar o segredo durante o fluxo de pareamento TOTP.
+  - Tabela `password_resets` para armazenamento de tokens descartáveis de redefinição com expiração de 1 hora e revogação pós-uso.
+- **Hashing Criptográfico de Senhas (`apps/api/src/auth/password.ts`)**:
+  - Implementação com `bcryptjs` (salt rounds 10) garantindo portabilidade multiplataforma sem dependências C++ nativas.
+- **Gerenciador de Tokens JWT (`apps/api/src/auth/jwt.ts`)**:
+  - Implementação RFC 7519 HMAC-SHA256 nativa com `crypto.timingSafeEqual` contra timing attacks.
+  - Access tokens com validade de 15 minutos e tokens temporários de 2FA com validade de 5 minutos.
+- **Algoritmo TOTP de Segundo Fator (`apps/api/src/auth/totp.ts`)**:
+  - Implementação completa dos padrões RFC 6238 e RFC 4648 Base32 para geração e verificação de códigos de 6 dígitos com janela de tolerância de $\pm 30$ segundos para drift de relógio.
+  - Geração de URIs `otpauth://totp/CarX:...` compatíveis com Google Authenticator, Microsoft Authenticator e Authy.
+- **Proteção Anti-Brute Force (`apps/api/src/auth/rate-limiter.ts`)**:
+  - Rate limiter em memória com janela deslizante de 15 minutos e limite de 5 tentativas inválidas consecutivas por IP/e-mail, respondendo HTTP 429 Too Many Requests.
+- **Serviço de Autenticação e Sessões (`apps/api/src/auth/auth-service.ts`)**:
+  - Cadastro de usuários com vinculação direta à oficina e gravação estrita do papel correto em `memberships` (`owner`, `gestor`, `atendente`, `tecnico`, `financeiro`), prevenindo o bug do legado de rebaixamento para operador.
+  - Rotação contínua de Refresh Tokens (validade de 7 dias) rastreados por `family_id` com **detecção compulsória de reuso malicioso**: se um token antigo revogado for apresentado, toda a família de sessões é revogada instantaneamente.
+  - Fluxo de recuperação de senha seguro: emissão de token de uso único com revogação forçada de todas as sessões anteriores após a redefinição.
+- **Rotas Fastify (`apps/api/src/routes/auth-routes.ts`)**:
+  - Endpoints expostos: `/auth/register`, `/auth/login`, `/auth/2fa/verify`, `/auth/2fa/setup`, `/auth/2fa/enable`, `/auth/2fa/disable`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/me`.
+  - Hook `authenticateBearer` para proteção de rotas privadas.
+- **Validação Automatizada (`apps/api/src/auth/auth.test.ts`)**:
+  - 10 testes cobrindo cadastro, login, rejeição de duplicados, bloqueio por força bruta, rotação, detecção de replay de token, ativação/desativação de 2FA e redefinição de senha com 100% de sucesso.
