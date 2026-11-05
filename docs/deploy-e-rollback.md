@@ -115,3 +115,4 @@ Para que o rollback de código funcione sem quebrar o banco de dados:
    - Nunca renomear ou deletar colunas em uso pela versão anterior.
 2. **Fase de Contração (Deploy N+1):**
    - Somente após a versão estar consolidada em produção e sem risco de rollback imediato, remover colunas ou tabelas descontinuadas.
+

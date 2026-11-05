@@ -405,3 +405,28 @@ Concluído o pipeline de Entrega Contínua (CD), publicação automatizada de im
   - Testado e auditado com sucesso no Docker Desktop com restabelecimento de saúde instantâneo.
 - **Manual de Operações e Contingência (`docs/deploy-e-rollback.md`)**:
   - Guia detalhado de branches, segredos do GitHub Actions (`VPS_HOST`, `VPS_SSH_KEY`, `VPS_SSH_USER`) e procedimentos de contingência.
+
+---
+
+### 🏢 Fase 2 — Núcleo Multitenant & Super Admin
+
+#### Tarefa T2.0: Inventário e Mapeamento de Reúso (OperaBeauty) 📑
+Realizada análise aprofundada da base de código do SaaS multitenant de referência (`d:\Repositorios\OperaBeauty`), discriminando componentes a serem aproveitados, adaptados ou descartados para o domínio automotivo do CarX:
+- **Aproveitamento Direto (COPIAR)**:
+  - Mecanismo dinâmico de Row Level Security (RLS) via PL/pgSQL com variável de sessão `app.current_tenant_id` e papel sem bypass `carx_app`.
+  - Sessão e autenticação com Refresh Tokens rotativos e `family_id` (prevenção compulsória contra ataques de repetição e sequestro de sessão).
+  - Autenticação com Segundo Fator (2FA TOTP RFC 6238) para Super Admin da plataforma.
+  - Painel de métricas SaaS: cálculo de MRR, Churn Rate, inadimplência e suspensão/reativação.
+- **Adaptação para o Domínio Automotivo (ADAPTAR)**:
+  - Suporte a multi-unidades/filiais (`tenants` -> `units` -> `memberships`).
+  - Modelo RBAC automotivo unificado: `owner`, `gestor`, `atendente`, `tecnico`, `financeiro`.
+  - Quotas de planos calibradas para centros automotivos: técnicos simultâneos, bobinas de PPF, gigabytes de laudos no MinIO e disparos WhatsApp.
+  - Motor de faturamento recorrente integrado prioritariamente com Asaas (PIX dinâmico, boletos e cartão recorrente) e fallback para Mercado Pago.
+- **Evolução Arquitetural e Eliminação de Dívidas Técnicas (REFATORAR)**:
+  - Migração de uploads em disco local para **MinIO (Object Storage S3)** com URLs pré-assinadas e buckets protegidos.
+  - Reescrita completa dos serviços e rotas em **Node.js 20 + Fastify + TypeScript estrito (`strict: true`) + validações Zod**.
+  - Criação de suíte automatizada de testes dinâmicos de isolamento entre inquilinos (`tenant-isolation.test.ts`).
+- **Descarte de Recursos Incompatíveis (DESCARTAR)**:
+  - Descarte definitivo de fichas de anamnese corporal/facial, cardápios de espera, pacotes de procedimentos de beleza e vales-presente.
+- **Manual de Engenharia**:
+  - Mapeamento documentado detalhadamente em `docs/reuso-operabeauty.md`.

@@ -14,7 +14,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 |---|---|---|---|
 | **Fase 0** | Fundação do Projeto, Monorepo e Design System | `[x] Concluído` | Nenhuma |
 | **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[x] Concluído` | Fase 0 |
-| **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[ ] Não Iniciado` | Fase 1 |
+| **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[~] Em Andamento` | Fase 1 |
 | **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[ ] Não Iniciado` | Fase 2 |
 | **Fase 4** | Migração de Dados e Clientes Legados (ETL) | `[ ] Não Iniciado` | Fase 3 |
 | **Fase 5** | Produto SaaS Comercial, Landing Page e Faturamento | `[ ] Não Iniciado` | Fase 3 |
@@ -302,13 +302,21 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 **Objetivo:** Construir o coração do SaaS multitenant (reaproveitando conceitos do OperaBeauty): isolamento por tenant no banco de dados com RLS, autenticação robusta, papéis (RBAC), quotas, MinIO para uploads e o painel do Super Admin. (Se quiser olhar o sistema ele esta no file:///d:/Repositorios/OperaBeauty)
 
-### [ ] T2.0 — Inventário e Mapeamento de Reúso (OperaBeauty)
+### [x] T2.0 — Inventário e Mapeamento de Reúso (OperaBeauty) `(Concluído)`
 - **Descrição:** Mapear o código e as regras de negócio multitenant existentes (tenants, auth, planos e billing) para adaptação ao CarX.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Decisão de Arquitetura (Linhas 94–96)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L94-L96)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.0 (Linhas 530–533)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L530-L533)
 - **Entrega:** Documento `docs/reuso-operabeauty.md` discriminando o que será aproveitado diretamente, o que precisa de adaptação e o que será descartado.
 - **Pronto quando:** Todos os módulos de autenticação e multitenancy do núcleo estiverem classificados.
+- **Status da Validação:**
+  - Repositório de referência analisado em profundidade (`d:\Repositorios\OperaBeauty`).
+  - Matriz completa de classificação elaborada em `docs/reuso-operabeauty.md`:
+    - **Aproveitamento Direto (COPIAR):** RLS dinâmico no PostgreSQL com função PL/pgSQL percorrendo `tenant_id`, sessões com refresh token rotativo e `family_id` (anti-replay attack), métricas de MRR e Churn do Super Admin, e 2FA TOTP para platform admins.
+    - **Adaptação para o Domínio Automotivo (ADAPTAR):** Reestruturação de tenants para suportar matriz e filiais (`units`), modelo unificado de `users` com associativa `memberships` e papéis RBAC (`owner`, `gestor`, `atendente`, `tecnico`, `financeiro`), cotas de planos reconfiguradas para técnicos simultâneos, bobinas de PPF e armazenamento de laudos/fotos, e integração do billing recorrente com Asaas + Mercado Pago.
+    - **Evolução Arquitetural (REFATORAR):** Migração de uploads locais em disco (`private_uploads`) para **MinIO S3** com URLs pré-assinadas, e reescrita dos serviços em **Node.js 20 + Fastify + TypeScript estrito + Zod**.
+    - **Descartes (DESCARTAR):** Descarte completo de anamnese estética, pacotes de procedimentos de beleza, vales-presente e cardápios de espera.
+  - Documento oficial de engenharia consolidado e linkado em `docs/reuso-operabeauty.md`.
 
 ---
 
