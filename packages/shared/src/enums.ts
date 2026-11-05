@@ -50,3 +50,32 @@ export const DamageType = {
 
 export type DamageTypeType = (typeof DamageType)[keyof typeof DamageType];
 
+/**
+ * Subdomínios reservados da plataforma CarX
+ * Nenhuma oficina/tenant pode registrar esses slugs como identificador de loja.
+ */
+export const RESERVED_SUBDOMAINS = [
+  'app',
+  'admin',
+  'api',
+  'status',
+  'staging',
+  'staging-api',
+  'www',
+  'mail',
+  'smtp',
+  'cdn',
+  'assets',
+  'static',
+  'auth',
+  'billing',
+  'webhook',
+  'webhooks',
+  'root',
+  'dev',
+  'test',
+] as const;
+
+export type ReservedSubdomainType = (typeof RESERVED_SUBDOMAINS)[number];
+
+

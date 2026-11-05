@@ -333,3 +333,16 @@ Concluída a arquitetura de conteinerização do CarX cobrindo os 5 blocos da ap
 - **Validação Prática no Docker Desktop**:
   - Todos os containers de infraestrutura e aplicação subiram saudáveis (`carx-dev-db`, `carx-dev-minio`, `carx-dev-redis`, `carx-dev-wa`, `carx-dev-api`).
   - Healthchecks validados com sucesso via curl interno e verificação de integridade de processos.
+
+#### Tarefa T1.3: Domínio, SSL Wildcard e Subdomínios 🌐
+Estruturado o roteamento de borda, terminação TLS automática e gestão de subdomínios do ecossistema:
+- **Proxy Reverso Caddy com On-Demand TLS (`infra/caddy/Caddyfile`)**:
+  - **Suporte Nativo a Subdomínios de Lojas**: Roteamento dinâmico para `*.carx.com.br` e `app.carx.com.br` direcionando para a SPA com envio do cabeçalho `X-Tenant-Host`.
+  - **Isolamento de Subdomínios de Sistema**: Roteamento específico para `admin.` (Super Admin com proteção anti-clickjacking `X-Frame-Options: DENY`), `api.` (Fastify com limite de upload de 15MB) e `status.` (Uptime Kuma).
+  - **Suporte a Domínio Próprio White-Label**: Bloco coringa `:443` permitindo que clientes premium operem sob seus próprios domínios (ex: `sistema.lucasenvelopamento.com.br`) via CNAME direto com emissão automática de SSL.
+  - **Blindagem Anti-DoS em Emissões de Certificados**: Implementação da diretiva `on_demand_tls` associada ao endpoint `ask http://carx-api:3000/internal/caddy-check`. Apenas domínios formalmente validados e autorizados recebem certificados, impedindo esgotamento de cotas do Let's Encrypt por apontamentos maliciosos externos.
+- **Defesas e Validações no Backend (`apps/api/src/server.ts`)**:
+  - Endpoint `/internal/caddy-check` implementado e testado unitariamente: retorna HTTP 200 para subdomínios da zona base e homologados, e HTTP 403 para domínios estranhos.
+  - Subdomínios reservados da plataforma padronizados na constante `RESERVED_SUBDOMAINS` em `packages/shared/src/enums.ts` (`app`, `admin`, `api`, `status`, `staging`, `auth`, `billing`, etc.) para prevenir sequestro de rotas internas por tenants.
+- **Guia Técnico de DNS e Domínios (`docs/dns-e-dominios.md`)**:
+  - Matriz completa de registros A, CNAME, Wildcard (`*`), TTLs recomendados e políticas de segurança de e-mails transacionais (SPF, DMARC) documentada.

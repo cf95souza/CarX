@@ -200,13 +200,26 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T1.3 — Domínio, SSL Wildcard e Subdomínios
+### [x] T1.3 — Domínio, SSL Wildcard e Subdomínios `(Concluído)`
 - **Descrição:** Configuração do proxy reverso Caddy para roteamento inteligente de subdomínios de cada oficina cliente (`{loja}.carx.com.br`) e subdomínios do sistema (`app.`, `admin.`, `api.`).
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 3: Domínios e Redes (Linhas 132–137)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L132-L137)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.3 (Linhas 508–512)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L508-L512)
 - **Entrega:** `Caddyfile` com provisionamento automático de certificados Let's Encrypt / ZeroSSL e wildcard DNS.
 - **Pronto quando:** Requisições para `https://app.<dominio>` e subdomínio de teste `https://loja-teste.<dominio>` respondem com SSL válido.
+- **Status da Validação:**
+  - `infra/caddy/Caddyfile` configurado com terminação TLS automática, cabeçalhos de segurança (HSTS, CSP, X-Frame-Options, anti-sniffing) e compressão zstd/gzip.
+  - Roteamento completo dos blocos do ecossistema:
+    - `carx.com.br` e `www`: Landing Page (`carx-web:80`).
+    - `app.carx.com.br` e `*.carx.com.br`: Aplicação de gestão e PWA de oficina com encaminhamento do header `X-Tenant-Host`.
+    - `admin.carx.com.br`: Painel do Super Admin com bloqueio total de framing (`DENY`).
+    - `api.carx.com.br`: API Fastify (`carx-api:3000`) com limite de payload de 15MB para upload de fotos.
+    - `status.carx.com.br`: Monitoramento de integridade e Uptime Kuma (`uptime:3001`).
+    - `:443`: Suporte a domínios próprios White-Label de clientes via On-Demand TLS.
+  - Blindagem anti-DoS na emissão de certificados via diretiva `on_demand_tls` integrada ao endpoint `/internal/caddy-check` da API Fastify (retorna 200 para subdomínios e domínios homologados, e 403 para domínios desconhecidos).
+  - Subdomínios reservados da plataforma padronizados no enum `RESERVED_SUBDOMAINS` em `@carx/shared` para impedir colisões de slugs de oficinas.
+  - Guia mestre de apontamentos DNS, TTLs, registros Wildcard e segurança de e-mails (SPF, DMARC) documentado em `docs/dns-e-dominios.md`.
+  - Endpoint `/internal/caddy-check` testado unitariamente via Fastify inject com 100% de sucesso.
 
 ---
 

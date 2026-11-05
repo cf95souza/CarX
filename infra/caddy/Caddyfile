@@ -1,5 +1,5 @@
 # ==============================================================================
-# CarX — Configuração do Proxy Reverso Caddy com TLS Automático
+# CarX — Configuração do Proxy Reverso Caddy com TLS Automático & Wildcard
 # ==============================================================================
 
 {
@@ -7,6 +7,14 @@
     admin off
     servers {
         trusted_proxies static private_ranges
+    }
+
+    # Proteção de emissão de TLS On-Demand para domínios de clientes (White-Label)
+    # Valida dinamicamente no backend se o domínio pertence a um tenant ativo antes de emitir SSL
+    on_demand_tls {
+        ask http://carx-api:3000/internal/caddy-check
+        interval 2m
+        burst 10
     }
 }
 
@@ -21,13 +29,13 @@
     }
 }
 
-# Snippet de Compressão
+# Snippet de Compressão de Alta Performance
 (compression) {
     encode zstd gzip
 }
 
 # ------------------------------------------------------------------------------
-# 1. API Fastify do CarX
+# 1. API Fastify do CarX (api.carx.com.br)
 # ------------------------------------------------------------------------------
 api.{$BASE_DOMAIN:carx.com.br} {
     import security_headers
@@ -47,51 +55,89 @@ api.{$BASE_DOMAIN:carx.com.br} {
 }
 
 # ------------------------------------------------------------------------------
-# 2. Painel Super Admin (admin.carx...)
+# 2. Painel Super Admin (admin.carx.com.br)
 # ------------------------------------------------------------------------------
 admin.{$BASE_DOMAIN:carx.com.br} {
     import security_headers
     import compression
 
-    # Bloqueio de Frame para proteção contra Clickjacking
+    # Bloqueio estrito de frame para proteção contra Clickjacking no Super Admin
     header X-Frame-Options "DENY"
 
     reverse_proxy carx-admin-web:80 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
     }
 }
 
 # ------------------------------------------------------------------------------
-# 3. Monitoramento e Status (status.carx...)
+# 3. Monitoramento e Status (status.carx.com.br)
 # ------------------------------------------------------------------------------
 status.{$BASE_DOMAIN:carx.com.br} {
     import security_headers
     import compression
 
-    reverse_proxy uptime:3001
+    reverse_proxy uptime:3001 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
 }
 
 # ------------------------------------------------------------------------------
-# 4. Landing Page e Domínio Raiz (carx.com.br / www)
+# 4. Landing Page e Domínio Raiz (carx.com.br / www.carx.com.br)
 # ------------------------------------------------------------------------------
 {$BASE_DOMAIN:carx.com.br}, www.{$BASE_DOMAIN:carx.com.br} {
-    import security_headers
-    import compression
-
-    reverse_proxy carx-web:80
-}
-
-# ------------------------------------------------------------------------------
-# 5. App Central e Subdomínios Wildcard de Lojas (*.carx... e app.carx...)
-# ------------------------------------------------------------------------------
-app.{$BASE_DOMAIN:carx.com.br}, *.{$BASE_DOMAIN:carx.com.br} {
     import security_headers
     import compression
 
     reverse_proxy carx-web:80 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
     }
 }
 
+# ------------------------------------------------------------------------------
+# 5. App Central e Subdomínios Wildcard de Lojas (*.carx.com.br e app.carx.com.br)
+# ------------------------------------------------------------------------------
+app.{$BASE_DOMAIN:carx.com.br}, *.{$BASE_DOMAIN:carx.com.br} {
+    import security_headers
+    import compression
+
+    tls {
+        on_demand
+    }
+
+    reverse_proxy carx-web:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Tenant-Host {host}
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 6. Suporte a Domínios Próprios White-Label (ex: sistema.oficina.com.br)
+# ------------------------------------------------------------------------------
+:443 {
+    tls {
+        on_demand
+    }
+
+    import security_headers
+    import compression
+
+    reverse_proxy carx-web:80 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Tenant-Host {host}
+    }
+}
