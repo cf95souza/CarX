@@ -6,6 +6,7 @@ export interface AuditLogEntry {
   id: string;
   tenant_id: string | null;
   user_id: string | null;
+  superadmin_user_id: string | null;
   action: string;
   entity: string;
   entity_id: string | null;
@@ -19,6 +20,7 @@ export interface AuditLogEntry {
 export interface CreateAuditLogParams {
   tenantId?: string | null;
   userId?: string | null;
+  superadminUserId?: string | null;
   action: string;
   entity: string;
   entityId?: string | null;
@@ -57,6 +59,7 @@ export class AuditService {
     const {
       tenantId = null,
       userId = null,
+      superadminUserId = null,
       action,
       entity,
       entityId = null,
@@ -70,6 +73,7 @@ export class AuditService {
       INSERT INTO audit_logs (
         tenant_id,
         user_id,
+        superadmin_user_id,
         action,
         entity,
         entity_id,
@@ -77,13 +81,14 @@ export class AuditService {
         new_values,
         ip_address,
         user_agent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *;
     `;
 
     const values = [
       tenantId,
       userId,
+      superadminUserId,
       action.toUpperCase().trim(),
       entity.toLowerCase().trim(),
       entityId ? String(entityId) : null,

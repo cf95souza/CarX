@@ -75,8 +75,25 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
       rawTenantSlug = extractTenantSlugFromHost(forwardedHost);
     }
 
-    // 3. Se temos o slug mas não o ID, resolver ID no banco
-    if (!rawTenantId && rawTenantSlug) {
+    // 3. Resolver e validar status do tenant no banco (por ID, SLUG ou CUSTOM DOMAIN)
+    let tenantRow: TenantRow | null = null;
+
+    if (rawTenantId) {
+      try {
+        const res = await tenantQuery<TenantRow>(
+          null,
+          'SELECT id, slug, status FROM tenants WHERE id = $1 LIMIT 1',
+          [rawTenantId],
+          { bypassRls: true }
+        );
+        if (res.rows.length > 0) {
+          tenantRow = res.rows[0];
+          rawTenantSlug = tenantRow.slug;
+        }
+      } catch (err) {
+        request.log.error({ err, rawTenantId }, 'Falha ao resolver tenant por ID');
+      }
+    } else if (rawTenantSlug) {
       try {
         const res = await tenantQuery<TenantRow>(
           null,
@@ -84,27 +101,15 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
           [rawTenantSlug],
           { bypassRls: true }
         );
-
         if (res.rows.length > 0) {
-          const tenant = res.rows[0];
-
-          if (tenant.status === 'suspended' || tenant.status === 'cancelled') {
-            return reply.code(403).send({
-              statusCode: 403,
-              error: 'Forbidden',
-              message: `Acesso bloqueado: oficina ${tenant.slug} está com status "${tenant.status}".`,
-            });
-          }
-
-          rawTenantId = tenant.id;
+          tenantRow = res.rows[0];
+          rawTenantId = tenantRow.id;
         }
       } catch (err) {
         request.log.error({ err, rawTenantSlug }, 'Falha ao resolver tenant por slug');
       }
-    }
-
-    // 3.1 Se ainda não temos tenantId/slug, verificar se o host corresponde a um custom_domain de oficina
-    if (!rawTenantId && !rawTenantSlug) {
+    } else {
+      // 3.1 Se ainda não temos tenantId/slug, verificar se o host corresponde a um custom_domain de oficina
       const forwardedHost = (request.headers['x-tenant-host'] as string) || request.headers.host;
       if (forwardedHost) {
         const cleanHost = forwardedHost.split(':')[0].toLowerCase().trim();
@@ -118,24 +123,23 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
             );
 
             if (customDomainRes.rows.length > 0) {
-              const tenant = customDomainRes.rows[0];
-
-              if (tenant.status === 'suspended' || tenant.status === 'cancelled') {
-                return reply.code(403).send({
-                  statusCode: 403,
-                  error: 'Forbidden',
-                  message: `Acesso bloqueado: oficina ${tenant.slug} está com status "${tenant.status}".`,
-                });
-              }
-
-              rawTenantId = tenant.id;
-              rawTenantSlug = tenant.slug;
+              tenantRow = customDomainRes.rows[0];
+              rawTenantId = tenantRow.id;
+              rawTenantSlug = tenantRow.slug;
             }
           } catch (err) {
             request.log.error({ err, cleanHost }, 'Falha ao resolver tenant por custom_domain');
           }
         }
       }
+    }
+
+    if (tenantRow && (tenantRow.status === 'suspended' || tenantRow.status === 'cancelled') && !request.isSuperadmin) {
+      return reply.code(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: `Acesso bloqueado: oficina ${tenantRow.slug} está com status "${tenantRow.status}".`,
+      });
     }
 
     request.tenantId = rawTenantId;

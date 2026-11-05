@@ -494,6 +494,121 @@ CREATE INDEX IF NOT EXISTS idx_storage_files_file_key ON storage_files(file_key)
 
 ---
 
+## 🛡️ Migração 008: Super Admin, Contratos, Leads e Impersonação (`008_superadmin_schema.up.sql`)
+
+### 1. Tabela `superadmin_users` (Administradores da Plataforma Isolados dos Tenants)
+```sql
+CREATE TABLE IF NOT EXISTS superadmin_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    two_factor_secret VARCHAR(64),
+    two_factor_enabled BOOLEAN NOT NULL DEFAULT false,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 2. Tabela `contracts` e `contract_events` (Contratos e Licenças Comerciais)
+```sql
+CREATE TABLE IF NOT EXISTS contracts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    plan_id UUID NOT NULL REFERENCES plans(id) ON DELETE RESTRICT,
+    billing_cycle VARCHAR(50) NOT NULL DEFAULT 'monthly',
+    negotiated_price_cents INTEGER NOT NULL DEFAULT 0,
+    discount_cents INTEGER NOT NULL DEFAULT 0,
+    custom_limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
+    starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativar e Forçar RLS na tabela contracts (possui tenant_id)
+ALTER TABLE contracts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contracts FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_policy ON contracts
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE TABLE IF NOT EXISTS contract_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL,
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 3. Tabela `impersonation_log` (Auditoria Rigorosa de Acesso a Oficinas)
+```sql
+CREATE TABLE IF NOT EXISTS impersonation_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    superadmin_user_id UUID NOT NULL REFERENCES superadmin_users(id) ON DELETE CASCADE,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    reason TEXT NOT NULL,
+    token_jti VARCHAR(100) NOT NULL,
+    ip_address VARCHAR(50),
+    user_agent TEXT,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ended_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- RLS Canônico e Forçado
+ALTER TABLE impersonation_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE impersonation_log FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_policy ON impersonation_log
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+```
+
+### 4. Tabela `leads` (Funil de Vendas da Landing Page)
+```sql
+CREATE TABLE IF NOT EXISTS leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    phone VARCHAR(50),
+    company_name VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'new',
+    converted_tenant_id UUID REFERENCES tenants(id) ON DELETE SET NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### 5. Alterações Estruturais Complementares
+- `ALTER TABLE invoices ADD COLUMN IF NOT EXISTS contract_id UUID REFERENCES contracts(id) ON DELETE SET NULL;`
+- `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS superadmin_user_id UUID REFERENCES superadmin_users(id) ON DELETE SET NULL;`
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).

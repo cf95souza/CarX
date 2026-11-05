@@ -566,13 +566,19 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.9 — Super Admin: Backend e Módulo `/admin`
+### [x] T2.9 — Super Admin: Backend e Módulo `/admin`
 - **Descrição:** Módulo de gerenciamento global das oficinas clientes, com role de banco separada, bypass das regras de tenant isolado e auditoria imutável.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 11: Ambiente Super Admin (Linhas 367–402)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L367-L402)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.9 (Linhas 567–570)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L567-L570)
-- **Entrega:** Endpoints de métricas globais (MRR, churn, lojas ativas), CRUD de oficinas, suspensão/reativação, log de impersonação e planos.
-- **Pronto quando:** Token JWT emitido para usuário do Super Admin é sumariamente rejeitado no app das lojas e vice-versa.
+- **Entrega Concluída:**
+  - **Tabelas do Super Admin (`008_superadmin_schema.up.sql`)**: `superadmin_users` isolada da tabela de usuários de lojas, `contracts` e `contract_events`, `impersonation_log` com RLS obrigatório e política canônica `tenant_isolation_policy`, `leads` para captação do funil da landing page, e relacionamento `superadmin_user_id` em `audit_logs`.
+  - **Rejeição Mútua Estrita de Tokens (Critério de Aceite)**: Tokens com `scope: 'superadmin'` são sumariamente rejeitados no app das lojas com HTTP 403 Forbidden ("Tokens administrativos de Super Admin não possuem permissão para acesso direto a rotas de lojas sem impersonação ativa"), e tokens de inquilinos/colaboradores são sumariamente rejeitados no módulo `/admin` com HTTP 403 Forbidden.
+  - **Impersonação Auditada**: Endpoint `/admin/tenants/:id/impersonate` emite token específico delimitado a 1 hora com registro imutável em `impersonation_log` e `audit_logs`.
+  - **Métricas SaaS Globais**: Endpoint `/admin/dashboard/metrics` calcula MRR, ARR, oficinas por status (ativas, trialing, suspensas, canceladas), churn rate (%), inadimplência e receita por plano.
+  - **Gestão de Oficinas**: Listagem `/admin/tenants` com contadores enriquecidos (unidades, usuários, faturamento), assistente de criação com matriz e usuário proprietário, e bloqueio imediato com HTTP 403 para oficinas com status `suspended` ou `cancelled`.
+  - **Suíte de Testes Automatizada**: 15 testes aprovados em [`apps/api/src/superadmin/superadmin.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/superadmin/superadmin.test.ts).
+  - **Total Geral da API CarX**: **107/107 testes passando com 100% de sucesso** em 15 suítes.
 
 ---
 

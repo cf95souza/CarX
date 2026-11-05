@@ -24,6 +24,16 @@ export const authenticateBearer: preHandlerHookHandler = async (request: Fastify
   const token = authHeader.replace('Bearer ', '').trim();
   try {
     const payload = verifyJwt<JwtPayload>(token);
+
+    // CRITÉRIO DE ACEITE T2.9: Token JWT de Super Admin é sumariamente rejeitado no app das lojas
+    if (payload.scope === 'superadmin' && !payload.isImpersonation) {
+      return reply.code(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'Tokens administrativos de Super Admin não possuem permissão para acesso direto a rotas de lojas sem impersonação ativa.',
+      });
+    }
+
     request.user = payload;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Token inválido';

@@ -12,6 +12,7 @@ import planRoutes from './routes/plan-routes.js';
 import multipart from '@fastify/multipart';
 import brandingRoutes from './routes/branding-routes.js';
 import storageRoutes from './routes/storage-routes.js';
+import superadminRoutes from './routes/superadmin-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -57,6 +58,9 @@ export function buildServer() {
     },
   });
   app.register(storageRoutes);
+
+  // Módulo Super Admin (Dono do SaaS)
+  app.register(superadminRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

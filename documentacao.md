@@ -639,5 +639,34 @@ Implementado o subsistema completo de upload, validação de segurança e armaze
   - 11 testes cobrindo upload multipart, detecção de magic bytes, **rejeição de executável .exe renomeado para .jpg (critério de aceite)**, bloqueio de SVG e scripts, **bloqueio de acesso cruzado entre oficinas (critério de aceite)**, path traversal, presigned URLs, controle de cotas e exclusão segura.
   - Total consolidado da suíte da API CarX: **92 testes passando com 100% de sucesso** em 14 suítes.
 
+#### Tarefa T2.9: Super Admin: Backend e Módulo `/admin` 🛡️
+Implementado o módulo central de governança global da plataforma SaaS para o dono do negócio operar contratos, visualizar métricas financeiras, gerenciar oficinas clientes e auditar acessos com isolamento absoluto:
+- **Migration 008 — Tabelas do Super Admin (`008_superadmin_schema.up.sql`)**:
+  - `superadmin_users`: Tabela de administradores da plataforma CarX totalmente separada da tabela `users` dos inquilinos, com suporte a 2FA TOTP e sessões curtas (30 minutos).
+  - `contracts` e `contract_events`: Gestão de licenças, ciclo de cobrança (mensal/anual), limites customizados e histórico imutável de eventos contratuais.
+  - `impersonation_log`: Registro de auditoria rigoroso para acessos temporários de suporte a oficinas clientes, com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e política canônica `tenant_isolation_policy`.
+  - `leads`: Funil de captação de clientes da landing page com fluxo de conversão automática em oficina.
+  - Relacionamentos `contract_id` em `invoices` e `superadmin_user_id` em `audit_logs`.
+- **Rejeição Mútua Estrita de Tokens (Critério de Aceite)**:
+  - Middlewares `requireSuperadminAuth` e `authenticateBearer` configurados com barreiras intransponíveis:
+    - Qualquer token de Super Admin é sumariamente rejeitado no app das lojas com HTTP 403 Forbidden ("Tokens administrativos de Super Admin não possuem permissão para acesso direto a rotas de lojas sem impersonação ativa").
+    - Qualquer token de usuário ou colaborador de loja é sumariamente rejeitado no módulo `/admin` com HTTP 403 Forbidden ("Acesso restrito a Super Administradores da plataforma CarX").
+- **Métricas Globais de SaaS (`GET /admin/dashboard/metrics`)**:
+  - Consolidação em tempo real de MRR (Receita Recorrente Mensal), ARR, contagem de oficinas por status (`active`, `trialing`, `suspended`, `cancelled`), taxa de churn (%), inadimplência e distribuição de receita por plano.
+  - Métricas de infraestrutura: total de unidades, colaboradores, ordens de serviço e armazenamento consumido.
+- **CRUD e Ciclo de Vida de Oficinas (`/admin/tenants`)**:
+  - Listagem enriquecida com contadores de uso e filtros por status ou busca textual.
+  - Assistente corporativo de criação de oficina (`POST /admin/tenants`), provisionando tenant, unidade Matriz padrão, proprietário e contrato.
+  - Suspensão imediata (`POST /admin/tenants/:id/suspend`) e reativação (`POST /admin/tenants/:id/reactivate`), com bloqueio instantâneo de requisições de inquilinos suspensos no `tenantPlugin` (HTTP 403).
+- **Impersonação Auditada (`POST /admin/tenants/:id/impersonate`)**:
+  - Emissão de token delimitado no tempo (1 hora) e geração obrigatória de registro em `impersonation_log` contendo justificativa do atendimento, IP, user-agent e identificador único de rastreabilidade `token_jti`.
+- **Gestão de Leads e Contratos**:
+  - `POST /admin/leads/:id/convert`: Transforma um lead em oficina homologada mantendo o vínculo `converted_tenant_id`.
+  - `GET /admin/contracts` e `GET /admin/invoices`: Visão consolidada de contratos e histórico de cobranças.
+  - `GET /admin/audit-logs`: Trilha imutável de compliance das ações administrativas.
+- **Validação Automatizada (`apps/api/src/superadmin/superadmin.test.ts`)**:
+  - 15 testes automatizados cobrindo autenticação com 2FA, rejeição mútua de tokens, métricas SaaS, listagem, suspensão/reativação, impersonação, conversão de leads e auditoria.
+  - **Total Consolidado da API CarX**: **107/107 testes passando com 100% de sucesso** em 15 suítes.
+
 
 
