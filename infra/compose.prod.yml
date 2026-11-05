@@ -88,7 +88,7 @@ services:
       args:
         - VITE_API_URL=https://api.${BASE_DOMAIN:-carx.com.br}
         - VITE_APP_ENV=production
-    image: carx/web:latest
+    image: ${DOCKER_IMAGE_WEB:-carx/web}:${IMAGE_TAG:-latest}
     container_name: carx-web
     restart: unless-stopped
     networks:
@@ -119,7 +119,7 @@ services:
       args:
         - VITE_API_URL=https://api.${BASE_DOMAIN:-carx.com.br}
         - VITE_APP_ENV=production
-    image: carx/admin-web:latest
+    image: ${DOCKER_IMAGE_ADMIN:-carx/admin-web}:${IMAGE_TAG:-latest}
     container_name: carx-admin-web
     restart: unless-stopped
     networks:
@@ -147,7 +147,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/api.Dockerfile
-    image: carx/api:latest
+    image: ${DOCKER_IMAGE_API:-carx/api}:${IMAGE_TAG:-latest}
     container_name: carx-api
     restart: unless-stopped
     environment:
@@ -192,7 +192,7 @@ services:
   # Bloco 2 (+): Background Jobs Worker (Mesma imagem da API)
   # ----------------------------------------------------------------------------
   carx-worker:
-    image: carx/api:latest
+    image: ${DOCKER_IMAGE_API:-carx/api}:${IMAGE_TAG:-latest}
     container_name: carx-worker
     restart: unless-stopped
     command: ["node", "-e", "console.log('CarX Background Worker ativo consumindo filas Redis'); setInterval(() => {}, 60000);"]
@@ -260,7 +260,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/wa.Dockerfile
-    image: carx/wa:latest
+    image: ${DOCKER_IMAGE_WA:-carx/wa}:${IMAGE_TAG:-latest}
     container_name: carx-wa
     restart: unless-stopped
     volumes:

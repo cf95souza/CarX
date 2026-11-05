@@ -387,3 +387,21 @@ Implementado o ecossistema completo de telemetria, logs estruturados em JSON, ra
   - Validação executada com sucesso contra o Docker Desktop: a parada forçada do container da API foi detectada em **2 segundos** (limite exigido: $\le 120$ segundos / 2 minutos), e a recuperação ocorreu em **1 segundo** após o religamento.
 - **Manual de Operações (`docs/observabilidade.md`)**:
   - Documentação da arquitetura, matriz de monitores, formato de logs e configuração de canais de notificação (Discord, Telegram, Slack).
+
+#### Tarefa T1.6: Deploy Automatizado e Rollback 🚀
+Concluído o pipeline de Entrega Contínua (CD), publicação automatizada de imagens no GitHub Container Registry (GHCR) e procedimento de Rollback em 1 comando:
+- **Pipeline de CD com Gatilhos Inteligentes (`.github/workflows/deploy.yml`)**:
+  - **Ambiente de Homologação (Staging)**: Push ou merge na branch `main` executa a suíte de testes (`lint`, `typecheck`, `test`), constrói as imagens Docker via Buildx com cache GHA, publica no GHCR com as tags `sha-<commit>` e `staging`, e aciona o deploy remoto via SSH na VPS.
+  - **Ambiente de Produção (Production)**: Deploy acionado por tags Git semânticas (`v*.*.*`) ou manualmente via `workflow_dispatch` com seleção explícita de ambiente e tag.
+  - **Execução Remota Segura**: Uso da action `appleboy/ssh-action@v1.0.3` conectando ao usuário sem privilégios `carx` e executando o script `infra/scripts/deploy.sh`.
+- **Script de Deploy na VPS (`infra/scripts/deploy.sh`)**:
+  - Gravação do histórico atômico de versões em `~/.carx-deploy/<env>-previous.txt` antes de iniciar as alterações.
+  - Execução de migrations de banco isoladas antes da alternância de tráfego.
+  - Recriação de containers com `--remove-orphans`.
+  - **Rollback Preventivo Automático**: Se os healthchecks (`/health/ready`) não responderem HTTP 200 em até 60 segundos, o script aborta e executa o rollback imediato para a versão anterior.
+- **Rollback em 1 Comando (`infra/scripts/rollback.sh` e `infra/scripts/rollback.ps1`)**:
+  - Operação simplificada executável diretamente via SSH: `bash infra/scripts/rollback.sh production`.
+  - Restauração de containers e normalização de tráfego em menos de 10 segundos.
+  - Testado e auditado com sucesso no Docker Desktop com restabelecimento de saúde instantâneo.
+- **Manual de Operações e Contingência (`docs/deploy-e-rollback.md`)**:
+  - Guia detalhado de branches, segredos do GitHub Actions (`VPS_HOST`, `VPS_SSH_KEY`, `VPS_SSH_USER`) e procedimentos de contingência.

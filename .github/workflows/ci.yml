@@ -41,6 +41,9 @@ jobs:
       - name: Type Check
         run: pnpm typecheck
 
+      - name: Unit & Integration Tests
+        run: pnpm --filter @carx/api test
+
   build:
     name: Build Apps & Packages
     needs: validate

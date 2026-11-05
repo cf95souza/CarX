@@ -47,7 +47,7 @@ services:
       args:
         - VITE_API_URL=https://staging-api.${BASE_DOMAIN:-carx.com.br}
         - VITE_APP_ENV=staging
-    image: carx/web:staging
+    image: ${DOCKER_IMAGE_WEB:-carx/web}:${IMAGE_TAG:-staging}
     container_name: carx-staging-web
     restart: unless-stopped
     networks:
@@ -70,7 +70,7 @@ services:
       args:
         - VITE_API_URL=https://staging-api.${BASE_DOMAIN:-carx.com.br}
         - VITE_APP_ENV=staging
-    image: carx/admin-web:staging
+    image: ${DOCKER_IMAGE_ADMIN:-carx/admin-web}:${IMAGE_TAG:-staging}
     container_name: carx-staging-admin-web
     restart: unless-stopped
     networks:
@@ -90,7 +90,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/api.Dockerfile
-    image: carx/api:staging
+    image: ${DOCKER_IMAGE_API:-carx/api}:${IMAGE_TAG:-staging}
     container_name: carx-staging-api
     restart: unless-stopped
     environment:
@@ -127,7 +127,7 @@ services:
       retries: 3
 
   carx-worker:
-    image: carx/api:staging
+    image: ${DOCKER_IMAGE_API:-carx/api}:${IMAGE_TAG:-staging}
     container_name: carx-staging-worker
     restart: unless-stopped
     command: ["node", "-e", "console.log('CarX Staging Worker ativo'); setInterval(() => {}, 60000);"]
@@ -179,7 +179,7 @@ services:
     build:
       context: ..
       dockerfile: infra/docker/wa.Dockerfile
-    image: carx/wa:staging
+    image: ${DOCKER_IMAGE_WA:-carx/wa}:${IMAGE_TAG:-staging}
     container_name: carx-staging-wa
     restart: unless-stopped
     volumes:

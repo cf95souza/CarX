@@ -181,3 +181,4 @@ powershell -ExecutionPolicy Bypass -File infra/scripts/test-alert.ps1
 - Detecção de indisponibilidade: **$< 2$ segundos** (requisito: $\le 120$ segundos).
 - Restabelecimento do serviço: **$< 2$ segundos**.
 - Código de saída do script: `0 (Sucesso)`.
+

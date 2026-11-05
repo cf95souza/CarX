@@ -13,7 +13,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 | Fase | Descrição | Status | Dependências |
 |---|---|---|---|
 | **Fase 0** | Fundação do Projeto, Monorepo e Design System | `[x] Concluído` | Nenhuma |
-| **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[~] Em Andamento` | Fase 0 |
+| **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[x] Concluído` | Fase 0 |
 | **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[ ] Não Iniciado` | Fase 1 |
 | **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[ ] Não Iniciado` | Fase 2 |
 | **Fase 4** | Migração de Dados e Clientes Legados (ETL) | `[ ] Não Iniciado` | Fase 3 |
@@ -273,13 +273,28 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T1.6 — Deploy Automatizado e Rollback
+### [x] T1.6 — Deploy Automatizado e Rollback `(Concluído)`
 - **Descrição:** Pipeline de deploy contínuo das imagens dos containers para a VPS via SSH/Registry com suporte a rollback com 1 comando.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 3: CI/CD (Linhas 142–143)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L142-L143)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T1.6 (Linhas 521–524)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L521-L524)
 - **Entrega:** GitHub Action de deploy com versionamento semântico de tags Docker e script `infra/scripts/rollback.sh`.
 - **Pronto quando:** Merge na branch `main` atualiza o ambiente de homologação e a execução do script de rollback restaura a versão anterior.
+- **Status da Validação:**
+  - **Pipeline de CD (.github/workflows/deploy.yml)**:
+    - Gatilhos automáticos para branch `main` (deploy contínuo em homologação/staging) e tags de release `v*.*.*` ou `workflow_dispatch` (deploy controlado em produção).
+    - Etapas completas de testes automatizados (`pnpm lint`, `pnpm typecheck`, `pnpm test`).
+    - Build multi-arquitetura com Docker Buildx e cache GitHub Actions (`type=gha`).
+    - Publicação no GitHub Container Registry (GHCR) com tags semânticas (`sha-<commit>`, `<env>`, `<tag>`, `latest`).
+    - Execução remota na VPS via SSH (`appleboy/ssh-action@v1.0.3`) acionando `infra/scripts/deploy.sh`.
+  - **Script de Deploy na VPS (infra/scripts/deploy.sh)**:
+    - Gravação atômica do histórico de versões em `~/.carx-deploy/<env>-previous.txt` antes de qualquer alteração.
+    - Execução isolada de migrações de banco antes do switch de tráfego.
+    - Healthcheck probe ativo de até 60 segundos com **Rollback Automático Preventivo** caso a nova versão falhe.
+  - **Rollback em 1 Comando (infra/scripts/rollback.sh e rollback.ps1)**:
+    - Execução em linha única via SSH: `bash infra/scripts/rollback.sh production`.
+    - Procedimento testado e auditado com sucesso no Docker Desktop: restaura a versão anterior e restabelece a saúde dos containers em menos de 10 segundos.
+  - **Documentação Operacional**: Manual completo com fluxo de branches, segredos necessários e SOP de contingência registrado em `docs/deploy-e-rollback.md`.
 
 ---
 
@@ -621,7 +636,8 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 ### [ ] T3.17 — Gateway de WhatsApp Próprio e Mensagens Transacionais
 - **Descrição:** Integração com o container `carx-wa` através de uma interface de canal desacoplada (`MessageChannel`), permitindo disparo de mensagens da oficina e recebimento de respostas (NPS e aceite de orçamento). "No OperaBeauty fizemos um gateway copie ele para usar aqui se chama operabeauty-wa-gateway file:///d:/Repositorios/OperaBeauty"
 - **Onde ler no Documento Único:**
-  - [CarX_Documento_Unico.md — Seção 13: Gateway de WhatsApp Próprio (Linhas 436–456)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L436-L456)
+  - [CarX_Documento_Unico.md — Seção 13: Gateway de WhatsApp Próprio (Linhas 436–456)](file:/
+  //d:/Repositorios/CarX/CarX_Documento_Unico.md#L436-L456)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.17 (Linhas 651–654)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L651-L654)
 - **Entrega:** Driver `own-gateway` com fila BullMQ, pareamento via QR Code no painel da loja, limite de taxa por número, templates de mensagem parametrizados e opt-out automático ("SAIR").
 - **Pronto quando:** Concluir uma OS dispara notificação com link para o cliente no WhatsApp, e a parada forçada do container do WhatsApp não derruba a API (mensagens aguardam na fila).
