@@ -869,6 +869,7 @@ export class SuperadminService {
     const token = signJwt(
       {
         sub: superadminUserId,
+        email: 'impersonation@carx.local',
         tenant_id: tenant.id,
         role: 'owner',
         isImpersonation: true,
@@ -984,7 +985,7 @@ export class SuperadminService {
    * Listagem de Leads prospectados da Landing Page
    */
   async listLeads(): Promise<LeadDto[]> {
-    const res = await query('SELECT * FROM leads ORDER BY created_at DESC');
+    const res = await query<LeadDto>('SELECT * FROM leads ORDER BY created_at DESC');
     return res.rows;
   }
 
@@ -1002,7 +1003,7 @@ export class SuperadminService {
       throw new SuperadminError('Nome e e-mail são obrigatórios para registrar o lead.', 400);
     }
 
-    const res = await query(
+    const res = await query<LeadDto>(
       `INSERT INTO leads (name, email, phone, company_name, notes)
        VALUES ($1, LOWER(TRIM($2)), $3, $4, $5)
        RETURNING *`,

@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { superadminService, SuperadminError } from '../superadmin/superadmin-service.js';
+import { dunningService, PayInvoiceInput, CreateInvoiceInput } from '../billing/dunning-service.js';
 import { requireSuperadminAuth } from '../middlewares/superadmin-guards.js';
 import {
   SuperadminLoginInput,
@@ -274,6 +275,109 @@ export async function superadminRoutes(fastify: FastifyInstance) {
           return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
         }
         throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /admin/invoices — Emissão Manual de Fatura pelo Super Admin
+   */
+  fastify.post<{ Body: CreateInvoiceInput }>(
+    '/admin/invoices',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const superadminId = request.superadmin!.id;
+        const result = await dunningService.createInvoiceManual(request.body, superadminId);
+        return reply.code(201).send(result);
+      } catch (err: any) {
+        const statusCode = err.statusCode || 500;
+        return reply.code(statusCode).send({ statusCode, message: err.message });
+      }
+    }
+  );
+
+  /**
+   * POST /admin/invoices/:id/pay — Baixa Manual de Fatura com Reativação Imediata
+   */
+  fastify.post<{ Params: { id: string }; Body: PayInvoiceInput }>(
+    '/admin/invoices/:id/pay',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const superadminId = request.superadmin!.id;
+        const result = await dunningService.payInvoiceManual(
+          request.params.id,
+          request.body || {},
+          superadminId
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        const statusCode = err.statusCode || 500;
+        return reply.code(statusCode).send({ statusCode, message: err.message });
+      }
+    }
+  );
+
+  /**
+   * POST /admin/invoices/:id/cancel — Cancelamento Manual de Fatura
+   */
+  fastify.post<{ Params: { id: string }; Body: { reason?: string } }>(
+    '/admin/invoices/:id/cancel',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const superadminId = request.superadmin!.id;
+        const result = await dunningService.cancelInvoiceManual(
+          request.params.id,
+          request.body?.reason || 'Cancelamento solicitado pelo administrador',
+          superadminId
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        const statusCode = err.statusCode || 500;
+        return reply.code(statusCode).send({ statusCode, message: err.message });
+      }
+    }
+  );
+
+  /**
+   * POST /admin/billing/run-dunning — Execução Manual ou Agendada da Régua de Cobrança
+   */
+  fastify.post<{ Body: { targetDate?: string } }>(
+    '/admin/billing/run-dunning',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const targetDate = request.body?.targetDate ? new Date(request.body.targetDate) : undefined;
+        const result = await dunningService.runDunningRoutine(targetDate);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        const statusCode = err.statusCode || 500;
+        return reply.code(statusCode).send({ statusCode, message: err.message });
+      }
+    }
+  );
+
+  /**
+   * GET /admin/billing/dunning-events — Histórico de Eventos da Régua de Cobrança
+   */
+  fastify.get<{ Querystring: { tenantId?: string; limit?: string; offset?: string } }>(
+    '/admin/billing/dunning-events',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const limit = request.query.limit ? parseInt(request.query.limit, 10) : 20;
+        const offset = request.query.offset ? parseInt(request.query.offset, 10) : 0;
+        const result = await dunningService.getDunningEvents({
+          tenantId: request.query.tenantId,
+          limit,
+          offset,
+        });
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        const statusCode = err.statusCode || 500;
+        return reply.code(statusCode).send({ statusCode, message: err.message });
       }
     }
   );

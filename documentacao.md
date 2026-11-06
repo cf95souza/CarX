@@ -714,7 +714,31 @@ Implementado o provisionamento completo de novas oficinas clientes, garantindo i
   - Assistente em 5 etapas com seleção visual dos segmentos e resumo dos itens injetados.
 - **Validação Automatizada com Sucesso Absoluto**:
   - 7 novos testes em [`apps/api/src/provisioning/provisioning.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/provisioning/provisioning.test.ts).
-  - **Total Consolidado da API CarX**: **114/114 testes passando com 100% de sucesso** em 16 suítes.
+  - Total consolidado da API CarX: 114/114 testes passando em 16 suítes.
+
+#### Tarefa T2.12: Contratos, Faturas e Régua de Cobrança (Manual/Regras) ⚖️
+Implementado o ciclo completo de gestão de contratos, emissão e conciliação de faturas, e o motor da régua de cobrança programada com suspensão seletiva em **Modo Somente Leitura**:
+- **Migration 010 — Esquema de Dunning e Modo Somente Leitura (`010_billing_dunning.up.sql`)**:
+  - Colunas adicionadas em `tenants`: `is_read_only BOOLEAN NOT NULL DEFAULT false`, `suspended_reason VARCHAR(255)`, `last_dunning_stage VARCHAR(50)`, `dunning_updated_at TIMESTAMPTZ`.
+  - Tabela `billing_dunning_events`: histórico imutável de eventos da régua com colunas `stage`, `days_overdue`, `action_taken`, `details (JSONB)`, com RLS e FORCE RLS ativados (`tenant_isolation_policy`).
+- **Máquina de Estados da Régua de Cobrança (`apps/api/src/billing/dunning-service.ts`)**:
+  - **3 dias de atraso (`warning_3d`)**: Aviso formal de cobrança registrado no histórico; oficina permanece ativa e operacional.
+  - **7 dias de atraso (`soft_restriction_7d`)**: Restrição leve; alertas visuais em destaque no sistema da oficina e bloqueio preventivo de criação de novas filiais/unidades.
+  - **15 dias de atraso (`suspension_15d`) — Suspensão em Modo Somente Leitura (Seção 11.2)**:
+    - O inquilino é marcado com `status = 'suspended'` e `is_read_only = true`. O contrato passa para `past_due`.
+    - **Proteção HTTP via `tenantPlugin`**: Consultas `GET` continuam funcionando normalmente (com header de resposta `x-tenant-read-only: true`), permitindo que a oficina consulte ordens de serviço antigas, histórico de clientes e laudos periciais.
+    - Operações de escrita (`POST`, `PUT`, `PATCH`, `DELETE`) de usuários da loja são sumariamente bloqueadas com **HTTP 403 Forbidden** e código específico `TENANT_SUSPENDED_READ_ONLY`.
+  - **30 dias de atraso (`cancellation_30d`)**: Cancelamento do contrato e da licença, mantendo a integridade dos dados retidos para fins de exportação e cumprimento da LGPD.
+- **Baixa Manual e Reativação Imediata da Oficina (`POST /admin/invoices/:id/pay`)**:
+  - Quitação manual com conciliação via Pix, Boleto ou Cartão.
+  - O sistema verifica se o inquilino não possui outras faturas críticas pendentes; caso regularizado, **restaura imediatamente o status para `active`**, redefine `is_read_only = false`, reativa o contrato e desbloqueia em tempo real todas as rotas de gravação da oficina!
+- **Frontend Operacional no Super Admin (`apps/admin/src/pages/InvoicesPage.tsx`)**:
+  - Botão de execução da régua de cobrança ("Executar Régua") com feedback quantitativo das ações aplicadas.
+  - Coluna de Ações com botão "Baixa Manual" (modal de conciliação e reativação) e botão "Cancelar Fatura".
+- **Validação Automatizada com Sucesso Absoluto**:
+  - Suíte dedicada em [`apps/api/src/billing/billing-dunning.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/billing/billing-dunning.test.ts) cobrindo todo o ciclo de transição de estados, bloqueio seletivo de escrita, leitura permitida e reativação instantânea.
+  - **Total Consolidado da API CarX**: **120/120 testes passando com 100% de sucesso** em 17 suítes completas.
+  - **FASE 2 CONCLUÍDA EM 100%**.
 
 
 

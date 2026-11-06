@@ -14,7 +14,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 |---|---|---|---|
 | **Fase 0** | Fundação do Projeto, Monorepo e Design System | `[x] Concluído` | Nenhuma |
 | **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[x] Concluído` | Fase 0 |
-| **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[~] Em Andamento` | Fase 1 |
+| **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[x] 100% Concluída` | Fase 1 |
 | **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[ ] Não Iniciado` | Fase 2 |
 | **Fase 4** | Migração de Dados e Clientes Legados (ETL) | `[ ] Não Iniciado` | Fase 3 |
 | **Fase 5** | Produto SaaS Comercial, Landing Page e Faturamento | `[ ] Não Iniciado` | Fase 3 |
@@ -632,13 +632,27 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.12 — Contratos, Faturas e Régua de Cobrança (Manual/Regras)
+### [x] T2.12 — Contratos, Faturas e Régua de Cobrança (Manual/Regras) `(Concluído)`
 - **Descrição:** Máquina de estados de contratos de licença (`trial`, `ativo`, `inadimplente`, `suspenso`, `cancelado`) com bloqueio programado.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 11.2: Régua de Cobrança (Linhas 387–389)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L387-L389)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.12 (Linhas 579–582)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L579-L582)
-- **Entrega:** Rotina agendada (Worker) que verifica faturas vencidas, envia avisos, aplica restrição leve aos 7 dias e suspende em modo somente leitura aos 15 dias.
-- **Pronto quando:** Loja com fatura em atraso tem a escrita bloqueada na API, mantendo visualização dos dados históricos com banner informativo.
+- **Entrega Concluída:**
+  - **Migration 010 — Esquema de Dunning e Modo Somente Leitura (`010_billing_dunning.up.sql`)**:
+    - Colunas `is_read_only`, `suspended_reason`, `last_dunning_stage`, `dunning_updated_at` em `tenants`.
+    - Tabela imutável `billing_dunning_events` com RLS e FORCE RLS ativos (`tenant_isolation_policy`).
+  - **Serviço da Régua de Cobrança (`apps/api/src/billing/dunning-service.ts`)**:
+    - Estágios automáticos: 3 dias (`warning_3d`), 7 dias (`soft_restriction_7d`), 15 dias (`suspension_15d` em modo somente leitura), 30 dias (`cancellation_30d`).
+    - Suspensão em Modo Somente Leitura no `tenantPlugin`: Requisições `GET` são liberadas com cabeçalho `x-tenant-read-only: true`, permitindo consulta de dados históricos e laudos; requisições de escrita (`POST`, `PUT`, `PATCH`, `DELETE`) de usuários comuns são bloqueadas com HTTP 403 `TENANT_SUSPENDED_READ_ONLY`.
+    - Baixa manual pelo Super Admin (`POST /admin/invoices/:id/pay`) que quita a fatura e, caso regularizada, reativa a oficina imediatamente para `active`, remove o modo somente leitura e restabelece as permissões de gravação.
+    - Cancelamento manual (`POST /admin/invoices/:id/cancel`) e emissão avulsa de faturas (`POST /admin/invoices`).
+  - **Interface no Super Admin (`apps/admin/src/pages/InvoicesPage.tsx`)**:
+    - Botão "Executar Régua" para disparar a rotina analítica com relatório de faturas processadas.
+    - Ações por fatura: Baixa Manual com modal de conciliação e reativação automática, e Cancelamento com justificativa.
+  - **Validação Automatizada com Sucesso**:
+    - Suíte de 6 testes em [`apps/api/src/billing/billing-dunning.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/billing/billing-dunning.test.ts).
+    - **Total Consolidado da API CarX**: **120/120 testes passando com 100% de sucesso** em 17 suítes completas.
+  - **🎉 FASE 2: 100% CONCLUÍDA!**
 
 ---
 

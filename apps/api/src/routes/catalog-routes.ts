@@ -48,6 +48,44 @@ export async function catalogRoutes(fastify: FastifyInstance) {
       return reply.code(200).send(res.rows);
     }
   );
+
+  /**
+   * POST /catalog/services — Cadastra um novo serviço no catálogo da oficina (RLS)
+   */
+  fastify.post<{
+    Body: {
+      name: string;
+      category?: string;
+      description?: string;
+      priceCents?: number;
+      estimatedMinutes?: number;
+    };
+  }>(
+    '/catalog/services',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+      }
+
+      const { name, category = 'geral', description = '', priceCents = 0, estimatedMinutes = 60 } = request.body || {};
+
+      if (!name) {
+        return reply.code(400).send({ statusCode: 400, message: 'O nome do serviço é obrigatório.' });
+      }
+
+      const res = await tenantQuery<ServiceDto>(
+        tenantId,
+        `INSERT INTO services (tenant_id, name, category, description, price_cents, estimated_minutes, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, true)
+         RETURNING *`,
+        [tenantId, name, category, description, priceCents, estimatedMinutes]
+      );
+
+      return reply.code(201).send(res.rows[0]);
+    }
+  );
 }
 
 export default catalogRoutes;

@@ -22,7 +22,7 @@ export async function storageRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId!;
-      const user = request.user;
+      const user = request.user as any;
 
       try {
         const data = await request.file();
@@ -132,12 +132,12 @@ export async function storageRoutes(fastify: FastifyInstance) {
    * GET /storage/files/:id/url — Gera URL pré-assinada de visualização segura
    * Garante isolamento estrito: rejeita acesso cruzado entre oficinas.
    */
-  fastify.get(
+  fastify.get<{ Params: { id: string } }>(
     '/storage/files/:id/url',
     {
       preHandler: [authenticateBearer, requireTenantContext],
     },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request, reply) => {
       const tenantId = request.tenantId!;
       const fileId = request.params.id;
 
@@ -192,12 +192,12 @@ export async function storageRoutes(fastify: FastifyInstance) {
   /**
    * DELETE /storage/files/:id — Exclui arquivo do MinIO e do banco com isolamento
    */
-  fastify.delete(
+  fastify.delete<{ Params: { id: string } }>(
     '/storage/files/:id',
     {
       preHandler: [authenticateBearer, requireTenantContext],
     },
-    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    async (request, reply) => {
       const tenantId = request.tenantId!;
       const fileId = request.params.id;
 

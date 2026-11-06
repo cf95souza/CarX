@@ -726,6 +726,58 @@ CREATE INDEX IF NOT EXISTS idx_tenant_invitations_email ON tenant_invitations(re
 
 ---
 
+## 💳 Migração 010: Régua de Cobrança, Dunning e Modo Somente Leitura (`010_billing_dunning.up.sql`)
+
+### 1. Colunas de Controle de Inadimplência na Tabela `tenants`
+```sql
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS is_read_only BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS suspended_reason VARCHAR(255);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS last_dunning_stage VARCHAR(50);
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS dunning_updated_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_tenants_is_read_only ON tenants(is_read_only);
+```
+
+### 2. Tabela `billing_dunning_events` (Trilha de Eventos da Régua de Cobrança)
+```sql
+CREATE TABLE IF NOT EXISTS billing_dunning_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE,
+    contract_id UUID REFERENCES contracts(id) ON DELETE SET NULL,
+    stage VARCHAR(50) NOT NULL,
+    days_overdue INTEGER NOT NULL DEFAULT 0,
+    action_taken VARCHAR(100) NOT NULL,
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE billing_dunning_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE billing_dunning_events FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON billing_dunning_events
+    AS PERMISSIVE
+    FOR ALL
+    TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_billing_dunning_events_tenant ON billing_dunning_events(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_billing_dunning_events_invoice ON billing_dunning_events(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_billing_dunning_events_created ON billing_dunning_events(created_at DESC);
+```
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).

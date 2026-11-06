@@ -9,6 +9,7 @@ declare module 'fastify' {
     tenantId: string | null;
     tenantSlug: string | null;
     isSuperadmin: boolean;
+    isReadOnly: boolean;
     tenantQuery: <T extends pg.QueryResultRow = pg.QueryResultRow>(
       sqlText: string,
       params?: unknown[],
@@ -25,6 +26,8 @@ interface TenantRow {
   id: string;
   slug: string;
   status: 'active' | 'suspended' | 'cancelled' | 'trialing';
+  is_read_only: boolean;
+  suspended_reason: string | null;
 }
 
 /**
@@ -60,6 +63,7 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
   fastify.decorateRequest('tenantId', null);
   fastify.decorateRequest('tenantSlug', null);
   fastify.decorateRequest('isSuperadmin', false);
+  fastify.decorateRequest('isReadOnly', false);
 
   fastify.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
     // 1. Verificar se é superadmin via header interno ou flag do token
@@ -82,7 +86,7 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
       try {
         const res = await tenantQuery<TenantRow>(
           null,
-          'SELECT id, slug, status FROM tenants WHERE id = $1 LIMIT 1',
+          'SELECT id, slug, status, is_read_only, suspended_reason FROM tenants WHERE id = $1 LIMIT 1',
           [rawTenantId],
           { bypassRls: true }
         );
@@ -97,7 +101,7 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
       try {
         const res = await tenantQuery<TenantRow>(
           null,
-          'SELECT id, slug, status FROM tenants WHERE slug = $1 LIMIT 1',
+          'SELECT id, slug, status, is_read_only, suspended_reason FROM tenants WHERE slug = $1 LIMIT 1',
           [rawTenantSlug],
           { bypassRls: true }
         );
@@ -117,7 +121,7 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
           try {
             const customDomainRes = await tenantQuery<TenantRow>(
               null,
-              'SELECT id, slug, status FROM tenants WHERE custom_domain = $1 LIMIT 1',
+              'SELECT id, slug, status, is_read_only, suspended_reason FROM tenants WHERE custom_domain = $1 LIMIT 1',
               [cleanHost],
               { bypassRls: true }
             );
@@ -134,12 +138,29 @@ export const tenantPlugin: FastifyPluginAsync = async (fastify: FastifyInstance)
       }
     }
 
-    if (tenantRow && (tenantRow.status === 'suspended' || tenantRow.status === 'cancelled') && !request.isSuperadmin) {
-      return reply.code(403).send({
-        statusCode: 403,
-        error: 'Forbidden',
-        message: `Acesso bloqueado: oficina ${tenantRow.slug} está com status "${tenantRow.status}".`,
-      });
+    if (tenantRow && !request.isSuperadmin) {
+      // Modo Somente Leitura por Inadimplência na Régua de Cobrança (Seção 11.2 / T2.12)
+      if (tenantRow.is_read_only || (tenantRow.status === 'suspended' && tenantRow.is_read_only)) {
+        request.isReadOnly = true;
+        reply.header('x-tenant-read-only', 'true');
+
+        // Se a requisição for de alteração/escrita (POST, PUT, PATCH, DELETE), bloqueia com 403 TENANT_SUSPENDED_READ_ONLY
+        const writeMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+        if (writeMethods.includes(request.method.toUpperCase())) {
+          return reply.code(403).send({
+            statusCode: 403,
+            error: 'TENANT_SUSPENDED_READ_ONLY',
+            message: 'Oficina suspensa por inadimplência na régua de cobrança. O sistema está em modo somente leitura. Regularize a fatura pendente para restabelecer os acessos de escrita.',
+          });
+        }
+      } else if (tenantRow.status === 'suspended' || tenantRow.status === 'cancelled') {
+        // Suspensão total ou cancelamento definitivo
+        return reply.code(403).send({
+          statusCode: 403,
+          error: 'Forbidden',
+          message: `Acesso bloqueado: oficina ${tenantRow.slug} está com status "${tenantRow.status}".`,
+        });
+      }
     }
 
     request.tenantId = rawTenantId;

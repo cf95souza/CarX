@@ -176,9 +176,56 @@ export const adminApi = {
     return fetchClient<ContractDto[]>('/admin/contracts');
   },
 
-  // Faturas
+  // Faturas e Régua de Cobrança
   listInvoices: async (): Promise<SuperadminInvoiceDto[]> => {
     return fetchClient<SuperadminInvoiceDto[]>('/admin/invoices');
+  },
+
+  createInvoice: async (data: {
+    tenantId: string;
+    amountCents: number;
+    dueDate: string;
+    paymentMethod?: string;
+  }): Promise<any> => {
+    return fetchClient<any>('/admin/invoices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  payInvoice: async (
+    invoiceId: string,
+    data?: { paymentMethod?: string; notes?: string }
+  ): Promise<{ invoice: any; tenantReactivated: boolean; tenant: any }> => {
+    return fetchClient<{ invoice: any; tenantReactivated: boolean; tenant: any }>(
+      `/admin/invoices/${invoiceId}/pay`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }
+    );
+  },
+
+  cancelInvoice: async (invoiceId: string, reason?: string): Promise<{ id: string; status: string }> => {
+    return fetchClient<{ id: string; status: string }>(`/admin/invoices/${invoiceId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  runDunning: async (targetDate?: string): Promise<any> => {
+    return fetchClient<any>('/admin/billing/run-dunning', {
+      method: 'POST',
+      body: JSON.stringify({ targetDate }),
+    });
+  },
+
+  getDunningEvents: async (params?: { tenantId?: string; limit?: number; offset?: number }): Promise<any> => {
+    const q = new URLSearchParams();
+    if (params?.tenantId) q.append('tenantId', params.tenantId);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    return fetchClient<any>(`/admin/billing/dunning-events?${q.toString()}`);
   },
 
   // Leads

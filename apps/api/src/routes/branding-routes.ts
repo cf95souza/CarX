@@ -121,7 +121,7 @@ export async function brandingRoutes(fastify: FastifyInstance) {
 
       try {
         const updated = await brandingService.updateBranding(tenantId, body, {
-          userId: request.user?.userId,
+          userId: (request.user as any)?.userId || null,
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'] as string,
         });
@@ -157,7 +157,7 @@ export async function brandingRoutes(fastify: FastifyInstance) {
 
       try {
         const updated = await brandingService.updateBranding(tenantId, body, {
-          userId: request.user?.userId,
+          userId: (request.user as any)?.userId || null,
           ipAddress: request.ip,
           userAgent: request.headers['user-agent'] as string,
         });
