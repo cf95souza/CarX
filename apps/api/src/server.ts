@@ -14,6 +14,8 @@ import brandingRoutes from './routes/branding-routes.js';
 import storageRoutes from './routes/storage-routes.js';
 import superadminRoutes from './routes/superadmin-routes.js';
 import catalogRoutes from './routes/catalog-routes.js';
+import customerRoutes from './routes/customer-routes.js';
+import vehicleRoutes from './routes/vehicle-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -65,6 +67,10 @@ export function buildServer() {
 
   // Catálogo de Serviços e Checklists dos Tenants (Injeção de Segmento)
   app.register(catalogRoutes);
+
+  // Domínio Automotivo: Clientes e Veículos (T3.1)
+  app.register(customerRoutes);
+  app.register(vehicleRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

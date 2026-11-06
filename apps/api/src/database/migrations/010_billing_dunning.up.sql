@@ -45,3 +45,4 @@ CREATE POLICY tenant_isolation_policy ON billing_dunning_events
 CREATE INDEX IF NOT EXISTS idx_billing_dunning_events_tenant ON billing_dunning_events(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_billing_dunning_events_invoice ON billing_dunning_events(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_billing_dunning_events_created ON billing_dunning_events(created_at DESC);
+

@@ -740,6 +740,30 @@ Implementado o ciclo completo de gestão de contratos, emissão e conciliação 
   - **Total Consolidado da API CarX**: **120/120 testes passando com 100% de sucesso** em 17 suítes completas.
   - **FASE 2 CONCLUÍDA EM 100%**.
 
+---
+
+### 🚗 Fase 3 — Domínio Automotivo no Novo Backend
+
+#### Tarefa T3.1: Clientes e Veículos (Placa por Oficina) 🚘
+Implementada a camada relacional e serviços de gestão de clientes e frotas, superando a limitação estrutural número 1 do legado (tabela single-tenant com placa única global):
+- **Migration 011 — Esquema de Clientes e Veículos (`011_customers_vehicles.up.sql`)**:
+  - `customers`: Tabela de clientes com nome, documento (CPF/CNPJ limpo), telefone normalizado E.164, endereço completo e dados para contato, com RLS e FORCE RLS ativados (`tenant_isolation_policy`).
+  - `vehicles`: Tabela de veículos com chave estrangeira para `customers`, placa, marca, modelo, ano, cor, classe de porte (`size_class`), chassi (VIN) e quilometragem atual (`current_km`).
+  - **Regra Fundamental de SaaS Multitenant**: Restrição composta `CONSTRAINT uq_vehicles_tenant_plate UNIQUE (tenant_id, plate)`. Duas oficinas distintas (Oficina A e Oficina B) podem cadastrar e atender o mesmo veículo com a mesma placa simultaneamente sem nenhuma colisão de chave!
+- **Funções de Normalização e Validação Automotiva (`packages/shared/src/schemas.ts`)**:
+  - `normalizePhone`: Converte números telefônicos para o padrão internacional E.164 (`+5511999998888`), garantindo interoperabilidade com o futuro gateway de WhatsApp.
+  - `normalizePlate`: Higieniza caracteres alfanuméricos em caixa alta (ex: `abc-1234` -> `ABC1234`, `bra-2e19` -> `BRA2E19`).
+  - `validatePlate`: Validação estrita por Regex dos padrões oficiais brasileiro (Cinza `[A-Z]{3}[0-9]{4}` e Mercosul `[A-Z]{3}[0-9][A-Z][0-9]{2}`).
+  - `validateCpf` e `validateCnpj`: Cálculos de dígitos verificadores matemáticos.
+- **Serviços de Domínio (`CustomerService` e `VehicleService`)**:
+  - Detecção de duplicidade dentro da mesma oficina: impede cadastros redundantes da mesma placa ou do mesmo cliente/telefone na mesma loja com HTTP 409 Conflict.
+  - Busca paginada no servidor (`list`) suportando termos textuais parciais (nome, placa, modelo, documento).
+  - Consulta rápida de veículo por placa (`GET /vehicles/by-plate/:plate`) trazendo o veículo e os dados do proprietário associado.
+  - Trilha de auditoria imutável gerada automaticamente para todas as criações e alterações de cadastros.
+- **Validação Automatizada com Sucesso**:
+  - 10 novos testes dedicados em [`apps/api/src/customers/customers-vehicles.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customers/customers-vehicles.test.ts).
+  - **Total Consolidado da API CarX**: **130/130 testes passando com 100% de sucesso** em 18 suítes completas.
+
 
 
 

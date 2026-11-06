@@ -15,7 +15,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 | **Fase 0** | Fundação do Projeto, Monorepo e Design System | `[x] Concluído` | Nenhuma |
 | **Fase 1** | Infraestrutura VPS, Docker Compose e Redes | `[x] Concluído` | Fase 0 |
 | **Fase 2** | Núcleo Multitenant, Autenticação e Super Admin | `[x] 100% Concluída` | Fase 1 |
-| **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[ ] Não Iniciado` | Fase 2 |
+| **Fase 3** | Domínio Automotivo no Novo Backend (Eliminar Supabase/LocalStorage) | `[~] Em Andamento` | Fase 2 |
 | **Fase 4** | Migração de Dados e Clientes Legados (ETL) | `[ ] Não Iniciado` | Fase 3 |
 | **Fase 5** | Produto SaaS Comercial, Landing Page e Faturamento | `[ ] Não Iniciado` | Fase 3 |
 | **Fase 6** | Diferenciais Competitivos (Ondas 1, 2 e 3) | `[ ] Não Iniciado` | Fase 5 |
@@ -660,15 +660,30 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 **Objetivo:** Reimplementar todas as regras de negócio automotivas ricas do OsSystem no backend Node.js próprio, eliminando 100% das chamadas diretas ao Supabase e qualquer armazenamento de regras em `localStorage`.
 
-### [ ] T3.1 — Clientes e Veículos (Placa por Oficina)
+### [x] T3.1 — Clientes e Veículos (Placa por Oficina) `(Concluído)`
 - **Descrição:** Gestão de clientes e frotas, com normalização de telefones (E.164), validação de CPF/CNPJ e placa única **por loja** (permitindo que duas oficinas atendam o mesmo veículo sem choque).
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 1.4: Problema 1 (Linha 67)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L67)
   - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linhas 154)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L154)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.1 (Linhas 587–590)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L587-L590)
 - **Assets Visuais:** [Gestor · Painel (Clientes e frotas)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
-- **Entrega:** Endpoints CRUD para `customers` e `vehicles` com busca paginada no servidor por nome, telefone, placa ou modelo.
-- **Pronto quando:** Duas lojas distintas cadastram a mesma placa `ABC1D23` com sucesso e sem violação de unicidade global.
+- **Entrega Concluída:**
+  - **Migration 011 — Esquema de Clientes e Veículos (`011_customers_vehicles.up.sql`)**:
+    - Tabela `customers` com dados de contato, documento, endereço e isolamento via RLS e FORCE RLS (`tenant_isolation_policy`).
+    - Tabela `vehicles` com chave estrangeira para `customers`, cor, ano, chassi (VIN), porte (`size_class`) e km atual.
+    - **Unicidade de Placa por Loja**: `CONSTRAINT uq_vehicles_tenant_plate UNIQUE (tenant_id, plate)`. Duas oficinas distintas cadastram a mesma placa sem nenhum choque de chave única!
+  - **Normalização e Validações Automotivas (`packages/shared/src/schemas.ts`)**:
+    - `normalizePhone` para o padrão internacional E.164 (`+55...`).
+    - `normalizePlate` e `validatePlate` (formatos tradicionais e Mercosul).
+    - `validateCpf` e `validateCnpj` matemáticos.
+  - **Serviços de Domínio e Rotas Fastify (`CustomerService` e `VehicleService`)**:
+    - Endpoints CRUD: `GET /customers`, `POST /customers`, `GET /customers/:id`, `PUT /customers/:id`, `DELETE /customers/:id`.
+    - Endpoints de Veículos: `GET /vehicles`, `POST /vehicles`, `GET /vehicles/:id`, `PUT /vehicles/:id`, `DELETE /vehicles/:id`, `GET /vehicles/by-plate/:plate`.
+    - Busca paginada no servidor com filtro textual e detecção de duplicidades locais.
+    - Auditoria imutável via `auditService.record`.
+  - **Validação Automatizada com Sucesso**:
+    - 10 novos testes dedicados em [`apps/api/src/customers/customers-vehicles.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customers/customers-vehicles.test.ts).
+    - **Total Consolidado da API CarX**: **130/130 testes passando com 100% de sucesso** em 18 suítes completas.
 
 ---
 
