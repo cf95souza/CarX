@@ -309,6 +309,7 @@ export const WorkOrderSchema = z.object({
   osNumber: z.number().int().positive().optional(),
   status: z.nativeEnum(WorkOrderStatus).default(WorkOrderStatus.QUOTE),
   previousStatus: z.string().optional().nullable(),
+  origin: z.string().default('INTERNAL').optional(),
   progress: z.number().min(0).max(100).default(0),
   totalCents: z.number().int().min(0).default(0),
   discountCents: z.number().int().min(0).default(0),
@@ -354,6 +355,7 @@ export interface CreateWorkOrderDto {
   vehicleId: string;
   technicianId?: string | null;
   status?: WorkOrderStatusType;
+  origin?: string;
   discountCents?: number;
   scheduledAt?: string | Date | null;
   notes?: string | null;
@@ -813,6 +815,167 @@ export interface LowStockAlertDto {
   criticalRolls: MaterialRollDto[];
   totalAlerts: number;
 }
+
+// ==========================================
+// T3.6: AGENDA INTELIGENTE POR BOX E AGENDAMENTO ONLINE
+// ==========================================
+
+export const BaySchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(1, 'Nome do box é obrigatório'),
+  description: z.string().optional().nullable(),
+  color: z.string().default('#C8F52E'),
+  orderIndex: z.number().int().default(0),
+  isActive: z.boolean().default(true),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type BayDto = z.infer<typeof BaySchema>;
+
+export const CreateBayInputSchema = z.object({
+  name: z.string().min(1, 'Nome do box é obrigatório'),
+  description: z.string().optional().nullable(),
+  color: z.string().default('#C8F52E').optional(),
+  orderIndex: z.number().int().default(0).optional(),
+  isActive: z.boolean().default(true).optional(),
+});
+export type CreateBayInputDto = z.infer<typeof CreateBayInputSchema>;
+
+export const UpdateBayInputSchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
+  color: z.string().optional(),
+  orderIndex: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+});
+export type UpdateBayInputDto = z.infer<typeof UpdateBayInputSchema>;
+
+export const AppointmentStatusEnum = z.enum([
+  'scheduled',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'canceled',
+  'no_show',
+]);
+export type AppointmentStatus = z.infer<typeof AppointmentStatusEnum>;
+
+export const AppointmentOriginEnum = z.enum(['INTERNAL', 'ONLINE', 'WHATSAPP']);
+export type AppointmentOrigin = z.infer<typeof AppointmentOriginEnum>;
+
+export const AppointmentSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  bayId: z.string().uuid().optional().nullable(),
+  bayName: z.string().optional().nullable(),
+  technicianId: z.string().uuid().optional().nullable(),
+  technicianName: z.string().optional().nullable(),
+  customerId: z.string().uuid().optional().nullable(),
+  vehicleId: z.string().uuid().optional().nullable(),
+  workOrderId: z.string().uuid().optional().nullable(),
+  workOrderNumber: z.number().optional().nullable(),
+  workOrderStatus: z.string().optional().nullable(),
+  title: z.string().min(1, 'Título é obrigatório'),
+  startTime: z.date().or(z.string()),
+  endTime: z.date().or(z.string()),
+  estimatedMinutes: z.number().int().positive().default(60),
+  status: AppointmentStatusEnum.default('scheduled'),
+  origin: AppointmentOriginEnum.default('INTERNAL'),
+  customerName: z.string().optional().nullable(),
+  customerPhone: z.string().optional().nullable(),
+  customerEmail: z.string().optional().nullable(),
+  vehiclePlate: z.string().optional().nullable(),
+  vehicleModel: z.string().optional().nullable(),
+  vehicleSizeClass: VehicleSizeClassEnum.optional().nullable(),
+  serviceSummary: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdBy: z.string().uuid().optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type AppointmentDto = z.infer<typeof AppointmentSchema>;
+
+export const CreateAppointmentInputSchema = z.object({
+  bayId: z.string().uuid().optional().nullable(),
+  technicianId: z.string().uuid().optional().nullable(),
+  customerId: z.string().uuid().optional().nullable(),
+  vehicleId: z.string().uuid().optional().nullable(),
+  workOrderId: z.string().uuid().optional().nullable(),
+  title: z.string().min(1, 'Título é obrigatório'),
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime().optional(),
+  estimatedMinutes: z.number().int().positive().optional().default(60),
+  status: AppointmentStatusEnum.optional().default('scheduled'),
+  customerName: z.string().optional().nullable(),
+  customerPhone: z.string().optional().nullable(),
+  customerEmail: z.string().optional().nullable(),
+  vehiclePlate: z.string().optional().nullable(),
+  vehicleModel: z.string().optional().nullable(),
+  vehicleSizeClass: VehicleSizeClassEnum.optional().nullable(),
+  serviceSummary: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type CreateAppointmentInputDto = z.infer<typeof CreateAppointmentInputSchema>;
+
+export const UpdateAppointmentInputSchema = z.object({
+  bayId: z.string().uuid().nullable().optional(),
+  technicianId: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).optional(),
+  startTime: z.string().datetime().optional(),
+  endTime: z.string().datetime().optional(),
+  estimatedMinutes: z.number().int().positive().optional(),
+  status: AppointmentStatusEnum.optional(),
+  customerName: z.string().optional().nullable(),
+  customerPhone: z.string().optional().nullable(),
+  customerEmail: z.string().optional().nullable(),
+  vehiclePlate: z.string().optional().nullable(),
+  vehicleModel: z.string().optional().nullable(),
+  vehicleSizeClass: VehicleSizeClassEnum.optional().nullable(),
+  serviceSummary: z.string().optional().nullable(),
+  notes: z.string().nullable().optional(),
+});
+export type UpdateAppointmentInputDto = z.infer<typeof UpdateAppointmentInputSchema>;
+
+export const PublicBookingInputSchema = z.object({
+  customerName: z.string().min(2, 'Nome é obrigatório'),
+  customerPhone: z.string().min(8, 'Telefone de contato é obrigatório'),
+  customerEmail: z.string().email('Email inválido').optional().nullable(),
+  vehiclePlate: z.string().min(7, 'Placa é obrigatória'),
+  vehicleBrand: z.string().optional().nullable(),
+  vehicleModel: z.string().min(1, 'Modelo do veículo é obrigatório'),
+  vehicleSizeClass: VehicleSizeClassEnum.optional().default('sedan'),
+  serviceIds: z.array(z.string().uuid()).min(1, 'Selecione ao menos um serviço'),
+  bayId: z.string().uuid().optional().nullable(),
+  preferredStartTime: z.string().datetime(),
+  notes: z.string().optional().nullable(),
+  website: z.string().optional().nullable(), // Honeypot anti-bot
+});
+export type PublicBookingInputDto = z.infer<typeof PublicBookingInputSchema>;
+
+export interface PublicBookingResponseDto {
+  appointment: AppointmentDto;
+  workOrder: {
+    id: string;
+    osNumber: number;
+    status: string;
+    origin: string;
+    trackingToken: string;
+    trackingUrl: string;
+  };
+  message: string;
+}
+
+export interface BayAvailabilitySlotDto {
+  bayId: string;
+  bayName: string;
+  bayColor: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  conflictingAppointmentId?: string | null;
+}
+
 
 
 

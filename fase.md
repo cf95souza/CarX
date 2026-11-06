@@ -844,7 +844,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.6 — Agenda Inteligente por Box e Agendamento Online
+### [x] T3.6 — Agenda Inteligente por Box e Agendamento Online `(Concluído)`
 - **Descrição:** Agenda com alocação por box físico e profissional técnico, respeitando o tempo de serviço pelo porte do veículo para evitar choques de horário.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linha 159)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L159)
@@ -853,6 +853,35 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
   - [Gestor · Agenda (Ocupação por boxes, horários, status)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Agenda@2x.png)
 - **Entrega:** Tabelas `appointments` e `bays`, com endpoint público de agendamento online (com proteção anti-bot e rate limit) que insere a proposta no status `QUOTE` com origem `ONLINE`.
 - **Pronto quando:** Dois clientes são impedidos de agendar no mesmo box e mesmo horário simultaneamente.
+- **Status da Validação:**
+  - **Migration 016 (`016_bays_appointments.up.sql` e `016_bays_appointments.down.sql`)**:
+    - Tabelas `bays` e `appointments` criadas com isolamento via RLS e `FORCE ROW LEVEL SECURITY` (`tenant_isolation_policy`).
+    - Enriquecimento de `work_orders` com coluna `origin VARCHAR(30) NOT NULL DEFAULT 'INTERNAL'`.
+    - Restrições de integridade temporal `CHECK (end_time > start_time)` e unicidade de nome de box por oficina (`uq_bays_tenant_name`).
+    - Validação de isolamento do banco via `npm --prefix apps/api run test:rls` aprovada com 8/8.
+  - **Camada de Domínio e Contratos (`packages/shared/src/schemas.ts`)**:
+    - DTOs e Schemas Zod: `BayDto`, `CreateBayInputSchema`, `UpdateBayInputSchema`, `AppointmentDto`, `CreateAppointmentInputSchema`, `UpdateAppointmentInputSchema`, `PublicBookingInputSchema`, `PublicBookingResponseDto`, `BayAvailabilitySlotDto`.
+  - **Serviço de Negócio (`apps/api/src/appointments/appointment-service.ts`)**:
+    - Gestão física de boxes (`bays`) com ordenação e paleta de identificação visual.
+    - **CRITÉRIO DE ACEITE (Prevenção de Choque de Horários)**: `checkBayConflict` bloqueia sobreposição de agendamento no mesmo box (`start_time < new_end_time AND end_time > new_start_time`) retornando **HTTP 409 Conflict** (`BayConflictError`).
+    - Agendamento em boxes paralelos no mesmo horário aprovado com sucesso.
+    - Reagendamento sem conflitos e liberação imediata do horário após cancelamento (`status = 'canceled'`).
+    - Consulta de disponibilidade por box (`getBayAvailability`) para montagem da grade horária.
+    - **CRITÉRIO DE ACEITE (Agendamento Online Público)**:
+      - Rota pública sem necessidade de token JWT (`POST /public/book/:tenantSlug`).
+      - Proteção anti-bot via honeypot (bloqueio com HTTP 400 `BotDetectedError`).
+      - Cálculo de duração dinâmico somando os minutos de cada serviço conforme o porte do veículo (`size_class`).
+      - Alocação automática do primeiro box livre quando omitido pelo cliente.
+      - **CRITÉRIO DE SEGURANÇA (Imunidade a Injeção de Privilégios)**: cria OS estritamente com `status: 'QUOTE'`, `origin: 'ONLINE'`, `paid_cents: 0` e `technician_id: null` (impossível injetar status ou quitação de valores).
+      - Emissão de link público com token de rastreio (`/work-orders/tracking/:token`).
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/appointment-routes.ts`)**:
+    - `GET /bays`, `POST /bays`, `GET /bays/:id`, `PUT /bays/:id`, `DELETE /bays/:id`.
+    - `GET /appointments`, `POST /appointments`, `GET /appointments/:id`, `PUT /appointments/:id`, `PATCH /appointments/:id/status`.
+    - `GET /appointments/availability`.
+    - `POST /public/book/:tenantSlug` e `POST /public/book`.
+  - **Validação Automatizada com Sucesso**:
+    - 12 testes dedicados em [`apps/api/src/appointments/appointments.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/appointments/appointments.test.ts) cobrindo criação de boxes, bloqueio de choques (409), boxes paralelos, reagendamento, cancelamento, agendamento online público, bloqueio de injeção de privilégios, honeypot anti-bot e isolamento RLS entre lojas.
+    - **Total Consolidado da API CarX**: **189/189 testes passando com 100% de sucesso** em 23 suítes completas.
 
 ---
 

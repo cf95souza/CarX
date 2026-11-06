@@ -147,6 +147,7 @@ export class WorkOrderService {
           technician_id,
           os_number,
           status,
+          origin,
           progress,
           total_cents,
           discount_cents,
@@ -156,7 +157,7 @@ export class WorkOrderService {
           scheduled_at,
           notes,
           customer_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 0, $11, $12, $13, $14)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, $12, $13, $14, $15)
         RETURNING 
           id,
           tenant_id AS "tenantId",
@@ -165,6 +166,7 @@ export class WorkOrderService {
           technician_id AS "technicianId",
           os_number AS "osNumber",
           status,
+          origin,
           previous_status AS "previousStatus",
           progress,
           total_cents AS "totalCents",
@@ -195,6 +197,7 @@ export class WorkOrderService {
           data.technicianId || null,
           osNumber,
           initialStatus,
+          data.origin || 'INTERNAL',
           progress,
           totalCents,
           discountCents,
@@ -370,6 +373,7 @@ export class WorkOrderService {
         wo.technician_id AS "technicianId",
         wo.os_number AS "osNumber",
         wo.status,
+        wo.origin,
         wo.previous_status AS "previousStatus",
         wo.progress,
         wo.total_cents AS "totalCents",
@@ -442,6 +446,7 @@ export class WorkOrderService {
         wo.technician_id AS "technicianId",
         wo.os_number AS "osNumber",
         wo.status,
+        wo.origin,
         wo.previous_status AS "previousStatus",
         wo.progress,
         wo.total_cents AS "totalCents",

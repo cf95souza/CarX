@@ -873,6 +873,44 @@ Implementado o subsistema automotivo de controle de estoque, insumos e bobinas d
   - 12 testes dedicados em [`apps/api/src/stock/stock.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/stock/stock.test.ts) cobrindo criação, gestão de bobinas, alertas visuais, saídas excedentes (422), alocação na OS, baixa idempotente e isolamento RLS entre lojas.
   - **Total Consolidado da API CarX**: **177/177 testes passando com 100% de sucesso** em 22 suítes completas.
 
+---
+
+#### Tarefa T3.6: Agenda Inteligente por Box e Agendamento Online 📅
+Implementado o subsistema de agendamento e pátio por boxes físicos (`bays`) e profissionais técnicos com detecção matemática de sobreposição de horários e portal público de agendamento online protegido:
+- **Migration 016 — Boxes Físicos, Agendamentos e Origem da OS (`016_bays_appointments.up.sql`)**:
+  - `bays`: Cadastro de boxes físicos da loja (`name`, `description`, `color`, `order_index`, `is_active`) com unicidade composta `uq_bays_tenant_name UNIQUE (tenant_id, name)` e isolamento via RLS e FORCE RLS (`tenant_isolation_policy`).
+  - `appointments`: Agendamentos com chaves estrangeiras para `bays`, `users` (técnico), `customers`, `vehicles` e `work_orders`, horários `start_time` e `end_time`, `estimated_minutes`, status (`scheduled`, `confirmed`, `in_progress`, `completed`, `canceled`, `no_show`), origem (`INTERNAL`, `ONLINE`, `WHATSAPP`), dados desnormalizados de contato e notas. RLS e FORCE RLS ativados com `tenant_isolation_policy`.
+  - `work_orders`: Coluna `origin VARCHAR(30) NOT NULL DEFAULT 'INTERNAL'` adicionada com índice dedicado.
+- **Serviço de Negócio (`AppointmentService`)**:
+  - `listBays`, `getBayById`, `createBay`, `updateBay`, `deleteBay`: CRUD de boxes com ordenação e paleta visual para a grade de agenda.
+  - **Prevenção Rigorosa de Choque de Horários (`checkBayConflict`)**:
+    - **Critério de Aceite Fundamental**: Dois clientes são impedidos de agendar no mesmo box e no mesmo horário simultaneamente.
+    - Avaliação de sobreposição temporal: `start_time < new_end_time AND end_time > new_start_time`.
+    - Agendamentos cancelados (`status = 'canceled'`) ou no-show são ignorados, liberando o horário imediatamente.
+    - Lança `BayConflictError` com status HTTP 409 Conflict detalhando o agendamento conflitante.
+  - `listAppointments`, `getAppointmentById`, `createAppointment`, `updateAppointment`, `updateAppointmentStatus`: Gestão interna da agenda com validação de conflito de box e registro de auditoria imutável (`APPOINTMENT_CREATED`, `APPOINTMENT_UPDATED`, `APPOINTMENT_STATUS_CHANGED`).
+  - `getBayAvailability`: Consulta em lote dos slots de hora em hora por box para exibição de horários livres no front-end.
+  - **Portal Público de Agendamento Online (`bookOnline`)**:
+    - **Critério de Aceite Fundamental**: Endpoint público que aceita somente campos seguros e cria OS em `QUOTE` com origem `ONLINE`.
+    - **Proteção Anti-Bot**: Bloqueio de submissões automatizadas via honeypot (`website`) com HTTP 400 `BotDetectedError`.
+    - **Cálculo de Duração Inteligente por Porte**: Soma os tempos dos serviços selecionados respeitando o porte do veículo (`size_class` em `service_prices_by_class` ou `services.estimated_minutes`).
+    - **Alocação de Box**: Valida o box solicitado ou aloca automaticamente o primeiro box disponível sem choque de horários.
+    - **Critério de Segurança Rigoroso**:
+      - Criação atômica em transação serializada.
+      - Status da OS: estritamente forçado para `QUOTE`.
+      - Origem da OS: estritamente forçada para `ONLINE`.
+      - Valores pagos: estritamente `0` (rejeita tentativa de injeção de quitação).
+      - Técnico: estritamente `null` (triagem manual posterior pelo gestor).
+      - Gera `tracking_token` público criptográfico para acompanhamento em tempo real sem expor dados internos.
+- **Rotas Fastify (`appointment-routes.ts`)**:
+  - `GET /bays`, `POST /bays`, `GET /bays/:id`, `PUT /bays/:id`, `DELETE /bays/:id`.
+  - `GET /appointments`, `POST /appointments`, `GET /appointments/:id`, `PUT /appointments/:id`, `PATCH /appointments/:id/status`.
+  - `GET /appointments/availability`.
+  - `POST /public/book/:tenantSlug` e `POST /public/book` (rotas públicas sem autenticação Bearer).
+- **Validação Automatizada com Sucesso**:
+  - 12 testes dedicados em [`apps/api/src/appointments/appointments.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/appointments/appointments.test.ts) cobrindo criação de boxes, bloqueio de sobreposição (409), boxes paralelos, reagendamento, liberação por cancelamento, agendamento online público, blindagem de segurança, honeypot anti-bot e isolamento RLS entre inquilinos.
+  - **Total Consolidado da API CarX**: **189/189 testes passando com 100% de sucesso** em 23 suítes completas.
+
 
 
 
