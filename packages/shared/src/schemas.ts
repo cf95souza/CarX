@@ -1129,6 +1129,106 @@ export interface InspectionDto {
   updatedAt: string;
 }
 
+// ==============================================================================
+// APP DO TÉCNICO (PWA DO OPERADOR) E CRONÔMETRO OFICIAL (T3.8)
+// ==============================================================================
+
+export const TimerStatusEnum = z.enum(['running', 'paused', 'completed']);
+export type TimerStatusType = z.infer<typeof TimerStatusEnum>;
+
+export const StartTimerInputSchema = z.object({
+  serviceItemId: z.string().uuid().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type StartTimerInputDto = z.infer<typeof StartTimerInputSchema>;
+
+export const PauseTimerInputSchema = z.object({
+  reason: z.string().optional().nullable(),
+});
+export type PauseTimerInputDto = z.infer<typeof PauseTimerInputSchema>;
+
+export const StartWithChecklistInputSchema = z.object({
+  checklistItems: z.array(InspectionChecklistItemSchema).optional().default([]),
+  currentKm: z.number().int().nonnegative().optional().nullable(),
+  fuelLevel: z.string().optional().default('1/2'),
+  serviceItemId: z.string().uuid().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type StartWithChecklistInputDto = z.infer<typeof StartWithChecklistInputSchema>;
+
+export const TechnicianQueueScopeEnum = z.enum(['mine', 'all']);
+export type TechnicianQueueScopeType = z.infer<typeof TechnicianQueueScopeEnum>;
+
+export const TechnicianQueueFilterSchema = z.object({
+  scope: TechnicianQueueScopeEnum.optional().default('mine'),
+  status: z.string().optional().nullable(),
+});
+export type TechnicianQueueFilterDto = z.infer<typeof TechnicianQueueFilterSchema>;
+
+export interface WorkOrderTimerDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  serviceItemId: string | null;
+  technicianId: string;
+  technicianName?: string | null;
+  status: TimerStatusType;
+  startedAt: string;
+  pausedAt: string | null;
+  stoppedAt: string | null;
+  accumulatedSeconds: number;
+  elapsedSeconds: number;
+  pauseReason: string | null;
+  notes: string | null;
+  isRunning: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TechnicianQueueItemDto {
+  workOrderId: string;
+  osNumber: number;
+  status: string;
+  isRework: boolean;
+  reworkReason: string | null;
+  promisedDeliveryAt: string | null;
+  vehicle: {
+    id: string;
+    plate: string;
+    brand: string;
+    model: string;
+    color: string | null;
+    sizeClass: VehicleSizeClassType;
+  };
+  customer: {
+    id: string;
+    name: string;
+    phone: string | null;
+  };
+  bay: {
+    id: string;
+    name: string;
+    color: string;
+  } | null;
+  technician: {
+    id: string;
+    name: string;
+  } | null;
+  services: Array<{
+    id: string;
+    serviceId: string;
+    serviceName: string;
+    estimatedMinutes: number;
+    status?: string;
+  }>;
+  hasCheckinInspection: boolean;
+  activeTimer: WorkOrderTimerDto | null;
+  totalElapsedSeconds: number;
+  isTimerRunning: boolean;
+  createdAt: string;
+}
+
+
 
 
 

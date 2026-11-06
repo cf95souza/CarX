@@ -875,45 +875,39 @@ Implementado o subsistema automotivo de controle de estoque, insumos e bobinas d
 
 ---
 
-#### Tarefa T3.7: Laudo de Inspeção Digital (VCR), Checklist e Fotos 📋
-Implementado o subsistema completo de vistoria digital do veículo (Vehicle Condition Report - VCR), marcação touch de avarias sobre silhueta automotiva, fotos antes/depois por ângulo guiado, assinatura digital física no MinIO e motor server-side de compilação de laudos em PDF vetorial:
-- **Migration 017 — Tabelas de Laudo VCR e Isolamento RLS (`017_inspections_vcr_photos.up.sql`)**:
-  - `inspections`: Tabela mestre do laudo (`work_order_id`, `vehicle_id`, `inspector_id`, `inspection_type` [`check_in`, `check_out`, `interim`], `vehicle_type` [`car`, `motorcycle`, `truck`], `current_km`, `fuel_level`, `checklist_items` em JSONB, `voice_notes`, `customer_signature_file_id` FK `storage_files(id)`, `customer_signature_name`, `signed_at`, `pdf_file_id` FK `storage_files(id)`, `pdf_generated_at`, `status` [`draft`, `completed`, `signed`]).
-  - `inspection_damage_points`: Registro de avarias identificadas na silhueta (`part`, `damage_type`, `severity` [`low`, `medium`, `high`, `critical`], coordenadas percentuais `x_percent` e `y_percent` com constraints numéricas entre 0 e 100, `view` [`top`, `front`, `rear`, `left`, `right`, `isometric`], `photo_file_id`).
-  - `inspection_photos`: Galeria guiada de fotos da vistoria (`photo_file_id`, `angle`, `phase` [`before`, `during`, `after`], `caption`).
-  - Ativação rigorosa de `ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy` em todas as tabelas.
-- **Serviço de Negócio (`InspectionService`)**:
-  - `createInspection`, `getInspectionById`, `listByWorkOrder`, `updateInspection`: Gestão completa de laudos veiculares com checklist padrão inteligente de itens e acessórios.
-  - `addDamagePoint`, `removeDamagePoint`: Adição e remoção de pontos de avaria com coordenadas percentuais touch na silhueta, gerando URLs assinadas seguras para fotos de detalhe anexas.
-  - `addPhoto`, `removePhoto`: Catálogo fotográfico guiado por ângulos operacionais (3/4 dianteiro, 3/4 traseiro, odômetro, teto, etc.).
-  - **Assinatura Digital Física sem Base64 no Banco (`signInspection`)**:
-    - **Critério de Aceite Fundamental**: O Base64 desenhado na tela de toque do smartphone/tablet é convertido para binário e enviado fisicamente ao MinIO/S3 via `storageService.uploadFile`.
-    - A coluna `customer_signature_file_id` armazena exclusivamente o UUID do arquivo em `storage_files`.
-    - **Nenhum Base64 é persistido em colunas de texto no PostgreSQL**, mantendo o banco leve, performático e em conformidade estrita de auditoria.
-  - **Gerador de Laudo em PDF Vetorial Server-Side (`generateInspectionPdf`)**:
-    - **Critério de Aceite Fundamental**: Compilação de laudo pericial em PDF de alta fidelidade visual com `pdfkit`.
-    - Cabeçalho institucional com marca CarX e dados da oficina.
-    - Quadro de dados do cliente, veículo (placa, marca, modelo, cor, ano), odômetro e nível de combustível.
-    - **Mapa Visual da Carroceria (Vehicle Condition Map)**: Renderização vetorial precisa da silhueta superior automotiva, com plotagem dos marcadores de avaria nas coordenadas exatas `(x_percent, y_percent)`, círculos com numeração indexada e cores correspondentes à severidade (`low` = verde, `medium` = âmbar, `high` = vermelho, `critical` = bordô).
-    - Tabela estruturada de avarias correspondente aos marcadores plotados.
-    - Checklist de entrada/saída com marcadores visuais `[OK]` e `[ ! ]`.
-    - Termo legal de vistoria e declaração de conformidade com renderização da imagem da assinatura digital do cliente.
-    - O PDF gerado é armazenado diretamente no MinIO sob chave isolada e referenciado em `pdf_file_id`.
-- **Rotas Fastify (`inspection-routes.ts`)**:
-  - `POST /inspections`: Criação de vistoria.
-  - `GET /inspections/:id`: Detalhes completos com avarias, fotos e URLs de download.
-  - `GET /work-orders/:workOrderId/inspections`: Histórico de vistorias da OS.
-  - `PATCH /inspections/:id`: Atualização de dados da inspeção.
-  - `POST /inspections/:id/damage-points`: Inserção de avaria touch.
-  - `DELETE /inspections/:id/damage-points/:pointId`: Remoção de avaria.
-  - `POST /inspections/:id/photos`: Anexo de foto guiada.
-  - `DELETE /inspections/:id/photos/:photoId`: Remoção de foto.
-  - `POST /inspections/:id/sign`: Assinatura digital do cliente com upload físico.
-  - `POST /inspections/:id/generate-pdf`: Compilação e salvamento do laudo PDF no MinIO.
-  - `GET /inspections/:id/pdf`: Download ou visualização direta inline do laudo em PDF.
+#### Tarefa T3.8: App do Técnico (PWA do Operador) e Cronômetro Oficial ⏱️
+Implementado o subsistema do operador e execução de serviços no chão de oficina (PWA ergonômico em tema escuro), fila de trabalho priorizada com destaque para retrabalho, cronômetro oficial calculado no PostgreSQL (imune a manipulações de relógio) e ação inteligente sem bloqueios:
+- **Migration 018 — Cronômetros de Execução e Flags de Retrabalho (`018_technician_timers_execution.up.sql`)**:
+  - `work_order_timers`: Tabela com controle atômico de tempo (`work_order_id`, `service_item_id`, `technician_id`, `status` [`running`, `paused`, `completed`], `started_at`, `paused_at`, `stopped_at`, `accumulated_seconds`, `pause_reason`, `notes`).
+  - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com política `tenant_isolation_policy`.
+  - Colunas `is_rework` (boolean default false) e `rework_reason` (text) adicionadas em `work_orders` com índice composto `idx_work_orders_tenant_rework`.
+  - Índices otimizados `idx_work_order_timers_active` e `idx_work_order_timers_wo` para resposta em milissegundos nas telas de bancada.
+- **Serviço de Domínio (`TechnicianService`)**:
+  - **Fila de Execução Priorizada (`getQueue`)**:
+    - Suporte aos escopos `mine` ("Minha fila") e `all` ("Toda a loja").
+    - **Priorização Máxima de Retrabalho (Critério de Aceite)**: Ordens de serviço com flag `is_rework = true` aparecem ordenadas no topo absoluto da fila (`ORDER BY wo.is_rework DESC`), garantindo tratamento imediato de inconformidades.
+    - Enriquecimento dos cards da fila com dados do veículo (marca, modelo, placa, porte), cliente, serviços contratados e box alocado da agenda.
+  - **Cronômetro Oficial no PostgreSQL (Critério Fundamental de Segurança e Imunidade a Fraudes)**:
+    - O tempo decorrido **NUNCA** é calculado com base no relógio do cliente, smartphone ou navegador.
+    - A apuração é realizada de forma atômica no banco: `accumulated_seconds + GREATEST(0, EXTRACT(EPOCH FROM (NOW() - started_at))::INTEGER)`.
+    - **Critério Fundamental**: Fechar a aba do navegador, reiniciar o dispositivo móvel ou sofrer queda de energia mantém o tempo decorrido perfeitamente íntegro e sincronizado ao reabrir a aplicação.
+  - **Regra de Foco Único (`pauseAllRunningTimersForTechnician`)**:
+    - Ao iniciar a execução de uma nova OS ou retomar um serviço, qualquer timer ativo anterior daquele mesmo técnico é pausado silenciosamente no servidor com registro de transição.
+  - **Ação Inteligente "Fazer checklist e iniciar" (`startWithChecklist`)**:
+    - **Critério "Nunca bloquear sem saída"**: Se a OS ainda não possui o checklist de check-in efetuado pela recepção, o operador pode preencher as conferências preliminares na hora e disparar o início do cronômetro sem depender do gestor da oficina.
+- **Rotas Fastify (`technician-routes.ts`)**:
+  - `GET /technician/queue`: Fila de OS por escopo (`mine` ou `all`).
+  - `POST /technician/work-orders/:id/start`: Disparo do cronômetro oficial e transição automática da OS para `IN_PROGRESS`.
+  - `POST /technician/work-orders/:id/pause`: Pausa do cronômetro com gravação de motivo e totalização de segundos.
+  - `POST /technician/work-orders/:id/resume`: Retomada da contagem oficial sob novo marco temporal.
+  - `POST /technician/work-orders/:id/stop`: Finalização do cronômetro da OS com status `completed`.
+  - `GET /technician/work-orders/:id/timer`: Consulta consolidada de tempo decorrido em tempo real.
+  - `POST /technician/work-orders/:id/start-with-checklist`: Preenchimento instantâneo de checklist e disparo imediato do serviço.
+  - `PATCH /technician/work-orders/:id/rework`: Sinalização de retrabalho com justificativa.
 - **Validação Automatizada com Sucesso**:
-  - 13 testes dedicados em [`apps/api/src/inspections/inspections.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/inspections/inspections.test.ts) cobrindo criação, coordenadas percentuais touch, checklist, anexos, persistência física da assinatura sem Base64 no banco, compilação vetorial do PDF, download com cabeçalho `%PDF-` e isolamento RLS cross-tenant.
-  - **Total Consolidado da API CarX**: **202/202 testes passando com 100% de sucesso** em 24 suítes completas.
+  - 10 testes dedicados em [`apps/api/src/technician/technician.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician.test.ts) cobrindo fila por escopo, prioridade no topo de retrabalho, início/pausa/retomada/parada de cronômetro, persistência atômica após recarregar, regra de foco único, checklist integrado e isolamento RLS cross-tenant.
+  - **Total Consolidado da API CarX**: **212/212 testes passando com 100% de sucesso** em 25 suítes completas.
+
 
 
 

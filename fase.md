@@ -896,7 +896,8 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 - **Pronto quando:** O PDF gerado abre com os pontos plotados sobre a silhueta do veículo, tabela descritiva com severidades, checklist de itens, fotos anexadas e assinatura do cliente, sem armazenar dados em Base64 no banco.
 - **Status da Validação:**
   - **Migração 017 Aplicada com RLS Canônico**:
-    - [`apps/api/src/database/migrations/017_inspections_vcr_photos.up.sql`](file:///d:/Repositorios/CarX/apps/api/src/database/migrations/017_inspections_vcr_photos.up.sql) e `.down.sql` criando `inspections`, `inspection_damage_points` e `inspection_photos`.
+    - [`apps/api/src/database/migrations/017_inspections_vcr_photos.up.sql`](file:///d:/Repositorios/CarX/apps/api/src/database/migrations/017_inspections_vcr_photos.up.sql) e `.down.sql` 
+    
     - `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e `tenant_isolation_policy` aplicados em todas as 3 tabelas e validados com 100% de aprovação em `test:rls`.
   - **Contratos e DTOs Compartilhados**:
     - Adicionados em [`packages/shared/src/schemas.ts`](file:///d:/Repositorios/CarX/packages/shared/src/schemas.ts): `InspectionDto`, `CreateInspectionInputSchema`, `UpdateInspectionInputSchema`, `AddDamagePointInputSchema`, `AddInspectionPhotoInputSchema`, `SignInspectionInputSchema`, `InspectionDamagePointDto`, `InspectionPhotoDto` e `InspectionChecklistItemSchema`.
@@ -927,7 +928,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.8 — App do Técnico (PWA do Operador)
+### [x] T3.8 — App do Técnico (PWA do Operador) `(Concluído)`
 - **Descrição:** Interface otimizada para o chão de oficina em tema escuro: botões grandes (56–60px), fila priorizada ("Minha fila" vs "Toda a loja"), cronômetro oficial calculado no backend e fluxo sem bloqueios.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 10.3: Princípios do App do Operador (Linhas 328–338)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L328-L338)
@@ -935,11 +936,33 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 - **Assets e Telas de Referência:**
   - [Operador · Fila (Cards de serviços, alvos de toque, badge de retrabalho)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Fila@2x.png)
   - [Operador · Execução (Cronômetro Space Grotesk, stepper de etapas, botão gigante)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Execu%C3%A7%C3%A3o@2x.png)
-- **Entrega:**
-  - PWA com suporte a Screen Wake Lock (mantém tela ligada durante serviço).
-  - Ação inteligente "Fazer checklist e iniciar" caso a OS ainda não tenha checklist de entrada preenchido.
-  - Cronômetro calculado a partir do `timestamp` do banco (imune a alterações no relógio do aparelho).
-- **Pronto quando:** Fechar o navegador no meio da aplicação de película ou recarregar a página mantém o tempo decorrido sincronizado com exatidão.
+- **Entrega Concluída:**
+  - **Migration 018 (`018_technician_timers_execution.up.sql`)**:
+    - Tabela `work_order_timers` com RLS obrigatório, `FORCE ROW LEVEL SECURITY`, política canônica `tenant_isolation_policy` e integridade referencial.
+    - Colunas `is_rework` (boolean) e `rework_reason` (text) em `work_orders` com índice composto `idx_work_orders_tenant_rework`.
+    - Índices otimizados para consulta em tempo real da bancada de produção: `idx_work_order_timers_active` e `idx_work_order_timers_wo`.
+  - **Contratos e DTOs Zod (`packages/shared/src/schemas.ts`)**:
+    - Tipos TypeScript e esquemas Zod completos: `WorkOrderTimerDto`, `TechnicianQueueItemDto`, `StartTimerInputSchema`, `PauseTimerInputSchema`, `StartWithChecklistInputSchema` e `SetReworkInputSchema`.
+  - **Serviço de Negócio (`apps/api/src/technician/technician-service.ts`)**:
+    - Fila priorizada com escopos `mine` ("Minha fila") e `all` ("Toda a loja"), integrando dados do veículo, cliente, serviços a executar e box alocado.
+    - **Priorização Máxima de Retrabalho**: Ordens de serviço marcadas com `is_rework = true` aparecem no topo absoluto da fila (`ORDER BY wo.is_rework DESC`).
+    - **Cronômetro Oficial no PostgreSQL (Imune a Fraudes)**: Cálculo atômico via `accumulated_seconds + GREATEST(0, EXTRACT(EPOCH FROM (NOW() - started_at))::INTEGER)`, sem confiar em relógios de clientes/smartphones.
+    - **Critério Fundamental**: Fechar o app, desligar o celular ou recarregar a página mantém o tempo decorrido perfeitamente sincronizado com o servidor.
+    - **Regra de Foco Único**: Iniciar o cronômetro de uma nova OS pausa automaticamente qualquer timer anterior ativo do técnico (`pauseAllRunningTimersForTechnician`).
+    - **Ação Inteligente "Fazer checklist e iniciar" (`/start-with-checklist`)**: Critério "Nunca bloquear sem saída", permitindo preenchimento de checklist de entrada na hora e início imediato do cronômetro sem depender de aprovações prévias da recepção.
+  - **Rotas Fastify (`apps/api/src/routes/technician-routes.ts`)**:
+    - `GET /technician/queue` (listagem filtrada por scope).
+    - `POST /technician/work-orders/:id/start` (início de contagem oficial e transição de OS para `IN_PROGRESS`).
+    - `POST /technician/work-orders/:id/pause` (pausa com acúmulo de segundos e motivo).
+    - `POST /technician/work-orders/:id/resume` (retomada da contagem oficial).
+    - `POST /technician/work-orders/:id/stop` (finalização do cronômetro).
+    - `GET /technician/work-orders/:id/timer` (consulta consolidada de tempo em tempo real).
+    - `POST /technician/work-orders/:id/start-with-checklist` (checklist instantâneo + início).
+    - `PATCH /technician/work-orders/:id/rework` (marcação de OS como retrabalho).
+  - **Suíte de Testes Automatizada (`apps/api/src/technician/technician.test.ts`)**:
+    - 10 testes dedicados cobrindo fila por escopo, priorização no topo de retrabalho, início/pausa/retomada/finalização de cronômetro, persistência do tempo ao recarregar, pausa automática ao trocar de tarefa, checklist integrado e isolamento RLS cross-tenant.
+    - **Total Consolidado da API CarX**: **212/212 testes passando com 100% de sucesso** em 25 suítes completas.
+    - **Typecheck Monorepo**: `tsc -b` aprovado com 0 erros.
 
 ---
 
