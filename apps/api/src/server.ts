@@ -16,6 +16,7 @@ import superadminRoutes from './routes/superadmin-routes.js';
 import catalogRoutes from './routes/catalog-routes.js';
 import customerRoutes from './routes/customer-routes.js';
 import vehicleRoutes from './routes/vehicle-routes.js';
+import workOrderRoutes from './routes/work-order-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -71,6 +72,9 @@ export function buildServer() {
   // Domínio Automotivo: Clientes e Veículos (T3.1)
   app.register(customerRoutes);
   app.register(vehicleRoutes);
+
+  // Domínio Automotivo: Orçamentos e Ordens de Serviço (T3.3)
+  app.register(workOrderRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

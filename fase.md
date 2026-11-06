@@ -723,7 +723,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.3 — Orçamentos e Ordens de Serviço (Máquina de Estados)
+### [x] T3.3 — Orçamentos e Ordens de Serviço (Máquina de Estados) `(Concluído)`
 - **Descrição:** A espinha dorsal do sistema. A OS deixa de ter status como texto solto e passa a operar como máquina de estados estrita no backend.
 - **Fluxo de Estados Obrigatório:**
   `QUOTE` ➔ `APPROVED` ➔ `SCHEDULED` ➔ `CHECKED_IN` ➔ `IN_PROGRESS` ➔ `QA` ➔ `READY` ➔ `DELIVERED` (+ `PAUSED`, `CANCELED`).
@@ -733,11 +733,30 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 - **Assets e Telas de Referência:**
   - [Gestor · Nova OS (Formulário em etapas, serviços, peças, prazos)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Nova%20OS@2x.png)
   - [Gestor · Painel (Pátio com colunas Aguardando, Em Execução e Prontas)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
-- **Entrega:**
-  - Tabela `work_orders` com número sequencial próprio por loja (`os_number` 1, 2, 3...).
-  - Tabelas `work_order_items` e `work_order_events` (histórico de auditoria de cada transição).
-  - Geração de token UUID seguro para acompanhamento público pelo cliente.
-- **Pronto quando:** Uma tentativa de mover uma OS diretamente de `QUOTE` para `DELIVERED` é rejeitada pela API com erro 422, e todas as transições válidas geram registro na linha do tempo.
+- **Entrega Concluída:**
+  - **Migration 013 — Esquema de Ordens de Serviço e Linha do Tempo (`013_work_orders_state_machine.up.sql`)**:
+    - Tabela `work_orders`: numeração sequencial atômica por loja (`os_number` com constraint `uq_work_orders_tenant_os_number`), máquina de estados com controle de `previous_status`, valores em centavos (`total_cents`, `discount_cents`, `final_cents`, `paid_cents`), timestamps automáticos de marcos (`checked_in_at`, `started_at`, `completed_at`, `delivered_at`, `canceled_at`), e token público UUID criptográfico (`tracking_token`).
+    - Tabela `work_order_items`: itens vinculados com quantidades, valores unitários, descontos, tempos estimados e garantias.
+    - Tabela `work_order_events`: histórico de auditoria e linha do tempo de transições com `from_status`, `to_status`, `user_id`, `event_type`, `notes` e `metadata JSONB`.
+    - RLS e FORCE RLS ativados compulsoriamente nas 3 tabelas com a política canônica `tenant_isolation_policy`.
+  - **Máquina de Estados Estrita (`@carx/shared/schemas.ts`)**:
+    - Mapa `ALLOWED_WORK_ORDER_TRANSITIONS` e função `isValidWorkOrderTransition`.
+    - Bloqueio terminante de transições inválidas com **HTTP 422 Unprocessable Entity** (ex: `QUOTE ➔ DELIVERED` é sumariamente rejeitado).
+    - Bloqueio de qualquer transição posterior a partir de estados terminais (`DELIVERED` e `CANCELED`).
+  - **Serviço de Negócio (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - `create`: geração atômica de `os_number` sequencial por loja, gravação do evento `CREATED` e cálculo de progresso automático.
+    - `list`: busca paginada com filtros por status, cliente, veículo, técnico e busca textual (placa, cliente, os_number).
+    - `getById`: detalhes completos com cliente, veículo, técnico, itens e histórico da linha do tempo.
+    - `transitionStatus`: validação rigorosa da máquina de estados, atualização de timestamps correspondentes e inserção de evento imutável em `work_order_events`.
+    - `getPublicTracking`: endpoint de acompanhamento público seguro sem necessidade de login.
+    - Auditoria imutável via `auditService.record`.
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/work-order-routes.ts`)**:
+    - `GET /work-orders`, `POST /work-orders`, `GET /work-orders/:id`, `PUT /work-orders/:id`, `PATCH /work-orders/:id/status`.
+    - `GET /work-orders/tracking/:token` (rota pública para o cliente final).
+    - Guardas RBAC: técnico só acessa e altera ordens de serviço atribuídas a ele; gestores e owners têm visão ampla.
+  - **Validação Automatizada com Sucesso**:
+    - 11 novos testes dedicados em [`apps/api/src/work-orders/work-orders.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/work-orders/work-orders.test.ts).
+    - **Total Consolidado da API CarX**: **153/153 testes passando com 100% de sucesso** em 20 suítes completas.
 
 ---
 

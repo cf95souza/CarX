@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { WorkOrderStatus, UserRole, VehicleClass, DamageType } from './enums.js';
+import { WorkOrderStatus, WorkOrderStatusType, UserRole, VehicleClass, DamageType } from './enums.js';
 
 // ==============================================================================
 // FUNÇÕES UTILITÁRIAS DE NORMALIZAÇÃO E VALIDAÇÃO AUTOMOTIVA
@@ -213,28 +213,190 @@ export interface UpdateVehicleDto extends Partial<Omit<CreateVehicleDto, 'custom
 }
 
 // ==============================================================================
-// ORDENS DE SERVIÇO E CHECKLIST
+// ORDENS DE SERVIÇO E MÁQUINA DE ESTADOS (T3.3)
 // ==============================================================================
+
+export const ALLOWED_WORK_ORDER_TRANSITIONS: Record<WorkOrderStatusType, readonly WorkOrderStatusType[]> = {
+  [WorkOrderStatus.QUOTE]: [WorkOrderStatus.APPROVED, WorkOrderStatus.CANCELED],
+  [WorkOrderStatus.APPROVED]: [
+    WorkOrderStatus.SCHEDULED,
+    WorkOrderStatus.CHECKED_IN,
+    WorkOrderStatus.IN_PROGRESS,
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.SCHEDULED]: [
+    WorkOrderStatus.CHECKED_IN,
+    WorkOrderStatus.IN_PROGRESS,
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.CHECKED_IN]: [
+    WorkOrderStatus.IN_PROGRESS,
+    WorkOrderStatus.PAUSED,
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.IN_PROGRESS]: [
+    WorkOrderStatus.QA,
+    WorkOrderStatus.PAUSED,
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.PAUSED]: [
+    WorkOrderStatus.IN_PROGRESS,
+    WorkOrderStatus.QA,
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.QA]: [
+    WorkOrderStatus.READY,
+    WorkOrderStatus.IN_PROGRESS, // Se reprovado no QA, volta para correções
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.READY]: [
+    WorkOrderStatus.DELIVERED,
+    WorkOrderStatus.IN_PROGRESS, // Retorno pontual antes da saída
+    WorkOrderStatus.CANCELED,
+  ],
+  [WorkOrderStatus.DELIVERED]: [],
+  [WorkOrderStatus.CANCELED]: [],
+} as const;
+
+export function isValidWorkOrderTransition(
+  from: WorkOrderStatusType,
+  to: WorkOrderStatusType
+): boolean {
+  if (from === to) return true;
+  const allowed = ALLOWED_WORK_ORDER_TRANSITIONS[from];
+  return allowed ? allowed.includes(to) : false;
+}
+
+export const WorkOrderItemSchema = z.object({
+  id: z.string().uuid().optional(),
+  tenantId: z.string().uuid().optional(),
+  workOrderId: z.string().uuid().optional(),
+  serviceId: z.string().uuid().optional().nullable(),
+  name: z.string().min(2, 'Nome do item obrigatório'),
+  category: z.string().optional().nullable(),
+  quantity: z.number().int().min(1).default(1),
+  unitPriceCents: z.number().int().min(0).default(0),
+  discountCents: z.number().int().min(0).default(0),
+  totalCents: z.number().int().min(0).default(0),
+  estimatedMinutes: z.number().int().min(0).default(0),
+  warrantyMonths: z.number().int().min(0).default(3),
+  customOrder: z.number().int().min(0).default(0),
+  createdAt: z.date().or(z.string()).optional(),
+});
+export type WorkOrderItemDto = z.infer<typeof WorkOrderItemSchema>;
+
+export const WorkOrderEventSchema = z.object({
+  id: z.string().uuid().optional(),
+  tenantId: z.string().uuid().optional(),
+  workOrderId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional().nullable(),
+  userName: z.string().optional().nullable(),
+  fromStatus: z.string().optional().nullable(),
+  toStatus: z.string(),
+  eventType: z.string().default('STATUS_CHANGE'),
+  notes: z.string().optional().nullable(),
+  metadata: z.record(z.any()).default({}),
+  createdAt: z.date().or(z.string()).optional(),
+});
+export type WorkOrderEventDto = z.infer<typeof WorkOrderEventSchema>;
 
 export const WorkOrderSchema = z.object({
   id: z.string().uuid().optional(),
-  osNumber: z.number().int().positive().optional(),
-  tenantId: z.string().uuid(),
+  tenantId: z.string().uuid().optional(),
   customerId: z.string().uuid(),
   vehicleId: z.string().uuid(),
   technicianId: z.string().uuid().optional().nullable(),
+  osNumber: z.number().int().positive().optional(),
   status: z.nativeEnum(WorkOrderStatus).default(WorkOrderStatus.QUOTE),
+  previousStatus: z.string().optional().nullable(),
   progress: z.number().min(0).max(100).default(0),
-  totalValue: z.number().min(0).default(0),
-  discountValue: z.number().min(0).default(0),
-  paidValue: z.number().min(0).default(0),
+  totalCents: z.number().int().min(0).default(0),
+  discountCents: z.number().int().min(0).default(0),
+  finalCents: z.number().int().min(0).default(0),
+  paidCents: z.number().int().min(0).default(0),
+  totalValue: z.number().min(0).default(0), // retrocompatibilidade
+  discountValue: z.number().min(0).default(0), // retrocompatibilidade
+  paidValue: z.number().min(0).default(0), // retrocompatibilidade
+  estimatedMinutes: z.number().int().min(0).default(0),
+  scheduledAt: z.date().or(z.string()).optional().nullable(),
+  checkedInAt: z.date().or(z.string()).optional().nullable(),
+  startedAt: z.date().or(z.string()).optional().nullable(),
+  completedAt: z.date().or(z.string()).optional().nullable(),
+  deliveredAt: z.date().or(z.string()).optional().nullable(),
+  canceledAt: z.date().or(z.string()).optional().nullable(),
+  cancelReason: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
+  customerNotes: z.string().optional().nullable(),
   trackingToken: z.string().uuid().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
+  items: z.array(WorkOrderItemSchema).optional(),
+  events: z.array(WorkOrderEventSchema).optional(),
+  customer: z.any().optional(),
+  vehicle: z.any().optional(),
+  technician: z.any().optional(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
 });
-
 export type WorkOrderDto = z.infer<typeof WorkOrderSchema>;
+
+export interface CreateWorkOrderItemInput {
+  serviceId?: string | null;
+  name: string;
+  category?: string | null;
+  quantity?: number;
+  unitPriceCents: number;
+  discountCents?: number;
+  estimatedMinutes?: number;
+  warrantyMonths?: number;
+}
+
+export interface CreateWorkOrderDto {
+  customerId: string;
+  vehicleId: string;
+  technicianId?: string | null;
+  status?: WorkOrderStatusType;
+  discountCents?: number;
+  scheduledAt?: string | Date | null;
+  notes?: string | null;
+  customerNotes?: string | null;
+  items?: CreateWorkOrderItemInput[];
+}
+
+export interface UpdateWorkOrderDto {
+  technicianId?: string | null;
+  discountCents?: number;
+  scheduledAt?: string | Date | null;
+  notes?: string | null;
+  customerNotes?: string | null;
+}
+
+export interface ChangeWorkOrderStatusDto {
+  status: WorkOrderStatusType;
+  notes?: string | null;
+  cancelReason?: string | null;
+  metadata?: Record<string, any>;
+}
+
+export interface PublicTrackingDto {
+  osNumber: number;
+  status: WorkOrderStatusType;
+  progress: number;
+  brand: string;
+  model: string;
+  plate: string;
+  scheduledAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  deliveredAt?: string | null;
+  items: Array<{
+    name: string;
+    category?: string | null;
+  }>;
+  timeline: Array<{
+    status: string;
+    createdAt: string;
+    notes?: string | null;
+  }>;
+}
 
 export const InspectionPointSchema = z.object({
   id: z.string(),

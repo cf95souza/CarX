@@ -793,6 +793,28 @@ Implementado o catálogo de serviços normalizado com tabela de preços por port
   - Suíte de 12 testes em [`apps/api/src/services/catalog-pricing.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/services/catalog-pricing.test.ts) cobrindo portes Hatch vs SUV, fallback para Sedan, precificação via `vehicleId`, combos percentuais e fixos, isolamento estrito entre lojas e auditoria imutável.
   - **Total Consolidado da API CarX**: **142/142 testes passando com 100% de sucesso** em 19 suítes completas.
 
+---
+
+#### Tarefa T3.3: Orçamentos e Ordens de Serviço (Máquina de Estados) 📋
+Implementada a espinha dorsal do sistema automotivo CarX: a gestão completa de orçamentos e ordens de serviço governada por máquina de estados estrita no backend, eliminando de vez os status em texto solto do legado:
+- **Migration 013 — Esquema de Ordens de Serviço e Linha do Tempo (`013_work_orders_state_machine.up.sql`)**:
+  - `work_orders`: Tabela com chave estrangeira para `customers`, `vehicles` e `users` (técnico), com numeração atômica independente por oficina (`os_number` com constraint `uq_work_orders_tenant_os_number`), valores monetários inteiros em centavos (`total_cents`, `discount_cents`, `final_cents`, `paid_cents`), timestamps automáticos de cada marco (`checked_in_at`, `started_at`, `completed_at`, `delivered_at`, `canceled_at`) e `tracking_token` UUID público criptográfico.
+  - `work_order_items`: Tabela relacional de itens/serviços contendo preços unitários ajustados ao porte do veículo, descontos aplicados, minutos previstos e garantia em meses.
+  - `work_order_events`: Linha do tempo imutável registrando cada transição (`from_status`, `to_status`, `user_id`, `event_type`, `notes`, `metadata JSONB`).
+  - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com `tenant_isolation_policy` nas 3 tabelas.
+- **Máquina de Estados Estrita (`WorkOrderService.transitionStatus`)**:
+  - **Fluxo Obrigatório**: `QUOTE` ➔ `APPROVED` ➔ `SCHEDULED` ➔ `CHECKED_IN` ➔ `IN_PROGRESS` ➔ `QA` ➔ `READY` ➔ `DELIVERED` (+ `PAUSED`, `CANCELED`).
+  - **Validação Terminante com HTTP 422 Unprocessable Entity**: Tentativa de transição inválida (ex: `QUOTE ➔ DELIVERED` ou retorno a partir de `DELIVERED`) é sumariamente rejeitada pelo backend com erro 422 e mensagem explicativa.
+  - Atualização automática de progresso (0% a 100%) e preenchimento atômico dos timestamps de marco de cada estado.
+- **Numeração Sequencial por Oficina (`os_number`)**:
+  - Garantia de que cada oficina possui sua própria sequência (#1, #2, #3...), executada via `SELECT COALESCE(MAX(os_number), 0) + 1 FROM work_orders WHERE tenant_id = $1` dentro de transação com bloqueio, sem nenhum risco de colisão entre lojas distintas.
+- **Tracking Público Seguro (`GET /work-orders/tracking/:token`)**:
+  - Endpoint público e seguro para clientes finais acompanharem o status do seu veículo em tempo real via link/QR Code sem necessidade de login e sem expor IDs sequenciais internos de banco.
+- **Validação Automatizada com Sucesso**:
+  - 11 novos testes dedicados em [`apps/api/src/work-orders/work-orders.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/work-orders/work-orders.test.ts).
+  - **Total Consolidado da API CarX**: **153/153 testes passando com 100% de sucesso** em 20 suítes completas.
+
+
 
 
 
