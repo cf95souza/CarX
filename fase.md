@@ -687,13 +687,39 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.2 — Catálogo de Serviços, Preços por Porte e Combos
-- **Descrição:** Tabela de serviços normalizada: tempo padrão por porte de veículo (Hatch, Sedan, SUV, Picape, Moto), preços específicos por classe e cálculo automático de combos.
+### [x] T3.2 — Catálogo de Serviços, Preços por Porte e Combos `(Concluído)`
+- **Descrição:** Tabela de serviços normalizada: tempo padrão por porte de veículo (Hatch, Sedan, SUV, Picape, Moto, Esportivo, Van), preços específicos por classe e cálculo automático de combos.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linhas 155)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L155)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.2 (Linhas 591–594)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L591-L594)
-- **Entrega:** Tabelas `service_catalog`, `service_prices_by_class`, `packages` e `package_items`.
-- **Pronto quando:** A seleção de um serviço em um orçamento calcula o valor exato baseado no porte do veículo cadastrado, aplicando o desconto de combo no backend.
+- **Entrega Concluída:**
+  - **Migration 012 — Catálogo, Preços por Porte e Combos (`012_services_prices_packages.up.sql`)**:
+    - Enriquecimento da tabela `services` com `warranty_months` (garantia padrão) e `material_consumption_estimate` (JSONB para consumo previsto de filmes/insumos).
+    - Tabela `service_prices_by_class` com RLS e FORCE RLS (`tenant_isolation_policy`), mapeando preços em centavos e tempos em minutos por porte (`size_class` com constraint `uq_service_prices_tenant_service_class`).
+    - Tabela `packages` (combos) com modalidade de desconto percentual ou fixo em centavos.
+    - Tabela `package_items` com itens do combo, ordenação customizada e chave estrangeira em cascata.
+  - **Contratos e Schemas Zod Compartilhados (`packages/shared/src/schemas.ts`)**:
+    - DTOs `CatalogServiceDto`, `CreateCatalogServiceDto`, `UpdateCatalogServiceDto`.
+    - DTOs `ServicePriceByClassDto`, `SetServicePriceInputDto`.
+    - DTOs `PackageDto`, `PackageItemDto`, `CreatePackageDto`, `UpdatePackageDto`.
+    - DTOs de Precificação `CalculatePricingInputDto`, `CalculatedServiceItemDto`, `PricingCalculationResultDto`.
+  - **Serviço de Negócio (`apps/api/src/services/catalog-pricing-service.ts`)**:
+    - CRUD completo de serviços com busca, filtros de categoria e segmento.
+    - Configuração de tabela de preços diferenciada por porte via UPSERT transacional.
+    - CRUD completo de combos/pacotes com itens vinculados gerenciados atomicamente.
+    - **Motor Automotivo de Orçamentos (`calculatePricing`)**:
+      - Resolução da classe de porte diretamente do veículo cadastrado (`vehicleId`) ou informada no orçamento.
+      - Aplicação de override por classe quando existente, ou fallback transparente para os valores padrão do serviço.
+      - Cálculo de desconto de combo no backend (percentual ou fixo), com distribuição proporcional entre itens e garantia de nunca gerar valor negativo.
+    - Trilha de auditoria imutável via `auditService.record`.
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/catalog-routes.ts`)**:
+    - Rotas de serviços: `GET /catalog/services`, `POST /catalog/services`, `GET /catalog/services/:id`, `PUT /catalog/services/:id`, `DELETE /catalog/services/:id`.
+    - Rotas de preços por porte: `GET /catalog/services/:id/prices`, `PUT /catalog/services/:id/prices`.
+    - Rotas de combos/pacotes: `GET /catalog/packages`, `POST /catalog/packages`, `GET /catalog/packages/:id`, `PUT /catalog/packages/:id`, `DELETE /catalog/packages/:id`.
+    - Motor de orçamento: `POST /catalog/calculate-pricing`.
+  - **Validação Automatizada com Sucesso**:
+    - 12 novos testes dedicados em [`apps/api/src/services/catalog-pricing.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/services/catalog-pricing.test.ts).
+    - **Total Consolidado da API CarX**: **142/142 testes passando com 100% de sucesso** em 19 suítes completas.
 
 ---
 

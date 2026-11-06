@@ -878,6 +878,120 @@ CREATE INDEX IF NOT EXISTS idx_vehicles_tenant_model ON vehicles(tenant_id, mode
 
 ---
 
+## 🚗 Migração 012: Catálogo de Serviços, Preços por Porte e Combos (`012_services_prices_packages.up.sql`)
+
+### 1. Enriquecimento da Tabela `services`
+```sql
+ALTER TABLE services ADD COLUMN IF NOT EXISTS warranty_months INTEGER DEFAULT 3;
+ALTER TABLE services ADD COLUMN IF NOT EXISTS material_consumption_estimate JSONB DEFAULT '{}'::jsonb;
+```
+
+### 2. Tabela `service_prices_by_class` (Preços e Tempos por Porte)
+```sql
+CREATE TABLE IF NOT EXISTS service_prices_by_class (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    size_class VARCHAR(20) NOT NULL, -- 'moto', 'hatch', 'sedan', 'suv', 'pickup', 'esportivo', 'van'
+    price_cents INTEGER NOT NULL DEFAULT 0,
+    estimated_minutes INTEGER NOT NULL DEFAULT 60,
+    warranty_months INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_service_prices_tenant_service_class UNIQUE (tenant_id, service_id, size_class)
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE service_prices_by_class ENABLE ROW LEVEL SECURITY;
+ALTER TABLE service_prices_by_class FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON service_prices_by_class
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_service_prices_tenant_service ON service_prices_by_class(tenant_id, service_id);
+CREATE INDEX IF NOT EXISTS idx_service_prices_tenant_class ON service_prices_by_class(tenant_id, size_class);
+```
+
+### 3. Tabela `packages` (Combos e Pacotes de Serviços)
+```sql
+CREATE TABLE IF NOT EXISTS packages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    discount_type VARCHAR(20) NOT NULL DEFAULT 'percentage', -- 'percentage' | 'fixed_cents'
+    discount_value INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE packages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE packages FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON packages
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_packages_tenant_id ON packages(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_packages_tenant_active ON packages(tenant_id, is_active);
+```
+
+### 4. Tabela `package_items` (Itens do Combo)
+```sql
+CREATE TABLE IF NOT EXISTS package_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    package_id UUID NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    custom_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_package_items_package_service UNIQUE (tenant_id, package_id, service_id)
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE package_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE package_items FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON package_items
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_package_items_package_id ON package_items(tenant_id, package_id);
+CREATE INDEX IF NOT EXISTS idx_package_items_service_id ON package_items(tenant_id, service_id);
+```
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).

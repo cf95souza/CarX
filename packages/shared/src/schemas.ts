@@ -248,3 +248,150 @@ export const InspectionPointSchema = z.object({
 });
 
 export type InspectionPointDto = z.infer<typeof InspectionPointSchema>;
+
+// ==============================================================================
+// CATÁLOGO DE SERVIÇOS, PREÇOS POR PORTE E COMBOS (T3.2)
+// ==============================================================================
+
+export const VehicleSizeClassEnum = z.enum([
+  'moto',
+  'hatch',
+  'sedan',
+  'suv',
+  'pickup',
+  'esportivo',
+  'van',
+]);
+export type VehicleSizeClassType = z.infer<typeof VehicleSizeClassEnum>;
+
+export const CatalogServiceSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(2, 'Nome do serviço deve ter no mínimo 2 caracteres'),
+  description: z.string().optional().nullable(),
+  priceCents: z.number().int().min(0, 'Preço deve ser positivo em centavos').default(0),
+  estimatedMinutes: z.number().int().min(1, 'Tempo estimado deve ser no mínimo 1 minuto').default(60),
+  category: z.string().optional().nullable(),
+  segment: z.string().optional().nullable(),
+  warrantyMonths: z.number().int().min(0).default(3),
+  materialConsumptionEstimate: z.record(z.any()).default({}),
+  isActive: z.boolean().default(true),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type CatalogServiceDto = z.infer<typeof CatalogServiceSchema>;
+
+export interface CreateCatalogServiceDto {
+  name: string;
+  description?: string | null;
+  priceCents: number;
+  estimatedMinutes?: number;
+  category?: string | null;
+  segment?: string | null;
+  warrantyMonths?: number;
+  materialConsumptionEstimate?: Record<string, any>;
+  isActive?: boolean;
+}
+
+export interface UpdateCatalogServiceDto extends Partial<CreateCatalogServiceDto> {}
+
+export const ServicePriceByClassSchema = z.object({
+  id: z.string().uuid().optional(),
+  tenantId: z.string().uuid().optional(),
+  serviceId: z.string().uuid(),
+  sizeClass: VehicleSizeClassEnum,
+  priceCents: z.number().int().min(0),
+  estimatedMinutes: z.number().int().min(1),
+  warrantyMonths: z.number().int().min(0).optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type ServicePriceByClassDto = z.infer<typeof ServicePriceByClassSchema>;
+
+export interface SetServicePriceInputDto {
+  sizeClass: VehicleSizeClassType;
+  priceCents: number;
+  estimatedMinutes: number;
+  warrantyMonths?: number | null;
+}
+
+export const PackageItemSchema = z.object({
+  id: z.string().uuid().optional(),
+  tenantId: z.string().uuid().optional(),
+  packageId: z.string().uuid().optional(),
+  serviceId: z.string().uuid(),
+  customOrder: z.number().int().min(0).default(0),
+  service: CatalogServiceSchema.optional(),
+});
+export type PackageItemDto = z.infer<typeof PackageItemSchema>;
+
+export const PackageSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(2, 'Nome do pacote deve ter no mínimo 2 caracteres'),
+  description: z.string().optional().nullable(),
+  discountType: z.enum(['percentage', 'fixed_cents']).default('percentage'),
+  discountValue: z.number().int().min(0).default(0),
+  isActive: z.boolean().default(true),
+  items: z.array(PackageItemSchema).optional(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type PackageDto = z.infer<typeof PackageSchema>;
+
+export interface CreatePackageDto {
+  name: string;
+  description?: string | null;
+  discountType?: 'percentage' | 'fixed_cents';
+  discountValue?: number;
+  isActive?: boolean;
+  serviceIds: string[];
+}
+
+export interface UpdatePackageDto {
+  name?: string;
+  description?: string | null;
+  discountType?: 'percentage' | 'fixed_cents';
+  discountValue?: number;
+  isActive?: boolean;
+  serviceIds?: string[];
+}
+
+export const CalculatePricingInputSchema = z.object({
+  vehicleId: z.string().uuid().optional().nullable(),
+  vehicleSizeClass: VehicleSizeClassEnum.optional().nullable(),
+  serviceIds: z.array(z.string().uuid()).default([]),
+  packageId: z.string().uuid().optional().nullable(),
+});
+export type CalculatePricingInputDto = z.infer<typeof CalculatePricingInputSchema>;
+
+export interface CalculatedServiceItemDto {
+  serviceId: string;
+  serviceName: string;
+  category: string | null;
+  vehicleSizeClass: VehicleSizeClassType;
+  basePriceCents: number;
+  appliedPriceCents: number;
+  isOverriddenByClass: boolean;
+  baseMinutes: number;
+  appliedMinutes: number;
+  warrantyMonths: number;
+  packageDiscountCents: number;
+  finalPriceCents: number;
+}
+
+export interface PricingCalculationResultDto {
+  vehicleSizeClass: VehicleSizeClassType;
+  package: {
+    id: string;
+    name: string;
+    discountType: 'percentage' | 'fixed_cents';
+    discountValue: number;
+  } | null;
+  items: CalculatedServiceItemDto[];
+  subtotalCents: number;
+  discountCents: number;
+  totalCents: number;
+  totalEstimatedMinutes: number;
+}
+

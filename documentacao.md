@@ -764,6 +764,36 @@ Implementada a camada relacional e serviços de gestão de clientes e frotas, su
   - 10 novos testes dedicados em [`apps/api/src/customers/customers-vehicles.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customers/customers-vehicles.test.ts).
   - **Total Consolidado da API CarX**: **130/130 testes passando com 100% de sucesso** em 18 suítes completas.
 
+---
+
+#### Tarefa T3.2: Catálogo de Serviços, Preços por Porte e Combos ⚙️
+Implementado o catálogo de serviços normalizado com tabela de preços por porte do veículo e motor de combos com desconto progressivo no backend:
+- **Migration 012 — Catálogo, Preços por Porte e Combos (`012_services_prices_packages.up.sql`)**:
+  - `services`: Enriquecida com colunas `warranty_months` (garantia padrão em meses) e `material_consumption_estimate` (JSONB com previsão de insumos).
+  - `service_prices_by_class`: Tabela com isolamento via RLS e FORCE RLS (`tenant_isolation_policy`), mapeando o preço (`price_cents`), o tempo de execução (`estimated_minutes`) e a garantia por porte de veículo (`size_class`: `moto`, `hatch`, `sedan`, `suv`, `pickup`, `esportivo`, `van`), com unicidade `uq_service_prices_tenant_service_class UNIQUE (tenant_id, service_id, size_class)`.
+  - `packages`: Tabela de combos/pacotes com RLS ativo, suportando descontos percentuais (`percentage`) ou em valor monetário fixo (`fixed_cents`).
+  - `package_items`: Itens vinculados ao combo com ordenação customizada e integridade referencial com deleção em cascata.
+- **Motor Automotivo de Orçamentos (`CatalogPricingService.calculatePricing`)**:
+  - **Critério Fundamental**: Orçamento sugere preço pelo porte do veículo e aplica desconto de combo no servidor.
+  - Resolução dinâmica da classe do veículo via `vehicleId` já cadastrado ou por `vehicleSizeClass` informado na simulação.
+  - Para cada serviço:
+    - Se houver preço e tempo cadastrados para o porte do veículo em `service_prices_by_class`, utiliza-os diretamente (`isOverriddenByClass: true`).
+    - Caso contrário, aplica fallback gracioso para os valores base da tabela de serviços (`services.price_cents`, `services.estimated_minutes`).
+  - Se um combo/pacote estiver selecionado:
+    - Calcula o desconto configurado no pacote sobre os itens participantes.
+    - Distribui o desconto proporcionalmente de forma matematicamente estável, sem gerar sobras de centavos e garantindo que o valor final nunca seja negativo.
+  - Retorna `PricingCalculationResultDto` completo com detalhamento item a item, subtotal, desconto total, total final e tempo estimado total em minutos.
+- **Rotas Fastify (`catalog-routes.ts`)**:
+  - `GET /catalog/services`: Listagem com filtros de categoria, segmento e busca textual.
+  - `POST /catalog/services`, `PUT /catalog/services/:id`, `DELETE /catalog/services/:id`: CRUD com RBAC (`owner`, `gestor`, `atendente`).
+  - `GET /catalog/services/:id/prices` e `PUT /catalog/services/:id/prices`: Configuração em lote dos preços por porte.
+  - `GET /catalog/packages`, `POST /catalog/packages`, `GET /catalog/packages/:id`, `PUT /catalog/packages/:id`, `DELETE /catalog/packages/:id`: Gestão completa de combos.
+  - `POST /catalog/calculate-pricing`: Endpoint inteligente de precificação e orçamento.
+- **Validação Automatizada com Sucesso**:
+  - Suíte de 12 testes em [`apps/api/src/services/catalog-pricing.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/services/catalog-pricing.test.ts) cobrindo portes Hatch vs SUV, fallback para Sedan, precificação via `vehicleId`, combos percentuais e fixos, isolamento estrito entre lojas e auditoria imutável.
+  - **Total Consolidado da API CarX**: **142/142 testes passando com 100% de sucesso** em 19 suítes completas.
+
+
 
 
 
