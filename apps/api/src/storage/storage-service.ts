@@ -289,6 +289,14 @@ export class StorageService {
   /**
    * Gera URL pré-assinada de leitura/download com verificação estrita de posse do tenant
    */
+  async getDownloadUrl(
+    tenantId: string,
+    fileIdOrKey: string,
+    expiresInSeconds = 900
+  ): Promise<{ downloadUrl: string; file: StorageFileDto }> {
+    return this.getPresignedDownloadUrl(tenantId, fileIdOrKey, expiresInSeconds);
+  }
+
   async getPresignedDownloadUrl(
     tenantId: string,
     fileIdOrKey: string,
@@ -391,6 +399,39 @@ export class StorageService {
     ]);
 
     return true;
+  }
+
+  /**
+   * Obtém o conteúdo de um arquivo diretamente como Buffer (para geração de PDFs, processamento, etc.)
+   */
+  async getFileBuffer(tenantId: string, fileId: string): Promise<Buffer> {
+    const res = await tenantQuery<StorageFileDto>(
+      tenantId,
+      `SELECT * FROM storage_files WHERE tenant_id = $1 AND id = $2 LIMIT 1;`,
+      [tenantId, fileId]
+    );
+
+    if (res.rows.length === 0) {
+      throw new StorageNotFoundError('Arquivo não encontrado.');
+    }
+
+    const file = res.rows[0];
+    this.assertTenantFileKey(tenantId, file.file_key);
+
+    const response = await this.s3.send(
+      new GetObjectCommand({
+        Bucket: file.bucket_name || this.defaultBucket,
+        Key: file.file_key,
+      })
+    );
+
+    if (!response.Body) {
+      throw new Error('Conteúdo do arquivo vazio no MinIO.');
+    }
+
+    // AWS SDK v3 Body stream conversion
+    const byteArray = await (response.Body as any).transformToByteArray();
+    return Buffer.from(byteArray);
   }
 }
 

@@ -976,6 +976,160 @@ export interface BayAvailabilitySlotDto {
   conflictingAppointmentId?: string | null;
 }
 
+// ==============================================================================
+// LAUDO DE INSPEÇÃO DIGITAL (VCR), CHECKLIST E FOTOS (T3.7)
+// ==============================================================================
+
+export const InspectionTypeEnum = z.enum(['check_in', 'check_out', 'interim']);
+export type InspectionType = z.infer<typeof InspectionTypeEnum>;
+
+export const InspectionVehicleTypeEnum = z.enum(['car', 'motorcycle', 'truck']);
+export type InspectionVehicleType = z.infer<typeof InspectionVehicleTypeEnum>;
+
+export const InspectionStatusEnum = z.enum(['draft', 'completed', 'signed']);
+export type InspectionStatusType = z.infer<typeof InspectionStatusEnum>;
+
+export const DamageSeverityEnum = z.enum(['low', 'medium', 'high', 'critical']);
+export type DamageSeverityType = z.infer<typeof DamageSeverityEnum>;
+
+export const DamageViewEnum = z.enum(['top', 'front', 'rear', 'left', 'right', 'isometric']);
+export type DamageViewType = z.infer<typeof DamageViewEnum>;
+
+export const PhotoPhaseEnum = z.enum(['before', 'during', 'after']);
+export type PhotoPhaseType = z.infer<typeof PhotoPhaseEnum>;
+
+export const InspectionChecklistItemSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  checked: z.boolean(),
+  notes: z.string().optional().nullable(),
+  photoFileId: z.string().uuid().optional().nullable(),
+});
+export type InspectionChecklistItemDto = z.infer<typeof InspectionChecklistItemSchema>;
+
+export const CreateInspectionInputSchema = z.object({
+  workOrderId: z.string().uuid('ID da Ordem de Serviço inválido'),
+  vehicleId: z.string().uuid('ID do Veículo inválido'),
+  inspectorId: z.string().uuid().optional().nullable(),
+  inspectionType: InspectionTypeEnum.optional().default('check_in'),
+  vehicleType: InspectionVehicleTypeEnum.optional().default('car'),
+  currentKm: z.number().int().nonnegative().optional().nullable(),
+  fuelLevel: z.string().optional().default('1/2'),
+  checklistItems: z.array(InspectionChecklistItemSchema).optional().default([]),
+  voiceNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type CreateInspectionInputDto = z.infer<typeof CreateInspectionInputSchema>;
+
+export const UpdateInspectionInputSchema = z.object({
+  currentKm: z.number().int().nonnegative().optional().nullable(),
+  fuelLevel: z.string().optional().nullable(),
+  checklistItems: z.array(InspectionChecklistItemSchema).optional(),
+  voiceNotes: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  status: InspectionStatusEnum.optional(),
+});
+export type UpdateInspectionInputDto = z.infer<typeof UpdateInspectionInputSchema>;
+
+export const AddDamagePointInputSchema = z.object({
+  part: z.string().min(1, 'Parte do veículo é obrigatória'),
+  damageType: z.string().min(1, 'Tipo de avaria é obrigatório'),
+  severity: DamageSeverityEnum.optional().default('medium'),
+  xPercent: z.number().min(0).max(100, 'Coordenada X deve estar entre 0% e 100%'),
+  yPercent: z.number().min(0).max(100, 'Coordenada Y deve estar entre 0% e 100%'),
+  view: DamageViewEnum.optional().default('top'),
+  photoFileId: z.string().uuid().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type AddDamagePointInputDto = z.infer<typeof AddDamagePointInputSchema>;
+
+export const AddInspectionPhotoInputSchema = z.object({
+  photoFileId: z.string().uuid('ID do arquivo de foto inválido'),
+  angle: z.string().min(1, 'Ângulo da foto é obrigatório'),
+  phase: PhotoPhaseEnum.optional().default('before'),
+  caption: z.string().optional().nullable(),
+});
+export type AddInspectionPhotoInputDto = z.infer<typeof AddInspectionPhotoInputSchema>;
+
+export const SignInspectionInputSchema = z.object({
+  customerSignatureName: z.string().min(2, 'Nome do signatário é obrigatório'),
+  signatureBase64: z.string().min(20, 'Imagem da assinatura é obrigatória'),
+});
+export type SignInspectionInputDto = z.infer<typeof SignInspectionInputSchema>;
+
+export interface InspectionDamagePointDto {
+  id: string;
+  tenantId: string;
+  inspectionId: string;
+  part: string;
+  damageType: string;
+  severity: DamageSeverityType;
+  xPercent: number;
+  yPercent: number;
+  view: DamageViewType;
+  photoFileId: string | null;
+  photoUrl?: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
+export interface InspectionPhotoDto {
+  id: string;
+  tenantId: string;
+  inspectionId: string;
+  photoFileId: string;
+  photoUrl?: string | null;
+  angle: string;
+  phase: PhotoPhaseType;
+  caption: string | null;
+  createdAt: string;
+}
+
+export interface InspectionDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  vehicleId: string;
+  inspectorId: string | null;
+  inspectorName?: string | null;
+  inspectionType: InspectionType;
+  vehicleType: InspectionVehicleType;
+  currentKm: number | null;
+  fuelLevel: string | null;
+  checklistItems: InspectionChecklistItemDto[];
+  voiceNotes: string | null;
+  customerSignatureFileId: string | null;
+  customerSignatureUrl?: string | null;
+  customerSignatureName: string | null;
+  signedAt: string | null;
+  pdfFileId: string | null;
+  pdfUrl?: string | null;
+  pdfGeneratedAt: string | null;
+  status: InspectionStatusType;
+  notes: string | null;
+  damagePoints?: InspectionDamagePointDto[];
+  photos?: InspectionPhotoDto[];
+  vehicle?: {
+    plate: string;
+    brand: string;
+    model: string;
+    color: string | null;
+    year: number | null;
+  };
+  customer?: {
+    name: string;
+    phone: string | null;
+    email: string | null;
+  };
+  workOrder?: {
+    osNumber: number;
+    status: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 
 
 

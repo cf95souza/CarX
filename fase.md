@@ -885,15 +885,45 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.7 — Laudo de Inspeção Digital (VCR), Checklist e Fotos
-- **Descrição:** Vistoria visual digital do veículo no celular/tablet: marcação touch dos pontos de avaria (riscos, amassados, trincas), fotos antes/depois por ângulo guiado e assinatura digital salva como arquivo.
+### [x] T3.7 — Laudo de Inspeção Digital (VCR), Checklist e Fotos `(Concluído)`
+- **Descrição:** Vistoria visual digital do veículo no celular/tablet (VCR - Vehicle Condition Report): marcação touch dos pontos de avaria (riscos, amassados, trincas, lascas, repinturas), fotos antes/depois por ângulo guiado e checklist de entrada/saída.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 10.1: O que observei nas telas / Laudo (Linhas 312–313)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L312-L313)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.7 (Linhas 611–614)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L611-L614)
 - **Assets e Telas de Referência:**
   - [Operador · Laudo de Inspeção (Mapa touch de avarias no celular, ângulos guiados)](file:///d:/Repositorios/CarX/rebraind/Operador%20%C2%B7%20Laudo%20de%20inspe%C3%A7%C3%A3o@2x.png)
-- **Entrega:** Tabela `inspections`, upload de imagens dos pontos para MinIO, geração de PDF do laudo no servidor com marcações gráficas e assinatura do cliente.
-- **Pronto quando:** O PDF gerado abre com os pontos plotados sobre a silhueta do veículo e fotos anexadas, sem armazenar dados em Base64 no banco.
+- **Entrega:** Tabelas `inspections`, `inspection_damage_points` e `inspection_photos` com RLS, upload físico no MinIO/S3 para fotos e assinatura do cliente (sem Base64 persistido em colunas de texto no banco), e gerador de PDF vetorial do laudo com silhueta mapeada.
+- **Pronto quando:** O PDF gerado abre com os pontos plotados sobre a silhueta do veículo, tabela descritiva com severidades, checklist de itens, fotos anexadas e assinatura do cliente, sem armazenar dados em Base64 no banco.
+- **Status da Validação:**
+  - **Migração 017 Aplicada com RLS Canônico**:
+    - [`apps/api/src/database/migrations/017_inspections_vcr_photos.up.sql`](file:///d:/Repositorios/CarX/apps/api/src/database/migrations/017_inspections_vcr_photos.up.sql) e `.down.sql` criando `inspections`, `inspection_damage_points` e `inspection_photos`.
+    - `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e `tenant_isolation_policy` aplicados em todas as 3 tabelas e validados com 100% de aprovação em `test:rls`.
+  - **Contratos e DTOs Compartilhados**:
+    - Adicionados em [`packages/shared/src/schemas.ts`](file:///d:/Repositorios/CarX/packages/shared/src/schemas.ts): `InspectionDto`, `CreateInspectionInputSchema`, `UpdateInspectionInputSchema`, `AddDamagePointInputSchema`, `AddInspectionPhotoInputSchema`, `SignInspectionInputSchema`, `InspectionDamagePointDto`, `InspectionPhotoDto` e `InspectionChecklistItemSchema`.
+  - **Serviço de Negócio VCR e PDFKit**:
+    - [`apps/api/src/inspections/inspection-service.ts`](file:///d:/Repositorios/CarX/apps/api/src/inspections/inspection-service.ts):
+      - CRUD de laudos de inspeção vinculado à OS e veículo.
+      - Adição/remoção de pontos de avaria touch com coordenadas percentuais (`xPercent`, `yPercent`), peça, tipo e severidade.
+      - Registro de fotos guiadas por ângulo (`phase: before/during/after`).
+      - Assinatura digital do cliente convertida de Base64 para buffer binário e persistida fisicamente no MinIO (`carx-media`) via `storageService.uploadFile` com integridade garantida por UUID em `customer_signature_file_id` (sem persistência de Base64 em tabelas do banco de dados).
+      - Gerador de PDF vetorial via `PDFKit`: silhueta automotiva vetorial em alta definição, plotagem de círculos numerados com halos coloridos por severidade (`low`, `medium`, `high`, `critical`), tabela detalhada de avarias, checklist com marcadores `[OK]` e `[ ! ]`, imagem da assinatura digital renderizada diretamente no documento e persistência do PDF no MinIO.
+  - **Rotas Fastify Registradas**:
+    - [`apps/api/src/routes/inspection-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/inspection-routes.ts) e registradas em `server.ts`:
+      - `POST /inspections`
+      - `GET /inspections/:id`
+      - `GET /work-orders/:workOrderId/inspections`
+      - `PATCH /inspections/:id`
+      - `POST /inspections/:id/damage-points`
+      - `DELETE /inspections/:id/damage-points/:pointId`
+      - `POST /inspections/:id/photos`
+      - `DELETE /inspections/:id/photos/:photoId`
+      - `POST /inspections/:id/sign`
+      - `POST /inspections/:id/generate-pdf`
+      - `GET /inspections/:id/pdf` (download direto como `application/pdf`).
+  - **Validação Automatizada com Sucesso**:
+    - 13 testes dedicados em [`apps/api/src/inspections/inspections.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/inspections/inspections.test.ts) cobrindo criação de inspeção, consulta com relacionamentos, plotagem touch, remoção de pontos, anexos de fotos, assinatura física sem Base64 (validação de UUID regex), compilação do laudo PDF vetorial (> 1000 bytes e cabeçalho `%PDF-`), download direto e isolamento estrito RLS cross-tenant.
+    - **Total Consolidado da API CarX**: **202/202 testes passando com 100% de sucesso** em 24 suítes completas.
+    - **Typecheck Monorepo**: `pnpm typecheck` aprovado com 0 erros.
 
 ---
 

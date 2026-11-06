@@ -20,6 +20,7 @@ import workOrderRoutes from './routes/work-order-routes.js';
 import paymentRoutes from './routes/payment-routes.js';
 import stockRoutes from './routes/stock-routes.js';
 import { appointmentRoutes } from './routes/appointment-routes.js';
+import { inspectionRoutes } from './routes/inspection-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -87,6 +88,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Agenda Inteligente por Box e Agendamento Online (T3.6)
   app.register(appointmentRoutes);
+
+  // Domínio Automotivo: Laudo de Inspeção Digital (VCR), Checklist e Fotos (T3.7)
+  app.register(inspectionRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

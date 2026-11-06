@@ -875,41 +875,46 @@ Implementado o subsistema automotivo de controle de estoque, insumos e bobinas d
 
 ---
 
-#### Tarefa T3.6: Agenda Inteligente por Box e Agendamento Online 📅
-Implementado o subsistema de agendamento e pátio por boxes físicos (`bays`) e profissionais técnicos com detecção matemática de sobreposição de horários e portal público de agendamento online protegido:
-- **Migration 016 — Boxes Físicos, Agendamentos e Origem da OS (`016_bays_appointments.up.sql`)**:
-  - `bays`: Cadastro de boxes físicos da loja (`name`, `description`, `color`, `order_index`, `is_active`) com unicidade composta `uq_bays_tenant_name UNIQUE (tenant_id, name)` e isolamento via RLS e FORCE RLS (`tenant_isolation_policy`).
-  - `appointments`: Agendamentos com chaves estrangeiras para `bays`, `users` (técnico), `customers`, `vehicles` e `work_orders`, horários `start_time` e `end_time`, `estimated_minutes`, status (`scheduled`, `confirmed`, `in_progress`, `completed`, `canceled`, `no_show`), origem (`INTERNAL`, `ONLINE`, `WHATSAPP`), dados desnormalizados de contato e notas. RLS e FORCE RLS ativados com `tenant_isolation_policy`.
-  - `work_orders`: Coluna `origin VARCHAR(30) NOT NULL DEFAULT 'INTERNAL'` adicionada com índice dedicado.
-- **Serviço de Negócio (`AppointmentService`)**:
-  - `listBays`, `getBayById`, `createBay`, `updateBay`, `deleteBay`: CRUD de boxes com ordenação e paleta visual para a grade de agenda.
-  - **Prevenção Rigorosa de Choque de Horários (`checkBayConflict`)**:
-    - **Critério de Aceite Fundamental**: Dois clientes são impedidos de agendar no mesmo box e no mesmo horário simultaneamente.
-    - Avaliação de sobreposição temporal: `start_time < new_end_time AND end_time > new_start_time`.
-    - Agendamentos cancelados (`status = 'canceled'`) ou no-show são ignorados, liberando o horário imediatamente.
-    - Lança `BayConflictError` com status HTTP 409 Conflict detalhando o agendamento conflitante.
-  - `listAppointments`, `getAppointmentById`, `createAppointment`, `updateAppointment`, `updateAppointmentStatus`: Gestão interna da agenda com validação de conflito de box e registro de auditoria imutável (`APPOINTMENT_CREATED`, `APPOINTMENT_UPDATED`, `APPOINTMENT_STATUS_CHANGED`).
-  - `getBayAvailability`: Consulta em lote dos slots de hora em hora por box para exibição de horários livres no front-end.
-  - **Portal Público de Agendamento Online (`bookOnline`)**:
-    - **Critério de Aceite Fundamental**: Endpoint público que aceita somente campos seguros e cria OS em `QUOTE` com origem `ONLINE`.
-    - **Proteção Anti-Bot**: Bloqueio de submissões automatizadas via honeypot (`website`) com HTTP 400 `BotDetectedError`.
-    - **Cálculo de Duração Inteligente por Porte**: Soma os tempos dos serviços selecionados respeitando o porte do veículo (`size_class` em `service_prices_by_class` ou `services.estimated_minutes`).
-    - **Alocação de Box**: Valida o box solicitado ou aloca automaticamente o primeiro box disponível sem choque de horários.
-    - **Critério de Segurança Rigoroso**:
-      - Criação atômica em transação serializada.
-      - Status da OS: estritamente forçado para `QUOTE`.
-      - Origem da OS: estritamente forçada para `ONLINE`.
-      - Valores pagos: estritamente `0` (rejeita tentativa de injeção de quitação).
-      - Técnico: estritamente `null` (triagem manual posterior pelo gestor).
-      - Gera `tracking_token` público criptográfico para acompanhamento em tempo real sem expor dados internos.
-- **Rotas Fastify (`appointment-routes.ts`)**:
-  - `GET /bays`, `POST /bays`, `GET /bays/:id`, `PUT /bays/:id`, `DELETE /bays/:id`.
-  - `GET /appointments`, `POST /appointments`, `GET /appointments/:id`, `PUT /appointments/:id`, `PATCH /appointments/:id/status`.
-  - `GET /appointments/availability`.
-  - `POST /public/book/:tenantSlug` e `POST /public/book` (rotas públicas sem autenticação Bearer).
+#### Tarefa T3.7: Laudo de Inspeção Digital (VCR), Checklist e Fotos 📋
+Implementado o subsistema completo de vistoria digital do veículo (Vehicle Condition Report - VCR), marcação touch de avarias sobre silhueta automotiva, fotos antes/depois por ângulo guiado, assinatura digital física no MinIO e motor server-side de compilação de laudos em PDF vetorial:
+- **Migration 017 — Tabelas de Laudo VCR e Isolamento RLS (`017_inspections_vcr_photos.up.sql`)**:
+  - `inspections`: Tabela mestre do laudo (`work_order_id`, `vehicle_id`, `inspector_id`, `inspection_type` [`check_in`, `check_out`, `interim`], `vehicle_type` [`car`, `motorcycle`, `truck`], `current_km`, `fuel_level`, `checklist_items` em JSONB, `voice_notes`, `customer_signature_file_id` FK `storage_files(id)`, `customer_signature_name`, `signed_at`, `pdf_file_id` FK `storage_files(id)`, `pdf_generated_at`, `status` [`draft`, `completed`, `signed`]).
+  - `inspection_damage_points`: Registro de avarias identificadas na silhueta (`part`, `damage_type`, `severity` [`low`, `medium`, `high`, `critical`], coordenadas percentuais `x_percent` e `y_percent` com constraints numéricas entre 0 e 100, `view` [`top`, `front`, `rear`, `left`, `right`, `isometric`], `photo_file_id`).
+  - `inspection_photos`: Galeria guiada de fotos da vistoria (`photo_file_id`, `angle`, `phase` [`before`, `during`, `after`], `caption`).
+  - Ativação rigorosa de `ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy` em todas as tabelas.
+- **Serviço de Negócio (`InspectionService`)**:
+  - `createInspection`, `getInspectionById`, `listByWorkOrder`, `updateInspection`: Gestão completa de laudos veiculares com checklist padrão inteligente de itens e acessórios.
+  - `addDamagePoint`, `removeDamagePoint`: Adição e remoção de pontos de avaria com coordenadas percentuais touch na silhueta, gerando URLs assinadas seguras para fotos de detalhe anexas.
+  - `addPhoto`, `removePhoto`: Catálogo fotográfico guiado por ângulos operacionais (3/4 dianteiro, 3/4 traseiro, odômetro, teto, etc.).
+  - **Assinatura Digital Física sem Base64 no Banco (`signInspection`)**:
+    - **Critério de Aceite Fundamental**: O Base64 desenhado na tela de toque do smartphone/tablet é convertido para binário e enviado fisicamente ao MinIO/S3 via `storageService.uploadFile`.
+    - A coluna `customer_signature_file_id` armazena exclusivamente o UUID do arquivo em `storage_files`.
+    - **Nenhum Base64 é persistido em colunas de texto no PostgreSQL**, mantendo o banco leve, performático e em conformidade estrita de auditoria.
+  - **Gerador de Laudo em PDF Vetorial Server-Side (`generateInspectionPdf`)**:
+    - **Critério de Aceite Fundamental**: Compilação de laudo pericial em PDF de alta fidelidade visual com `pdfkit`.
+    - Cabeçalho institucional com marca CarX e dados da oficina.
+    - Quadro de dados do cliente, veículo (placa, marca, modelo, cor, ano), odômetro e nível de combustível.
+    - **Mapa Visual da Carroceria (Vehicle Condition Map)**: Renderização vetorial precisa da silhueta superior automotiva, com plotagem dos marcadores de avaria nas coordenadas exatas `(x_percent, y_percent)`, círculos com numeração indexada e cores correspondentes à severidade (`low` = verde, `medium` = âmbar, `high` = vermelho, `critical` = bordô).
+    - Tabela estruturada de avarias correspondente aos marcadores plotados.
+    - Checklist de entrada/saída com marcadores visuais `[OK]` e `[ ! ]`.
+    - Termo legal de vistoria e declaração de conformidade com renderização da imagem da assinatura digital do cliente.
+    - O PDF gerado é armazenado diretamente no MinIO sob chave isolada e referenciado em `pdf_file_id`.
+- **Rotas Fastify (`inspection-routes.ts`)**:
+  - `POST /inspections`: Criação de vistoria.
+  - `GET /inspections/:id`: Detalhes completos com avarias, fotos e URLs de download.
+  - `GET /work-orders/:workOrderId/inspections`: Histórico de vistorias da OS.
+  - `PATCH /inspections/:id`: Atualização de dados da inspeção.
+  - `POST /inspections/:id/damage-points`: Inserção de avaria touch.
+  - `DELETE /inspections/:id/damage-points/:pointId`: Remoção de avaria.
+  - `POST /inspections/:id/photos`: Anexo de foto guiada.
+  - `DELETE /inspections/:id/photos/:photoId`: Remoção de foto.
+  - `POST /inspections/:id/sign`: Assinatura digital do cliente com upload físico.
+  - `POST /inspections/:id/generate-pdf`: Compilação e salvamento do laudo PDF no MinIO.
+  - `GET /inspections/:id/pdf`: Download ou visualização direta inline do laudo em PDF.
 - **Validação Automatizada com Sucesso**:
-  - 12 testes dedicados em [`apps/api/src/appointments/appointments.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/appointments/appointments.test.ts) cobrindo criação de boxes, bloqueio de sobreposição (409), boxes paralelos, reagendamento, liberação por cancelamento, agendamento online público, blindagem de segurança, honeypot anti-bot e isolamento RLS entre inquilinos.
-  - **Total Consolidado da API CarX**: **189/189 testes passando com 100% de sucesso** em 23 suítes completas.
+  - 13 testes dedicados em [`apps/api/src/inspections/inspections.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/inspections/inspections.test.ts) cobrindo criação, coordenadas percentuais touch, checklist, anexos, persistência física da assinatura sem Base64 no banco, compilação vetorial do PDF, download com cabeçalho `%PDF-` e isolamento RLS cross-tenant.
+  - **Total Consolidado da API CarX**: **202/202 testes passando com 100% de sucesso** em 24 suítes completas.
+
 
 
 

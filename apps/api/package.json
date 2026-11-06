@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test src/server.test.ts src/database/tenant-isolation.test.ts src/auth/auth.test.ts src/middlewares/rbac.test.ts src/audit/audit.test.ts src/plans/plans.test.ts src/branding/branding.test.ts src/storage/storage.test.ts src/superadmin/superadmin.test.ts src/provisioning/provisioning.test.ts src/billing/billing-dunning.test.ts src/customers/customers-vehicles.test.ts src/services/catalog-pricing.test.ts src/work-orders/work-orders.test.ts src/billing/payments.test.ts src/stock/stock.test.ts src/appointments/appointments.test.ts",
+    "test": "tsx --test src/server.test.ts src/database/tenant-isolation.test.ts src/auth/auth.test.ts src/middlewares/rbac.test.ts src/audit/audit.test.ts src/plans/plans.test.ts src/branding/branding.test.ts src/storage/storage.test.ts src/superadmin/superadmin.test.ts src/provisioning/provisioning.test.ts src/billing/billing-dunning.test.ts src/customers/customers-vehicles.test.ts src/services/catalog-pricing.test.ts src/work-orders/work-orders.test.ts src/billing/payments.test.ts src/stock/stock.test.ts src/appointments/appointments.test.ts src/inspections/inspections.test.ts",
     "test:rls": "tsx --test src/database/tenant-isolation.test.ts",
     "test:auth": "tsx --test src/auth/auth.test.ts",
     "test:rbac": "tsx --test src/middlewares/rbac.test.ts",
@@ -24,6 +24,7 @@
     "test:payments": "tsx --test src/billing/payments.test.ts",
     "test:stock": "tsx --test src/stock/stock.test.ts",
     "test:appointments": "tsx --test src/appointments/appointments.test.ts",
+    "test:inspections": "tsx --test src/inspections/inspections.test.ts",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext ts",
@@ -43,12 +44,14 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.2",
+    "pdfkit": "^0.20.2",
     "pg": "^8.23.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.11.24",
+    "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.23.1",
     "tsx": "^4.7.1",
     "typescript": "^5.4.2"
