@@ -664,4 +664,155 @@ export interface WorkOrderFinancialSummaryDto {
   deposits: DepositDto[];
 }
 
+// ============================================================================
+// DOMÍNIO AUTOMOTIVO: ESTOQUE, CONSUMO POR OS E BOBINAS (T3.5)
+// ============================================================================
+
+export const StockMovementTypeEnum = z.enum([
+  'entry',
+  'exit',
+  'os_consumption',
+  'waste',
+  'adjustment',
+]);
+export type StockMovementType = z.infer<typeof StockMovementTypeEnum>;
+
+export const MaterialRollStatusEnum = z.enum([
+  'in_use',
+  'depleted',
+  'reserved',
+  'discarded',
+]);
+export type MaterialRollStatus = z.infer<typeof MaterialRollStatusEnum>;
+
+export const MaterialSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(2, 'Nome do material é obrigatório'),
+  sku: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  unit: z.string().default('un'),
+  costCents: z.number().int().min(0).default(0),
+  currentStock: z.number().default(0),
+  minStock: z.number().default(0),
+  isRoll: z.boolean().default(false),
+  notes: z.string().optional().nullable(),
+  isLowStock: z.boolean().optional(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type MaterialDto = z.infer<typeof MaterialSchema>;
+
+export const CreateMaterialInputSchema = z.object({
+  name: z.string().min(2, 'Nome do material deve ter pelo menos 2 caracteres'),
+  sku: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  unit: z.string().default('un').optional(),
+  costCents: z.number().int().min(0).default(0).optional(),
+  initialStock: z.number().min(0).default(0).optional(),
+  minStock: z.number().min(0).default(0).optional(),
+  isRoll: z.boolean().default(false).optional(),
+  notes: z.string().optional().nullable(),
+});
+export type CreateMaterialInputDto = z.infer<typeof CreateMaterialInputSchema>;
+
+export const UpdateMaterialInputSchema = CreateMaterialInputSchema.partial();
+export type UpdateMaterialInputDto = z.infer<typeof UpdateMaterialInputSchema>;
+
+export const MaterialRollSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  materialId: z.string().uuid(),
+  materialName: z.string().optional(),
+  code: z.string().optional().nullable(),
+  lotNumber: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
+  widthMeters: z.number().positive(),
+  initialMeters: z.number().positive(),
+  currentMeters: z.number().min(0),
+  minAlertMeters: z.number().min(0).default(3.0),
+  costCents: z.number().int().min(0).default(0),
+  status: MaterialRollStatusEnum.default('in_use'),
+  isLowMeters: z.boolean().optional(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type MaterialRollDto = z.infer<typeof MaterialRollSchema>;
+
+export const CreateMaterialRollInputSchema = z.object({
+  materialId: z.string().uuid('ID do material inválido'),
+  code: z.string().optional().nullable(),
+  lotNumber: z.string().optional().nullable(),
+  brand: z.string().optional().nullable(),
+  widthMeters: z.number().positive('Largura deve ser positiva').default(1.52).optional(),
+  initialMeters: z.number().positive('Metragem inicial deve ser maior que zero'),
+  minAlertMeters: z.number().min(0).default(3.0).optional(),
+  costCents: z.number().int().min(0).default(0).optional(),
+  notes: z.string().optional().nullable(),
+});
+export type CreateMaterialRollInputDto = z.infer<typeof CreateMaterialRollInputSchema>;
+
+export const StockMovementSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  materialId: z.string().uuid(),
+  materialRollId: z.string().uuid().optional().nullable(),
+  workOrderId: z.string().uuid().optional().nullable(),
+  movementType: StockMovementTypeEnum,
+  quantity: z.number(),
+  unitCostCents: z.number().int().min(0).default(0),
+  totalCostCents: z.number().int().min(0).default(0),
+  previousStock: z.number(),
+  newStock: z.number(),
+  reason: z.string().optional().nullable(),
+  createdBy: z.string().uuid().optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+});
+export type StockMovementDto = z.infer<typeof StockMovementSchema>;
+
+export const CreateStockMovementInputSchema = z.object({
+  materialId: z.string().uuid(),
+  materialRollId: z.string().uuid().optional().nullable(),
+  workOrderId: z.string().uuid().optional().nullable(),
+  movementType: StockMovementTypeEnum,
+  quantity: z.number().refine((q) => q !== 0, 'Quantidade não pode ser zero'),
+  unitCostCents: z.number().int().min(0).optional(),
+  reason: z.string().optional().nullable(),
+});
+export type CreateStockMovementInputDto = z.infer<typeof CreateStockMovementInputSchema>;
+
+export const WorkOrderMaterialSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  workOrderId: z.string().uuid(),
+  materialId: z.string().uuid(),
+  materialName: z.string().optional(),
+  materialUnit: z.string().optional(),
+  materialRollId: z.string().uuid().optional().nullable(),
+  rollLotNumber: z.string().optional().nullable(),
+  quantity: z.number().positive('Quantidade deve ser maior que zero'),
+  isConsumed: z.boolean().default(false),
+  consumedAt: z.date().or(z.string()).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type WorkOrderMaterialDto = z.infer<typeof WorkOrderMaterialSchema>;
+
+export const AllocateWorkOrderMaterialInputSchema = z.object({
+  materialId: z.string().uuid('ID do material inválido'),
+  materialRollId: z.string().uuid().optional().nullable(),
+  quantity: z.number().positive('Quantidade deve ser estritamente maior que zero'),
+  notes: z.string().optional().nullable(),
+});
+export type AllocateWorkOrderMaterialInputDto = z.infer<typeof AllocateWorkOrderMaterialInputSchema>;
+
+export interface LowStockAlertDto {
+  lowStockMaterials: MaterialDto[];
+  criticalRolls: MaterialRollDto[];
+  totalAlerts: number;
+}
+
+
 

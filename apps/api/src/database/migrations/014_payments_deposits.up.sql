@@ -104,3 +104,4 @@ CREATE TRIGGER trg_deposits_updated_at
     BEFORE UPDATE ON deposits
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+

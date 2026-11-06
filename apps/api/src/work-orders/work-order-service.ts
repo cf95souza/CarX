@@ -1,5 +1,6 @@
 import { tenantQuery, tenantTransaction } from '../database/tenant-query.js';
 import { auditService } from '../audit/audit-service.js';
+import { stockService } from '../stock/stock-service.js';
 import {
   WorkOrderDto,
   CreateWorkOrderDto,
@@ -643,6 +644,11 @@ export class WorkOrderService {
         ]
       );
     });
+
+    // Baixa idempotente automática de insumos e bobinas ao entregar a Ordem de Serviço
+    if (targetStatus === WorkOrderStatus.DELIVERED) {
+      await stockService.deductWorkOrderMaterials(tenantId, id, actorUserId);
+    }
 
     const updated = await this.getById(tenantId, id);
 

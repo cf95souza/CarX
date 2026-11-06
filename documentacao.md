@@ -840,6 +840,39 @@ Implementada a gestão financeira de pagamentos e adiantamentos da Ordem de Serv
   - 12 testes dedicados em [`apps/api/src/billing/payments.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/billing/payments.test.ts) comprovando a eliminação da race condition com duas requisições simultâneas em concorrência real (`Promise.all`), estornos com auditoria, ciclo de sinal e isolamento RLS entre inquilinos.
   - **Total Consolidado da API CarX**: **165/165 testes passando com 100% de sucesso** em 21 suítes completas.
 
+---
+
+#### Tarefa T3.5: Controle de Estoque e Bobinas de Película (PPF e Insulfilm) 📦
+Implementado o subsistema automotivo de controle de estoque, insumos e bobinas de película (PPF e Insulfilm) com rastreamento por lote, metragem restante e baixa idempotente na Ordem de Serviço:
+- **Migration 015 — Materiais, Bobinas, Movimentações e Alocação na OS (`015_stock_materials_rolls.up.sql`)**:
+  - `materials`: Cadastro de produtos e insumos gerais da oficina (`sku`, `category`, `unit`, `cost_cents`, `current_stock`, `min_stock`, `is_roll`), com isolamento via RLS e FORCE RLS (`tenant_isolation_policy`).
+  - `material_rolls`: Tabela especializada para bobinas de película (PPF, Insulfilm, vinil) com rastreamento por código de barras (`code`), lote de fabricação (`lot_number`), marca (`brand`), largura padrão (`width_meters`), metragem inicial (`initial_meters`), metragem restante (`current_meters`), metragem mínima de alerta (`min_alert_meters`), custo em centavos e máquina de status (`in_use`, `depleted`, `reserved`, `discarded`). RLS e FORCE RLS ativos.
+  - `stock_movements`: Histórico atômico e imutável de todas as movimentações físicas (`entry`, `exit`, `os_consumption`, `waste`, `adjustment`), registrando a quantidade algébrica, custo unitário e total, saldo anterior (`previous_stock`), novo saldo (`new_stock`), motivo e usuário responsável.
+  - `work_order_materials`: Alocação de insumos e bobinas vinculados a uma OS (`work_order_id`, `material_id`, `material_roll_id`, `quantity`, `is_consumed`, `consumed_at`).
+- **Serviço de Negócio (`StockService`)**:
+  - `listMaterials`, `createMaterial`, `updateMaterial`: Gestão do catálogo de insumos com cálculo em tempo real da flag `isLowStock` (`current_stock <= min_stock AND min_stock > 0`).
+  - `listRolls`, `createRoll`: Gestão de bobinas com cálculo em tempo real da flag `isLowMeters` (`current_meters <= min_alert_meters AND status = 'in_use'`).
+  - `createStockMovement`: Registro de movimentação com bloqueio estrito de saídas que excedam o estoque disponível (HTTP 422 `StockInsufficientError`), atualizando atomicamente `materials.current_stock` e, quando aplicável, `material_rolls.current_meters` (marcando como `depleted` se atingir 0).
+  - **Baixa Idempotente na OS (`deductWorkOrderMaterials`)**:
+    - **Critério de Aceite Fundamental**: Entregar a mesma OS múltiplas vezes abate o estoque apenas na primeira execução.
+    - O serviço avalia os itens de `work_order_materials`. Se já tiverem sido consumidos (`is_consumed = true`), a operação retorna imediatamente `{ deductedCount: 0, alreadyDeducted: true }` sem deduzir novamente nem gerar duplicidade de movimentações em `stock_movements`.
+    - Na primeira baixa, consome os itens, abates os saldos e marca `is_consumed = true` e `consumed_at = NOW()`.
+  - **Consistência Matemática Rigorosa (`validateMaterialStockConsistency`)**:
+    - Validação de que `materials.current_stock` é estritamente igual à soma algébrica (`SUM(quantity)`) de todos os registros em `stock_movements`.
+  - **Alerta de Estoque Mínimo (`getLowStockAlerts`)**:
+    - Endpoint consolidado `GET /materials/alerts/low-stock` que retorna tanto insumos gerais quanto bobinas de película em nível crítico para exibição no painel gerencial.
+- **Integração de Máquina de Estados**:
+  - Ao transicionar o status da OS para `DELIVERED`, o método `WorkOrderService.transitionStatus` aciona automaticamente a baixa idempotente `deductWorkOrderMaterials`.
+- **Rotas Fastify (`stock-routes.ts`)**:
+  - `GET /materials`, `POST /materials`, `GET /materials/:id`, `PUT /materials/:id`.
+  - `GET /materials/rolls`, `POST /materials/rolls`.
+  - `GET /materials/movements`, `POST /materials/movements`.
+  - `GET /materials/alerts/low-stock`.
+  - `POST /work-orders/:id/materials`, `POST /work-orders/:id/deduct-materials`.
+- **Validação Automatizada com Sucesso**:
+  - 12 testes dedicados em [`apps/api/src/stock/stock.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/stock/stock.test.ts) cobrindo criação, gestão de bobinas, alertas visuais, saídas excedentes (422), alocação na OS, baixa idempotente e isolamento RLS entre lojas.
+  - **Total Consolidado da API CarX**: **177/177 testes passando com 100% de sucesso** em 22 suítes completas.
+
 
 
 

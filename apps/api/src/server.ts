@@ -18,6 +18,7 @@ import customerRoutes from './routes/customer-routes.js';
 import vehicleRoutes from './routes/vehicle-routes.js';
 import workOrderRoutes from './routes/work-order-routes.js';
 import paymentRoutes from './routes/payment-routes.js';
+import stockRoutes from './routes/stock-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -79,6 +80,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Pagamentos, Adiantamentos e Saldos (T3.4)
   app.register(paymentRoutes);
+
+  // Domínio Automotivo: Estoque, Consumo por OS e Bobinas (T3.5)
+  app.register(stockRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

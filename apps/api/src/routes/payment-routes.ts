@@ -241,3 +241,4 @@ export async function paymentRoutes(fastify: FastifyInstance) {
 }
 
 export default paymentRoutes;
+

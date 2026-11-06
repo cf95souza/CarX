@@ -806,7 +806,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.5 — Controle de Estoque e Bobinas de Película (PPF e Insulfilm)
+### [x] T3.5 — Controle de Estoque e Bobinas de Película (PPF e Insulfilm) `(Concluído)`
 - **Descrição:** Controle granular de consumo de insumos por OS e gestão especializada de bobinas/rolos (metragem restante, lote e desperdício).
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linhas 158)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L158)
@@ -815,6 +815,32 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 - **Assets Visuais:** [Gestor · Painel (Card de Alerta: Bobina de película G20 abaixo do mínimo)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
 - **Entrega:** Tabelas `materials`, `stock_movements` e `material_rolls` (com campo de metros lineares gastos por OS e baixa idempotente ao concluir a ordem).
 - **Pronto quando:** Entregar a mesma OS múltiplas vezes abate o estoque apenas uma única vez e gera alerta visual quando a bobina atinge o nível crítico configurado.
+- **Status da Validação:**
+  - **Migration 015 (`015_stock_materials_rolls.up.sql` e `015_stock_materials_rolls.down.sql`)**:
+    - Tabelas `materials`, `material_rolls`, `stock_movements` e `work_order_materials` criadas com isolamento via RLS e `FORCE ROW LEVEL SECURITY` (`tenant_isolation_policy`).
+    - Validação de isolamento do banco via `npm --prefix apps/api run test:rls` aprovada com 8/8.
+    - Suporte a metragem decimal (`current_meters`, `initial_meters`, `width_meters`), lotes de fabricação, status (`in_use`, `depleted`, `reserved`, `discarded`) e alerta configurável (`min_alert_meters`).
+  - **Camada de Domínio e Contratos (`packages/shared/src/schemas.ts`)**:
+    - DTOs e Schemas Zod: `MaterialDto`, `CreateMaterialInputSchema`, `UpdateMaterialInputSchema`, `MaterialRollDto`, `CreateMaterialRollInputSchema`, `StockMovementDto`, `CreateStockMovementInputSchema`, `WorkOrderMaterialDto`, `AllocateWorkOrderMaterialInputSchema`, `LowStockAlertDto`.
+  - **Serviço de Negócio (`apps/api/src/stock/stock-service.ts`)**:
+    - Gestão especializada de bobinas/rolos (PPF e Insulfilm) com rastreamento por lote, largura, metragem inicial e restante (`current_meters`), e alerta visual imediato quando a metragem atinge o nível crítico.
+    - Registro atômico de movimentações físicas (`createStockMovement`) atualizando o saldo de `materials` e `material_rolls`.
+    - **Rejeição Terminante de Saídas Excedentes**: tentativa de saída maior que o saldo em estoque é sumariamente rejeitada com **HTTP 422 Unprocessable Entity**.
+    - **Comprovação do Critério de Aceite da Tarefa (Baixa Idempotente)**: `deductWorkOrderMaterials` consome os insumos e bobinas alocadas na OS. Se chamada repetidas vezes (ou ao entregar a mesma OS múltiplas vezes via transição `READY ➔ DELIVERED`), abate o estoque apenas na primeira execução (`alreadyDeducted: true`), sem duplicar baixas nem movimentações.
+    - **Consistência Matemática Rigorosa**: `validateMaterialStockConsistency` comprova que `materials.current_stock` é estritamente idêntico à soma algébrica dos registros de `stock_movements`.
+    - **Alertas de Nível Crítico**: `getLowStockAlerts` identifica tanto insumos gerais quanto bobinas de película em uso abaixo da metragem mínima de alerta.
+  - **Integração de Máquina de Estados (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Transição de OS para status `DELIVERED` dispara automaticamente a rotina idempotente `deductWorkOrderMaterials`.
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/stock-routes.ts`)**:
+    - `GET /materials`, `POST /materials`, `GET /materials/:id`, `PUT /materials/:id`.
+    - `GET /materials/rolls`, `POST /materials/rolls`.
+    - `GET /materials/movements`, `POST /materials/movements`.
+    - `GET /materials/alerts/low-stock`.
+    - `POST /work-orders/:id/materials`: Alocação de materiais/bobinas na OS.
+    - `POST /work-orders/:id/deduct-materials`: Baixa manual ou acionada por evento.
+  - **Validação Automatizada com Sucesso**:
+    - 12 testes dedicados em [`apps/api/src/stock/stock.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/stock/stock.test.ts) cobrindo cadastro, gestão de bobinas, movimentações, rejeição de saídas excedentes (422), alocação na OS, baixa idempotente (dupla chamada abate 1 vez), consistência matemática e isolamento RLS entre inquilinos.
+    - **Total Consolidado da API CarX**: **177/177 testes passando com 100% de sucesso** em 22 suítes completas.
 
 ---
 
