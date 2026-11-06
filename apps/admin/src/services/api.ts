@@ -212,5 +212,18 @@ export const adminApi = {
     const limit = params?.limit || 20;
     return fetchClient<PaginatedResponse<AdminAuditLogItem>>(`/admin/audit-logs?page=${page}&limit=${limit}`);
   },
+
+  // Catálogo e Provisionamento
+  getTenantServices: async (tenantId: string): Promise<any[]> => {
+    return fetchClient<any[]>(`/admin/tenants/${tenantId}/services`);
+  },
+
+  getTenantChecklists: async (tenantId: string): Promise<any[]> => {
+    return fetchClient<any[]>(`/admin/tenants/${tenantId}/checklists`);
+  },
+
+  getTenantInvitations: async (tenantId: string): Promise<any[]> => {
+    return fetchClient<any[]>(`/admin/tenants/${tenantId}/invitations`);
+  },
 };
 

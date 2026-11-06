@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { adminApi } from '../services/api';
-import { AdminCreateTenantDto } from '@carx/shared';
+import { AdminCreateTenantDto, AutomotiveSegment } from '@carx/shared';
 import {
   Building2,
   User,
@@ -10,8 +10,13 @@ import {
   ArrowRight,
   ArrowLeft,
   AlertCircle,
-  Layers,
+  Shield,
+  Sun,
   Sparkles,
+  Wrench,
+  Mail,
+  Layers,
+  FileCheck2,
 } from 'lucide-react';
 
 export function TenantWizardPage() {
@@ -28,6 +33,7 @@ export function TenantWizardPage() {
     slug: '',
     email: '',
     phone: '',
+    segment: 'mecanica',
     owner_name: '',
     owner_email: '',
     owner_password: '',
@@ -39,7 +45,6 @@ export function TenantWizardPage() {
   const handleInputChange = (field: keyof AdminCreateTenantDto, value: unknown) => {
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
-      // Auto-gerar slug a partir do trade_name se slug estiver vazio ou sincronizado
       if (field === 'trade_name' && (!prev.slug || prev.slug === generateSlug(prev.trade_name))) {
         updated.slug = generateSlug(value as string);
       }
@@ -65,6 +70,9 @@ export function TenantWizardPage() {
       if (!formData.email.trim()) return 'E-mail corporativo da oficina é obrigatório.';
     }
     if (step === 2) {
+      if (!formData.segment) return 'Selecione o segmento automotivo da oficina.';
+    }
+    if (step === 3) {
       if (!formData.owner_name.trim()) return 'Nome do proprietário é obrigatório.';
       if (!formData.owner_email.trim()) return 'E-mail do proprietário é obrigatório.';
     }
@@ -98,12 +106,47 @@ export function TenantWizardPage() {
     }
   };
 
+  const segments = [
+    {
+      id: 'ppf' as AutomotiveSegment,
+      name: 'PPF (Paint Protection Film)',
+      icon: Shield,
+      highlight: 'Proteção de Pintura',
+      desc: 'Películas autorregenerativas, kits para soleiras/conchas e checklist de micragem e repintura.',
+      services: ['PPF Frontal Completo', 'PPF Full Body', 'Kit Maçanetas/Soleiras', 'Revitalização Hidrofóbica'],
+    },
+    {
+      id: 'insulfilm' as AutomotiveSegment,
+      name: 'Insulfilm e Controle Solar',
+      icon: Sun,
+      highlight: 'Películas Térmicas',
+      desc: 'Nano cerâmica térmica, antivandalismo PS8/PS12 e checklist de integridade de desembaçador.',
+      services: ['Nano Cerâmica Completa', 'Antivandalismo PS8/PS12', 'Para-brisa 70%', 'Remoção Técnica'],
+    },
+    {
+      id: 'detailing' as AutomotiveSegment,
+      name: 'Estética & Detalhamento',
+      icon: Sparkles,
+      highlight: 'Detailing & Vitrificação',
+      desc: 'Polimento técnico, coating cerâmico 9H, oxi-sanitização interna e tratamento de couro.',
+      services: ['Polimento Técnico', 'Vitrificação Cerâmica 9H', 'Higienização e Ozônio', 'Tratamento de Couro'],
+    },
+    {
+      id: 'mecanica' as AutomotiveSegment,
+      name: 'Oficina Mecânica Geral',
+      icon: Wrench,
+      highlight: 'Manutenção & Centro Auto',
+      desc: 'Revisão preventiva, freios, diagnóstico computadorizado via scanner e geometria 3D.',
+      services: ['Revisão Preventiva Geral', 'Freios e Sangria', 'Scanner Diagnóstico OBD-II', 'Correia Dentada'],
+    },
+  ];
+
   const plans = [
     {
       slug: 'start',
       name: 'Start',
       price: 'R$ 69,90/mês',
-      desc: 'Ideal para oficinas compactas e estéticas automotivas em fase inicial.',
+      desc: 'Ideal para oficinas compactas e estéticas em fase inicial.',
     },
     {
       slug: 'pro',
@@ -126,6 +169,8 @@ export function TenantWizardPage() {
     },
   ];
 
+  const selectedSegmentObj = segments.find((s) => s.id === formData.segment) || segments[3];
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -135,7 +180,7 @@ export function TenantWizardPage() {
             Assistente de Criação de Oficina
           </h1>
           <p className="text-xs text-muted mt-0.5">
-            Provisione uma nova empresa, defina o subdomínio e configure o acesso do proprietário.
+            Provisione uma nova empresa, injete o catálogo de serviços do segmento e envie o convite ao dono.
           </p>
         </div>
         <Link to="/tenants" className="text-xs text-muted hover:text-texto">
@@ -143,13 +188,14 @@ export function TenantWizardPage() {
         </Link>
       </div>
 
-      {/* Stepper Bar */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Stepper Bar (5 etapas) */}
+      <div className="grid grid-cols-5 gap-2">
         {[
           { num: 1, label: 'Oficina', icon: Building2 },
-          { num: 2, label: 'Proprietário', icon: User },
-          { num: 3, label: 'Plano & Trial', icon: CreditCard },
-          { num: 4, label: 'Confirmação', icon: CheckCircle2 },
+          { num: 2, label: 'Segmento', icon: Sparkles },
+          { num: 3, label: 'Proprietário', icon: User },
+          { num: 4, label: 'Plano', icon: CreditCard },
+          { num: 5, label: 'Confirmação', icon: CheckCircle2 },
         ].map((s) => {
           const Icon = s.icon;
           const isActive = currentStep === s.num;
@@ -157,7 +203,7 @@ export function TenantWizardPage() {
           return (
             <div
               key={s.num}
-              className={`p-3 rounded-btn border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+              className={`p-2.5 rounded-btn border text-center transition-all flex flex-col items-center justify-center gap-1 ${
                 isActive
                   ? 'bg-grafite border-volt text-volt font-semibold'
                   : isDone
@@ -165,9 +211,9 @@ export function TenantWizardPage() {
                   : 'bg-asfalto/50 border-aco/30 text-muted/60'
               }`}
             >
-              <div className="flex items-center gap-1.5 text-xs">
-                <Icon size={14} className={isActive ? 'text-volt' : isDone ? 'text-semantic-success' : 'text-muted/60'} />
-                <span>{s.label}</span>
+              <div className="flex items-center gap-1 text-[11px]">
+                <Icon size={13} className={isActive ? 'text-volt' : isDone ? 'text-semantic-success' : 'text-muted/60'} />
+                <span className="hidden sm:inline">{s.label}</span>
               </div>
             </div>
           );
@@ -280,11 +326,76 @@ export function TenantWizardPage() {
           </div>
         )}
 
-        {/* Etapa 2: Proprietário Inicial */}
+        {/* Etapa 2: Segmento Automotivo */}
         {currentStep === 2 && (
           <div className="space-y-4">
             <h3 className="font-display font-semibold text-sm text-white mb-2 flex items-center gap-2">
-              <User size={16} className="text-volt" /> 2. Administrador da Loja
+              <Sparkles size={16} className="text-volt" /> 2. Segmento de Atuação da Oficina
+            </h3>
+            <p className="text-xs text-muted">
+              Ao selecionar o segmento, o sistema injeta automaticamente o catálogo de serviços base e o
+              modelo de checklist de entrada específico, deixando a loja pronta para emitir a primeira OS.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {segments.map((seg) => {
+                const Icon = seg.icon;
+                const isSelected = formData.segment === seg.id;
+                return (
+                  <div
+                    key={seg.id}
+                    onClick={() => handleInputChange('segment', seg.id)}
+                    className={`p-4 rounded-card border cursor-pointer transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-asfalto border-volt shadow-sm shadow-volt/20'
+                        : 'bg-asfalto/50 border-aco/40 hover:border-aco'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-volt text-asfalto' : 'bg-aco text-muted'
+                          }`}
+                        >
+                          <Icon size={16} />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-aco/50 text-volt">
+                          {seg.highlight}
+                        </span>
+                      </div>
+                      <h4 className="font-display font-bold text-sm text-white">{seg.name}</h4>
+                      <p className="text-[11px] text-muted mt-1.5">{seg.desc}</p>
+                    </div>
+
+                    <div className="mt-3 pt-2.5 border-t border-aco/30">
+                      <span className="text-[10px] uppercase font-semibold text-muted block mb-1">
+                        Serviços Injetados:
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {seg.services.slice(0, 3).map((s, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-aco/40 text-texto"
+                          >
+                            {s}
+                          </span>
+                        ))}
+                        <span className="text-[10px] text-volt font-medium self-center">+ outros</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Etapa 3: Proprietário Inicial */}
+        {currentStep === 3 && (
+          <div className="space-y-4">
+            <h3 className="font-display font-semibold text-sm text-white mb-2 flex items-center gap-2">
+              <User size={16} className="text-volt" /> 3. Administrador da Loja (Proprietário)
             </h3>
 
             <div className="space-y-3">
@@ -318,7 +429,7 @@ export function TenantWizardPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-muted mb-1 uppercase tracking-wider">
-                  Senha Provisória (Opcional - padrão: Senha@123456)
+                  Senha Provisória (Opcional - padrão: Senha@CarX2026!)
                 </label>
                 <input
                   type="password"
@@ -332,11 +443,11 @@ export function TenantWizardPage() {
           </div>
         )}
 
-        {/* Etapa 3: Plano & Trial */}
-        {currentStep === 3 && (
+        {/* Etapa 4: Plano & Trial */}
+        {currentStep === 4 && (
           <div className="space-y-5">
             <h3 className="font-display font-semibold text-sm text-white mb-2 flex items-center gap-2">
-              <CreditCard size={16} className="text-volt" /> 3. Escolha do Plano SaaS
+              <CreditCard size={16} className="text-volt" /> 4. Escolha do Plano SaaS
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -380,11 +491,11 @@ export function TenantWizardPage() {
           </div>
         )}
 
-        {/* Etapa 4: Confirmação e Provisionamento */}
-        {currentStep === 4 && (
+        {/* Etapa 5: Confirmação e Provisionamento */}
+        {currentStep === 5 && (
           <div className="space-y-4">
             <h3 className="font-display font-semibold text-sm text-white mb-2 flex items-center gap-2">
-              <CheckCircle2 size={16} className="text-volt" /> 4. Confirmar Provisionamento
+              <CheckCircle2 size={16} className="text-volt" /> 5. Confirmar Provisionamento
             </h3>
 
             <div className="p-4 rounded-card bg-asfalto/70 border border-aco/40 space-y-3 text-xs">
@@ -396,6 +507,17 @@ export function TenantWizardPage() {
                 <div>
                   <span className="text-muted block text-[10px] uppercase font-semibold">Subdomínio</span>
                   <span className="font-mono text-volt">{formData.slug}.carx.com.br</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pb-2 border-b border-aco/30">
+                <div>
+                  <span className="text-muted block text-[10px] uppercase font-semibold">Segmento Automotivo</span>
+                  <span className="font-semibold text-volt">{selectedSegmentObj.name}</span>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px] uppercase font-semibold">Itens Automáticos</span>
+                  <span className="text-texto">5 Serviços + 1 Checklist Base</span>
                 </div>
               </div>
 
@@ -422,12 +544,15 @@ export function TenantWizardPage() {
               </div>
             </div>
 
-            <div className="p-3 rounded-btn bg-volt/10 border border-volt/20 text-[11px] text-muted flex items-start gap-2">
-              <Sparkles size={14} className="text-volt shrink-0 mt-0.5" />
-              <span>
-                Ao confirmar, o sistema criará a matriz com tenant isolado via RLS, cadastrará o proprietário
-                com permissão de Administrador e registrará o contrato inicial.
-              </span>
+            <div className="p-3.5 rounded-btn bg-volt/10 border border-volt/20 text-[11px] text-muted space-y-2">
+              <div className="flex items-center gap-2 text-volt font-semibold text-xs">
+                <Mail size={14} /> Convite Oficial de Boas-Vindas por E-mail
+              </div>
+              <p>
+                Ao clicar em confirmar, o sistema criará a oficina com subdomínio isolado, injetará o catálogo
+                de serviços do segmento e enviará automaticamente o e-mail com as credenciais para{' '}
+                <strong className="text-white">{formData.owner_email}</strong>.
+              </p>
             </div>
           </div>
         )}
@@ -448,7 +573,7 @@ export function TenantWizardPage() {
             <div />
           )}
 
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <button
               type="button"
               onClick={handleNext}
@@ -469,7 +594,7 @@ export function TenantWizardPage() {
               ) : (
                 <>
                   <Sparkles size={15} />
-                  <span>Concluir e Provisionar Oficina</span>
+                  <span>Provisionar Oficina e Enviar Convite</span>
                 </>
               )}
             </button>
@@ -479,4 +604,3 @@ export function TenantWizardPage() {
     </div>
   );
 }
-

@@ -57,6 +57,71 @@ export interface SaasMetricsDto {
   global_usage: GlobalUsageStats;
 }
 
+export type AutomotiveSegment = 'ppf' | 'insulfilm' | 'detailing' | 'mecanica';
+
+export interface ServiceDto {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string | null;
+  price_cents: number;
+  estimated_minutes: number;
+  category: string | null;
+  segment: AutomotiveSegment | string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChecklistItemDto {
+  id: string;
+  label: string;
+  type: 'boolean' | 'text' | 'rating' | 'photo';
+  required: boolean;
+  category?: string;
+}
+
+export interface ChecklistTemplateDto {
+  id: string;
+  tenant_id: string;
+  name: string;
+  segment: AutomotiveSegment | string;
+  description: string | null;
+  items: ChecklistItemDto[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TenantInvitationDto {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  recipient_email: string;
+  recipient_name: string;
+  role: string;
+  status: 'sent' | 'accepted' | 'expired';
+  expires_at: string;
+  created_at: string;
+}
+
+export interface ProvisioningResultDto {
+  tenant: AdminTenantSummaryDto;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  contract: ContractDto;
+  servicesCount: number;
+  checklistTemplatesCount: number;
+  invitation: {
+    id: string;
+    recipient_email: string;
+    invite_url: string;
+  };
+}
+
 export interface AdminTenantSummaryDto {
   id: string;
   slug: string;
@@ -70,6 +135,7 @@ export interface AdminTenantSummaryDto {
   plan_name: string | null;
   plan_slug: string | null;
   custom_domain: string | null;
+  segment?: AutomotiveSegment | string;
   units_count: number;
   users_count: number;
   work_orders_count: number;
@@ -85,6 +151,7 @@ export interface AdminCreateTenantDto {
   slug: string;
   email: string;
   phone?: string;
+  segment?: AutomotiveSegment;
   owner_name: string;
   owner_email: string;
   owner_password?: string;

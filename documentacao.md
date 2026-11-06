@@ -693,6 +693,30 @@ Implementada a aplicação frontend corporativa do Super Admin (`admin.carx.com.
   - **Funil de Leads (`LeadsPage.tsx`)**: Gestão de leads originários da landing page com modal de conversão instantânea em cliente CarX.
   - **Trilha de Auditoria Imutável (`AuditLogsPage.tsx`)**: Histórico de conformidade com metadados de IP, user-agent e visualização do payload JSON expandido.
 
+#### Tarefa T2.11: Assistente de Criação de Oficina e Provisionamento (Segmentos, Catálogo e Convites) 🚀
+Implementado o provisionamento completo de novas oficinas clientes, garantindo injeção atômica de catálogo especializado por segmento automotivo, checklists de recepção técnica e disparo de convite de primeiro acesso:
+- **Migration 009 — Esquema Relacional de Catálogo e Provisionamento (`009_provisioning_catalog.up.sql`)**:
+  - `ALTER TABLE tenants ADD COLUMN segment VARCHAR(50)`: Identifica a especialidade do negócio (`ppf`, `insulfilm`, `detailing`, `mecanica`).
+  - `services`: Tabela de serviços com categoria, estimativa em minutos, preço em centavos, RLS e FORCE RLS habilitados (`tenant_isolation_policy`).
+  - `checklist_templates`: Tabela de modelos de inspeção veicular prévia com itens técnicos armazenados em JSONB, RLS e FORCE RLS habilitados (`tenant_isolation_policy`).
+  - `tenant_invitations`: Rastreamento criptográfico de convites com tokens SHA-256 e payload de onboarding, com RLS e FORCE RLS ativados.
+- **Catálogos Oficiais Especializados por Nicho Automotivo (`apps/api/src/provisioning/segment-catalogs.ts`)**:
+  - **PPF (Paint Protection Film)**: Serviços de cobertura total (Full Body), frontal e kits de soleira/maçaneta; checklist com micragem de pintura e mapeamento fotográfico de pedriscos.
+  - **Insulfilm e Controle Solar**: Películas nano cerâmicas com rejeição térmica UV/IR, películas antivandalismo PS8/PS12; checklist de filetes térmicos do desembaçador e integridade das guarnições.
+  - **Estética Automotiva (Detailing)**: Polimento técnico multi-etapas, vitrificação cerâmica 9H, higienização com oxi-sanitização e hidratação de couro; checklist de espessura de verniz e marcas de boina.
+  - **Mecânica Geral & Centro Automotivo**: Manutenção preventiva, substituição de freios, diagnóstico eletrônico via scanner OBD-II e geometria 3D; checklist de fluidos e suspensão.
+- **Serviço Transacional de Provisionamento (`apps/api/src/provisioning/provisioning-service.ts`)**:
+  - Operação atômica em transação isolada: Tenant + Unidade Matriz + Membresia Owner + Contrato/Fatura + Injeção de 5 Serviços Base + Injeção de Checklist + Registro de Convite de Acesso.
+- **Rotas de Acesso e Consumo com RLS**:
+  - Super Admin: `GET /admin/tenants/:id/services`, `GET /admin/tenants/:id/checklists` e `GET /admin/tenants/:id/invitations`.
+  - Inquilinos: `GET /catalog/services` e `GET /catalog/checklists` garantindo que cada oficina só visualize seus próprios itens pré-configurados.
+- **Frontend Interativo (`apps/admin/src/pages/TenantWizardPage.tsx`)**:
+  - Assistente em 5 etapas com seleção visual dos segmentos e resumo dos itens injetados.
+- **Validação Automatizada com Sucesso Absoluto**:
+  - 7 novos testes em [`apps/api/src/provisioning/provisioning.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/provisioning/provisioning.test.ts).
+  - **Total Consolidado da API CarX**: **114/114 testes passando com 100% de sucesso** em 16 suítes.
+
+
 
 
 

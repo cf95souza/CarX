@@ -363,6 +363,63 @@ export async function superadminRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  /**
+   * GET /admin/tenants/:id/services — Consulta Serviços Injetados da Oficina
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/tenants/:id/services',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const services = await superadminService.listTenantServices(request.params.id);
+        return reply.code(200).send(services);
+      } catch (err) {
+        if (err instanceof SuperadminError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * GET /admin/tenants/:id/checklists — Consulta Templates de Checklist da Oficina
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/tenants/:id/checklists',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const checklists = await superadminService.listTenantChecklists(request.params.id);
+        return reply.code(200).send(checklists);
+      } catch (err) {
+        if (err instanceof SuperadminError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * GET /admin/tenants/:id/invitations — Consulta Convites do Proprietário da Oficina
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/tenants/:id/invitations',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const invitations = await superadminService.listTenantInvitations(request.params.id);
+        return reply.code(200).send(invitations);
+      } catch (err) {
+        if (err instanceof SuperadminError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
 }
 
 export default superadminRoutes;

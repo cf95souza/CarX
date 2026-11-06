@@ -42,6 +42,25 @@ export function TenantsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [detailsServices, setDetailsServices] = useState<any[]>([]);
+  const [detailsChecklists, setDetailsChecklists] = useState<any[]>([]);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const handleOpenDetails = async (tenant: AdminTenantSummaryDto) => {
+    setSelectedTenant(tenant);
+    setDetailsModalOpen(true);
+    setDetailsLoading(true);
+    try {
+      const [services, checklists] = await Promise.all([
+        adminApi.getTenantServices(tenant.id).catch(() => []),
+        adminApi.getTenantChecklists(tenant.id).catch(() => []),
+      ]);
+      setDetailsServices(services);
+      setDetailsChecklists(checklists);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   const loadTenants = async () => {
     setLoading(true);
@@ -333,10 +352,7 @@ export function TenantsPage() {
 
                         {/* Botão Ver Detalhes */}
                         <button
-                          onClick={() => {
-                            setSelectedTenant(tenant);
-                            setDetailsModalOpen(true);
-                          }}
+                          onClick={() => handleOpenDetails(tenant)}
                           title="Ver detalhes técnicos"
                           className="p-1.5 rounded-btn bg-aco/50 hover:bg-aco text-muted hover:text-texto transition-colors"
                         >
@@ -636,6 +652,51 @@ export function TenantsPage() {
                   <span className="font-display font-bold text-base text-texto">{formatBytes(selectedTenant.storage_bytes)}</span>
                 </div>
               </div>
+
+              {/* Serviços Provisionados do Segmento */}
+              <div className="p-3 rounded-btn bg-asfalto/60 border border-aco/30">
+                <span className="text-muted block text-[10px] uppercase font-semibold mb-2 flex items-center justify-between">
+                  <span>Catálogo de Serviços ({detailsServices.length})</span>
+                  <span className="text-volt font-bold uppercase">{selectedTenant.segment || 'Mecânica'}</span>
+                </span>
+                {detailsLoading ? (
+                  <div className="py-2 text-center text-muted">Carregando serviços...</div>
+                ) : detailsServices.length === 0 ? (
+                  <div className="text-muted text-[11px] italic">Nenhum serviço cadastrado.</div>
+                ) : (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {detailsServices.map((svc: any) => (
+                      <div
+                        key={svc.id}
+                        className="flex items-center justify-between p-2 rounded bg-grafite/80 border border-aco/40 text-[11px]"
+                      >
+                        <div>
+                          <div className="font-semibold text-white">{svc.name}</div>
+                          <div className="text-[10px] text-muted">{svc.category} • ~{svc.estimated_minutes} min</div>
+                        </div>
+                        <div className="font-display font-bold text-volt">
+                          {(svc.price_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Template de Checklist */}
+              {detailsChecklists.length > 0 && (
+                <div className="p-3 rounded-btn bg-asfalto/60 border border-aco/30">
+                  <span className="text-muted block text-[10px] uppercase font-semibold mb-1">
+                    Checklist Base de Entrada
+                  </span>
+                  <div className="text-texto font-medium text-[11px]">
+                    {detailsChecklists[0]?.name}
+                  </div>
+                  <div className="text-muted text-[10px] mt-0.5">
+                    {detailsChecklists[0]?.items?.length || 0} itens técnicos de inspeção prévia configurados.
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-5 pt-3 border-t border-aco/30 flex justify-end">

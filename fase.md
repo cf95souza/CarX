@@ -602,13 +602,33 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.11 — Assistente de Criação de Oficina e Provisionamento
+### [x] T2.11 — Assistente de Criação de Oficina e Provisionamento
 - **Descrição:** Wizard que cadastra uma nova oficina, provisiona o subdomínio, injeta o catálogo base do segmento escolhido e envia convite ao proprietário.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 11.4: Fluxos Principais (Linhas 393–398)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L393-L398)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.11 (Linhas 575–578)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L575-L578)
-- **Entrega:** Formulário em etapas: dados cadastrais (CNPJ/Razão Social), segmento (PPF, Insulfilm, Estética, Oficina), plano e criação automática da assinatura.
-- **Pronto quando:** Ao concluir o assistente, o proprietário recebe o e-mail de acesso e já encontra a loja com serviços pré-configurados do seu segmento.
+- **Entrega Concluída:**
+  - **Migration 009 — Tabelas de Provisionamento e Catálogo (`009_provisioning_catalog.up.sql`)**:
+    - Coluna `segment` em `tenants` com indexação dedicada para rápida segmentação operacional.
+    - Tabela `services` com RLS e FORCE RLS ativados (`tenant_isolation_policy`) para o catálogo multi-tenant de cada oficina.
+    - Tabela `checklist_templates` com RLS e FORCE RLS ativados (`tenant_isolation_policy`) contendo itens estruturados em JSONB (micragem, avarias, filetes, scanner).
+    - Tabela `tenant_invitations` com RLS e FORCE RLS ativados (`tenant_isolation_policy`) para rastreabilidade de convites, expiração e tokens criptográficos SHA-256.
+  - **Catálogos Oficiais por Segmento Automotivo (`apps/api/src/provisioning/segment-catalogs.ts`)**:
+    - **PPF (Paint Protection Film)**: 5 serviços (Full Body, Frontal, Kits de Soleira/Maçaneta, Remoção, Revitalização) e Checklist com Micragem de Pintura e Mapeamento de Chips.
+    - **Insulfilm e Controle Solar**: 5 serviços (Nano Cerâmica Térmica, Antivandalismo PS8/PS12, Para-brisa 70%, Remoção de Cola) e Checklist de Desembaçador e Borrachas.
+    - **Estética & Detalhamento (Detailing)**: 5 serviços (Polimento Técnico, Vitrificação 9H, Oxi-sanitização, Couro, Motor) e Checklist de Verniz e Hologramas.
+    - **Oficina Mecânica Tradicional**: 5 serviços (Revisão Preventiva, Freios, Scanner OBD-II, Geometria 3D, Correia Dentada) e Checklist de Fluidos, Pastilhas e Bateria.
+  - **Serviço Transacional de Provisionamento (`apps/api/src/provisioning/provisioning-service.ts`)**:
+    - Criação atômica de Tenant + Unidade Matriz + Proprietário (`owner`) + Contrato/Fatura + Injeção do Catálogo + Injeção do Checklist + Geração de Convite com Link de Onboarding.
+  - **Rotas de Catálogo e Super Admin**:
+    - `POST /admin/tenants` aprimorado com suporte ao campo `segment`.
+    - `GET /admin/tenants/:id/services`, `GET /admin/tenants/:id/checklists` e `GET /admin/tenants/:id/invitations`.
+    - `GET /catalog/services` e `GET /catalog/checklists` protegidas para inquilinos com isolamento RLS.
+  - **Frontend do Assistente (`TenantWizardPage.tsx`)**:
+    - Stepper em 5 etapas interativas (Oficina, Segmento, Proprietário, Plano/Trial e Confirmação) com seleção visual dos 4 segmentos e resumo detalhado dos serviços injetados.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 novos testes em [`apps/api/src/provisioning/provisioning.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/provisioning/provisioning.test.ts).
+    - **Total Consolidado da API CarX**: **114/114 testes passando com 100% de sucesso** em 16 suítes.
 
 ---
 

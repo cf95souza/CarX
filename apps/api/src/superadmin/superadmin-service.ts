@@ -20,8 +20,13 @@ import {
   SuperadminInvoiceDto,
   LeadDto,
   ConvertLeadDto,
+  AutomotiveSegment,
+  ServiceDto,
+  ChecklistTemplateDto,
+  TenantInvitationDto,
   RESERVED_SUBDOMAINS,
 } from '@carx/shared';
+import { SEGMENT_CATALOGS } from '../provisioning/segment-catalogs.js';
 
 export class SuperadminError extends Error {
   public statusCode: number;
@@ -458,7 +463,22 @@ export class SuperadminService {
       throw new SuperadminError(`O subdomínio "${slug}" é reservado pelo sistema.`, 400);
     }
 
-    const planRes = await tenantQuery('null', 'SELECT * FROM plans WHERE slug = $1 LIMIT 1', [input.plan_slug], {
+    const existingSlug = await tenantQuery('null', 'SELECT id FROM tenants WHERE slug = $1 LIMIT 1', [slug], {
+      isSuperadmin: true,
+    });
+    if (existingSlug.rows.length > 0) {
+      throw new SuperadminError(`O subdomínio "${slug}" já está em uso por outra oficina.`, 400);
+    }
+
+    const planSlugAliasMap: Record<string, string> = {
+      start: 'essencial',
+      pro: 'profissional',
+      prime: 'premium',
+      enterprise: 'premium',
+    };
+    const targetSlug = planSlugAliasMap[input.plan_slug] || input.plan_slug;
+
+    const planRes = await tenantQuery('null', 'SELECT * FROM plans WHERE slug = $1 LIMIT 1', [targetSlug], {
       isSuperadmin: true,
     });
     if (planRes.rows.length === 0) {
@@ -466,7 +486,10 @@ export class SuperadminService {
     }
     const plan = planRes.rows[0];
 
-    return tenantTransaction(
+    const segment: AutomotiveSegment = input.segment && SEGMENT_CATALOGS[input.segment] ? input.segment : 'mecanica';
+    const catalogSeed = SEGMENT_CATALOGS[segment];
+
+    const result = await tenantTransaction(
       null,
       async (client) => {
         // 1. Criar tenant
@@ -477,8 +500,8 @@ export class SuperadminService {
           : null;
 
         const tenantInsert = await client.query(
-          `INSERT INTO tenants (slug, trade_name, legal_name, cnpj, email, phone, status, plan_id, trial_ends_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          `INSERT INTO tenants (slug, trade_name, legal_name, cnpj, email, phone, status, plan_id, segment, trial_ends_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            RETURNING *`,
           [
             slug,
@@ -489,6 +512,7 @@ export class SuperadminService {
             input.phone || null,
             status,
             plan.id,
+            segment,
             trialEndsAt,
           ]
         );
@@ -510,10 +534,11 @@ export class SuperadminService {
           [input.owner_email.toLowerCase().trim()]
         );
 
+        const rawPassword = input.owner_password || 'CarX@2026TempPass';
         if (userRes.rows.length > 0) {
           userId = userRes.rows[0].id;
         } else {
-          const passwordHash = await hashPassword(input.owner_password || 'CarX@2026TempPass');
+          const passwordHash = await hashPassword(rawPassword);
           const newUserRes = await client.query(
             `INSERT INTO users (name, email, password_hash)
              VALUES ($1, $2, $3)
@@ -553,10 +578,81 @@ export class SuperadminService {
           ]
         );
 
+        // 6. Injetar Catálogo de Serviços do Segmento
+        let servicesCount = 0;
+        for (const service of catalogSeed.services) {
+          await client.query(
+            `INSERT INTO services (tenant_id, name, description, price_cents, estimated_minutes, category, segment, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true)`,
+            [
+              tenant.id,
+              service.name,
+              service.description,
+              service.price_cents,
+              service.estimated_minutes,
+              service.category,
+              segment,
+            ]
+          );
+          servicesCount++;
+        }
+
+        // 7. Injetar Modelo de Checklist de Entrada do Segmento
+        await client.query(
+          `INSERT INTO checklist_templates (tenant_id, name, segment, description, items, is_active)
+           VALUES ($1, $2, $3, $4, $5, true)`,
+          [
+            tenant.id,
+            catalogSeed.checklist.name,
+            segment,
+            catalogSeed.checklist.description,
+            JSON.stringify(catalogSeed.checklist.items),
+          ]
+        );
+
+        // 8. Gerar Convite por E-mail do Proprietário
+        const inviteToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(inviteToken).digest('hex');
+        const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const shopDomain = `${slug}.carx.com.br`;
+
+        const emailPayload = {
+          recipient_name: input.owner_name.trim(),
+          recipient_email: input.owner_email.trim(),
+          tenant_name: input.trade_name.trim(),
+          subdomain: shopDomain,
+          segment: catalogSeed.name,
+          plan_name: plan.name,
+          login_url: `https://${shopDomain}/login`,
+          temporary_password: rawPassword,
+          invite_token: inviteToken,
+        };
+
+        const inviteRes = await client.query(
+          `INSERT INTO tenant_invitations (tenant_id, user_id, recipient_email, recipient_name, role, token_hash, status, expires_at, email_payload)
+           VALUES ($1, $2, $3, $4, 'owner', $5, 'sent', $6, $7)
+           RETURNING id, recipient_email, status, expires_at`,
+          [
+            tenant.id,
+            userId,
+            input.owner_email.toLowerCase().trim(),
+            input.owner_name.trim(),
+            tokenHash,
+            inviteExpiresAt,
+            JSON.stringify(emailPayload),
+          ]
+        );
+
         return {
           tenant,
           unit,
           contract,
+          services_count: servicesCount,
+          checklists_count: 1,
+          invitation: {
+            ...inviteRes.rows[0],
+            invite_url: `https://${shopDomain}/onboarding?token=${inviteToken}`,
+          },
         };
       },
       { isSuperadmin: true }
@@ -572,7 +668,10 @@ export class SuperadminService {
       newValues: {
         slug: result.tenant.slug,
         trade_name: result.tenant.trade_name,
+        segment,
         plan: plan.slug,
+        services_injected: result.services_count,
+        checklists_injected: result.checklists_count,
         owner_email: input.owner_email,
       },
       ipAddress: ip,
@@ -580,6 +679,45 @@ export class SuperadminService {
     });
 
     return result;
+  }
+
+  /**
+   * Lista os serviços injetados/cadastrados para uma oficina específica
+   */
+  async listTenantServices(tenantId: string): Promise<ServiceDto[]> {
+    const res = await tenantQuery<ServiceDto>(
+      null,
+      'SELECT * FROM services WHERE tenant_id = $1 ORDER BY category, name ASC',
+      [tenantId],
+      { isSuperadmin: true }
+    );
+    return res.rows;
+  }
+
+  /**
+   * Lista os templates de checklist para uma oficina específica
+   */
+  async listTenantChecklists(tenantId: string): Promise<ChecklistTemplateDto[]> {
+    const res = await tenantQuery<ChecklistTemplateDto>(
+      null,
+      'SELECT * FROM checklist_templates WHERE tenant_id = $1 ORDER BY name ASC',
+      [tenantId],
+      { isSuperadmin: true }
+    );
+    return res.rows;
+  }
+
+  /**
+   * Lista os convites gerados para os proprietários/usuários da oficina
+   */
+  async listTenantInvitations(tenantId: string): Promise<TenantInvitationDto[]> {
+    const res = await tenantQuery<TenantInvitationDto>(
+      null,
+      'SELECT * FROM tenant_invitations WHERE tenant_id = $1 ORDER BY created_at DESC',
+      [tenantId],
+      { isSuperadmin: true }
+    );
+    return res.rows;
   }
 
   /**
