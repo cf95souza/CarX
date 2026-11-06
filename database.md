@@ -1134,6 +1134,110 @@ CREATE INDEX IF NOT EXISTS idx_work_order_events_created_at ON work_order_events
 
 ---
 
+## 💰 Migração 014: Pagamentos, Adiantamentos (Sinal) e Transações Atômicas (`014_payments_deposits.up.sql`)
+
+### 1. Tipos Enumerados e Tabela `payments` (Liquidações da Ordem de Serviço)
+```sql
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
+        CREATE TYPE payment_status AS ENUM ('pending', 'approved', 'failed', 'refunded', 'partially_refunded');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'deposit_status') THEN
+        CREATE TYPE deposit_status AS ENUM ('held', 'applied', 'refunded');
+    END IF;
+END $$;
+
+CREATE TABLE IF NOT EXISTS payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    work_order_id UUID NOT NULL REFERENCES work_orders(id) ON DELETE CASCADE,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    method VARCHAR(50) NOT NULL, -- pix, credit_card, debit_card, cash, bank_transfer, deposit_applied
+    status payment_status NOT NULL DEFAULT 'approved',
+    installments INTEGER NOT NULL DEFAULT 1 CHECK (installments >= 1),
+    card_brand VARCHAR(50),
+    transaction_reference VARCHAR(150),
+    notes TEXT,
+    refunded_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (refunded_amount_cents >= 0),
+    refund_reason TEXT,
+    refunded_at TIMESTAMPTZ,
+    refunded_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    received_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON payments
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_payments_tenant_id ON payments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(work_order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_tenant_order ON payments(tenant_id, work_order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_created_at ON payments(created_at);
+```
+
+### 2. Tabela `deposits` (Sinal e Adiantamentos Retidos)
+```sql
+CREATE TABLE IF NOT EXISTS deposits (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    work_order_id UUID REFERENCES work_orders(id) ON DELETE SET NULL,
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    method VARCHAR(50) NOT NULL, -- pix, credit_card, debit_card, cash, bank_transfer
+    status deposit_status NOT NULL DEFAULT 'held',
+    applied_to_work_order_id UUID REFERENCES work_orders(id) ON DELETE SET NULL,
+    applied_at TIMESTAMPTZ,
+    notes TEXT,
+    received_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE deposits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deposits FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON deposits
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_deposits_tenant_id ON deposits(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_deposits_customer_id ON deposits(customer_id);
+CREATE INDEX IF NOT EXISTS idx_deposits_tenant_customer ON deposits(tenant_id, customer_id);
+CREATE INDEX IF NOT EXISTS idx_deposits_order_id ON deposits(work_order_id);
+CREATE INDEX IF NOT EXISTS idx_deposits_applied_order ON deposits(applied_to_work_order_id);
+CREATE INDEX IF NOT EXISTS idx_deposits_status ON deposits(status);
+CREATE INDEX IF NOT EXISTS idx_deposits_created_at ON deposits(created_at);
+```
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).

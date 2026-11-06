@@ -557,3 +557,111 @@ export interface PricingCalculationResultDto {
   totalEstimatedMinutes: number;
 }
 
+// ==============================================================================
+// PAGAMENTOS, SINAL E TRANSAÇÕES ATÔMICAS (T3.4)
+// ==============================================================================
+
+export const PaymentMethodEnum = z.enum([
+  'pix',
+  'credit_card',
+  'debit_card',
+  'cash',
+  'bank_transfer',
+  'link',
+]);
+export type PaymentMethodType = z.infer<typeof PaymentMethodEnum>;
+
+export const PaymentStatusEnum = z.enum([
+  'approved',
+  'refunded',
+  'partially_refunded',
+  'pending',
+  'failed',
+]);
+export type PaymentStatusType = z.infer<typeof PaymentStatusEnum>;
+
+export const DepositStatusEnum = z.enum(['held', 'applied', 'refunded']);
+export type DepositStatusType = z.infer<typeof DepositStatusEnum>;
+
+export const PaymentSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  workOrderId: z.string().uuid(),
+  amountCents: z.number().int().positive('O valor do pagamento deve ser positivo'),
+  method: PaymentMethodEnum,
+  status: PaymentStatusEnum.default('approved'),
+  installments: z.number().int().min(1).default(1),
+  cardBrand: z.string().optional().nullable(),
+  transactionReference: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  refundedAmountCents: z.number().int().min(0).default(0),
+  refundReason: z.string().optional().nullable(),
+  refundedAt: z.date().or(z.string()).optional().nullable(),
+  refundedBy: z.string().uuid().optional().nullable(),
+  receivedBy: z.string().uuid().optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type PaymentDto = z.infer<typeof PaymentSchema>;
+
+export const CreatePaymentInputSchema = z.object({
+  amountCents: z.number().int().positive('O valor do pagamento deve ser estritamente maior que zero'),
+  method: PaymentMethodEnum,
+  installments: z.number().int().min(1).default(1).optional(),
+  cardBrand: z.string().optional().nullable(),
+  transactionReference: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type CreatePaymentInputDto = z.infer<typeof CreatePaymentInputSchema>;
+
+export const RefundPaymentInputSchema = z.object({
+  refundAmountCents: z.number().int().positive('O valor do estorno deve ser maior que zero').optional(),
+  reason: z.string().min(3, 'O motivo do estorno é obrigatório'),
+});
+export type RefundPaymentInputDto = z.infer<typeof RefundPaymentInputSchema>;
+
+export const DepositSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  customerId: z.string().uuid(),
+  workOrderId: z.string().uuid().optional().nullable(),
+  amountCents: z.number().int().positive('O valor do sinal deve ser positivo'),
+  method: PaymentMethodEnum,
+  status: DepositStatusEnum.default('held'),
+  appliedToWorkOrderId: z.string().uuid().optional().nullable(),
+  appliedAt: z.date().or(z.string()).optional().nullable(),
+  notes: z.string().optional().nullable(),
+  receivedBy: z.string().uuid().optional().nullable(),
+  createdAt: z.date().or(z.string()).optional(),
+  updatedAt: z.date().or(z.string()).optional(),
+});
+export type DepositDto = z.infer<typeof DepositSchema>;
+
+export const CreateDepositInputSchema = z.object({
+  customerId: z.string().uuid(),
+  workOrderId: z.string().uuid().optional().nullable(),
+  amountCents: z.number().int().positive('O valor do adiantamento deve ser maior que zero'),
+  method: PaymentMethodEnum,
+  notes: z.string().optional().nullable(),
+});
+export type CreateDepositInputDto = z.infer<typeof CreateDepositInputSchema>;
+
+export const ApplyDepositInputSchema = z.object({
+  workOrderId: z.string().uuid(),
+});
+export type ApplyDepositInputDto = z.infer<typeof ApplyDepositInputSchema>;
+
+export interface WorkOrderFinancialSummaryDto {
+  workOrderId: string;
+  osNumber: number;
+  totalCents: number;
+  discountCents: number;
+  finalCents: number;
+  paidCents: number;
+  remainingCents: number;
+  isFullyPaid: boolean;
+  payments: PaymentDto[];
+  deposits: DepositDto[];
+}
+
+

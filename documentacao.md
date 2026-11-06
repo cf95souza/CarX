@@ -814,6 +814,33 @@ Implementada a espinha dorsal do sistema automotivo CarX: a gestão completa de 
   - 11 novos testes dedicados em [`apps/api/src/work-orders/work-orders.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/work-orders/work-orders.test.ts).
   - **Total Consolidado da API CarX**: **153/153 testes passando com 100% de sucesso** em 20 suítes completas.
 
+---
+
+#### Tarefa T3.4: Pagamentos, Adiantamentos (Sinal) e Transações Atômicas 💳
+Implementada a gestão financeira de pagamentos e adiantamentos da Ordem de Serviço totalmente executada em transação atômica serializada no banco PostgreSQL com lock pessimista (`FOR UPDATE`), eliminando definitivamente a antiga race condition do sistema legado:
+- **Migration 014 — Esquema de Pagamentos e Adiantamentos (`014_payments_deposits.up.sql`)**:
+  - `payments`: Tabela normalizada para liquidações com chave estrangeira para `work_orders`, métodos (`pix`, `credit_card`, `debit_card`, `cash`, `bank_transfer`, `deposit_applied`), parcelamento (`installments`), bandeira de cartão (`card_brand`), identificador externo de transação (`transaction_reference`), controle de estorno (`refunded_amount_cents`, `refund_reason`, `refunded_at`, `refunded_by`) e auditoria de recebedor (`received_by`).
+  - `deposits`: Tabela para retenção e gestão de sinal/adiantamento de clientes (`amount_cents`, `method`, `status`: `held`, `applied`, `refunded`), com vínculo opcional prévio a uma OS e posterior amarração à OS executada (`applied_to_work_order_id`, `applied_at`).
+  - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com `tenant_isolation_policy` em ambas as tabelas e índices de alta performance para conciliação contábil.
+- **Eliminação Definitiva da Race Condition do Legado (`PaymentService.processWorkOrderPayment`)**:
+  - **Mecanismo Anti-Concorrência**: Executa `SELECT id, os_number, status, final_cents, paid_cents FROM work_orders WHERE tenant_id = $1 AND id = $2 FOR UPDATE;`. Qualquer requisição concorrente para a mesma OS é estritamente serializada no banco.
+  - **Validação Estrita de Saldo Devedor**: Rejeita pagamentos com valor zero ou negativo (HTTP 400) e pagamentos com valor superior ao saldo restante devedor (`amount_cents > remaining_cents`) com HTTP 422 `PaymentExcessiveAmountError`.
+  - **Atualização Atômica**: Incrementa `paid_cents` da OS e insere simultaneamente na linha do tempo da OS o evento imutável `PAYMENT_RECEIVED` com metadata contábil e saldo restante.
+- **Estorno Total ou Parcial com Auditoria Imutável (`PaymentService.refundPayment`)**:
+  - Suporta estorno parcial (`refundAmountCents`) ou total do pagamento, recalculando o valor reembolsável restante.
+  - Abate automaticamente o valor estornado do campo `paid_cents` da OS vinculada.
+  - Grava evento `PAYMENT_REFUNDED` na timeline da OS e emite registro de auditoria imutável compulsório via `auditService.recordPaymentRefund`.
+- **Adiantamentos e Sinal (`PaymentService.createDeposit` e `applyDepositToWorkOrder`)**:
+  - Capta adiantamento/sinal de clientes com status retido `held`.
+  - Aplica o sinal para abater o saldo devedor da OS em transação com lock na OS e no depósito, atualizando o depósito para `applied`, incrementando `paid_cents` na OS, gerando registro contábil em `payments` e emitindo evento `DEPOSIT_APPLIED`.
+  - Rejeita aplicação de sinal maior do que o saldo restante da OS (HTTP 422) e impede reutilização de sinal já aplicado (HTTP 400).
+- **Resumo Financeiro Consolidado (`PaymentService.getWorkOrderFinancialSummary`)**:
+  - Endpoint `GET /work-orders/:id/financial` com cálculo em tempo real de `totalCents`, `discountCents`, `finalCents`, `paidCents`, `remainingCents`, flag booleana de quitação total `isFullyPaid`, listagem cronológica de pagamentos aprovados e depósitos aplicados.
+- **Validação Automatizada com Sucesso**:
+  - 12 testes dedicados em [`apps/api/src/billing/payments.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/billing/payments.test.ts) comprovando a eliminação da race condition com duas requisições simultâneas em concorrência real (`Promise.all`), estornos com auditoria, ciclo de sinal e isolamento RLS entre inquilinos.
+  - **Total Consolidado da API CarX**: **165/165 testes passando com 100% de sucesso** em 21 suítes completas.
+
+
 
 
 

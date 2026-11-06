@@ -760,13 +760,49 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.4 — Pagamentos, Adiantamentos (Sinal) e Transações Atômicas
+### [x] T3.4 — Pagamentos, Adiantamentos (Sinal) e Transações Atômicas `(Concluído)`
 - **Descrição:** Gestão financeira de pagamentos de OS realizada no banco em transação atômica, eliminando a antiga race condition do legado.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linha 157)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L157)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.4 (Linhas 599–602)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L599-L602)
 - **Entrega:** Tabelas `payments` e `deposits`, com cálculo de saldo devedor, estorno, método (Pix, Cartão, Dinheiro) e controle de sinal.
 - **Pronto quando:** Teste de concorrência disparando duas liquidações simultâneas na mesma OS calcula o saldo sem duplicidade ou valor negativo.
+- **Status da Validação:**
+  - **Migration 014 (`014_payments_deposits.up.sql` e `014_payments_deposits.down.sql`)**:
+    - Tabelas `payments` e `deposits` criadas com isolamento RLS e `FORCE ROW LEVEL SECURITY`.
+    - Triggers de auditoria e validação de tenant isolado (`tenant_isolation_policy`).
+    - Índices otimizados: `idx_payments_tenant_wo`, `idx_payments_tenant_status`, `idx_deposits_tenant_customer`, `idx_deposits_tenant_wo`.
+    - Validação de isolamento de banco via `npm --prefix apps/api run test:rls` aprovado com 8/8.
+  - **Camada de Domínio e Contratos (`packages/shared/src/schemas.ts`)**:
+    - Tipos e schemas Zod estritos: `PaymentDto`, `CreatePaymentInputSchema`, `RefundPaymentInputSchema`, `DepositDto`, `CreateDepositInputSchema`, `ApplyDepositInputSchema`, `WorkOrderFinancialSummaryDto`.
+  - **Serviço de Negócio (`apps/api/src/billing/payment-service.ts`)**:
+    - `processWorkOrderPayment`: transação atômica serializada com lock pessimista (`SELECT ... FOR UPDATE`), rejeitando terminantemente pagamentos com valor zero, negativo (HTTP 400) ou que excedam o saldo restante da OS (HTTP 422). Atualiza `paid_cents` atomicamente e emite evento `PAYMENT_RECEIVED` na timeline da OS.
+    - `refundPayment`: estorno total ou parcial com abate automático de `paid_cents`, atualização de status (`refunded` / `partially_refunded`), evento `PAYMENT_REFUNDED` e trilha de auditoria imutável via `auditService.recordPaymentRefund`.
+    - `createDeposit`: captação de adiantamento/sinal de clientes com status inicial `held` e auditoria `DEPOSIT_RECEIVED`.
+    - `applyDepositToWorkOrder`: aplicação atômica de sinal retido à OS, abatendo o saldo devedor, atualizando status para `applied` e gerando pagamento e evento unificados.
+    - `getWorkOrderFinancialSummary`: cálculo exato em tempo real do total, desconto, valor final, valor pago, saldo devedor restante e flag `isFullyPaid`.
+  - **Endpoints HTTP Fastify (`apps/api/src/routes/payment-routes.ts`)**:
+    - `POST /work-orders/:id/payments`: Registro atômico de pagamento.
+    - `POST /payments/:id/refund`: Estorno total ou parcial de pagamento.
+    - `GET /work-orders/:id/financial`: Resumo financeiro consolidado da OS.
+    - `POST /deposits`: Registro de novo sinal/adiantamento retido.
+    - `POST /deposits/:id/apply`: Aplicação de sinal à OS.
+    - Rotas protegidas por RBAC (`owner`, `gestor`, `atendente`, `financeiro`, `superadmin`).
+  - **Validação Automatizada com Sucesso**:
+    - 12 testes dedicados em [`apps/api/src/billing/payments.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/billing/payments.test.ts) cobrindo:
+      1. Rejeição de valor zero e negativo com HTTP 400.
+      2. Rejeição de pagamento que excede o saldo com HTTP 422.
+      3. **Comprovação do Critério de Aceite da Tarefa (Anti-Race Condition)**: duas liquidações concorrentes simultâneas de R$ 300 com `Promise.all` em uma OS de saldo R$ 500 aprovam exatamente 1 e rejeitam a concorrente com HTTP 422, resultando em saldo final estritamente íntegro de R$ 300 (e não R$ 600 como no legado).
+      4. Quitação integral com quitação total (`isFullyPaid: true`).
+      5. Estorno parcial com abate de saldo e auditoria imutável.
+      6. Estorno total com status `refunded` e bloqueio de estorno posterior.
+      7. Criação de sinal retido com status `held`.
+      8. Aplicação de sinal à OS abatendo saldo e bloqueio de reutilização.
+      9. Bloqueio RLS: Oficina Beta não consegue registrar pagamento em OS de Alpha (404).
+      10. Bloqueio RLS: Oficina Beta não consulta financeiro de Alpha (404).
+      11. Bloqueio RLS: Oficina Beta não estorna pagamento de Alpha (404).
+      12. Bloqueio RLS: Oficina Beta não aplica sinal de Alpha (404).
+    - **Total Consolidado da API CarX**: **165/165 testes passando com 100% de sucesso** em 21 suítes completas.
 
 ---
 

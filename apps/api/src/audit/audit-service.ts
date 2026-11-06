@@ -294,6 +294,7 @@ export class AuditService {
       amount: number;
       refundReason: string;
       previousStatus: string;
+      workOrderId?: string;
       ipAddress?: string;
       userAgent?: string;
     },
@@ -312,6 +313,7 @@ export class AuditService {
           refunded: true,
           amount: params.amount,
           reason: params.refundReason,
+          workOrderId: params.workOrderId,
         },
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
