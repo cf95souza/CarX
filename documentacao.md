@@ -668,5 +668,31 @@ Implementado o módulo central de governança global da plataforma SaaS para o d
   - 15 testes automatizados cobrindo autenticação com 2FA, rejeição mútua de tokens, métricas SaaS, listagem, suspensão/reativação, impersonação, conversão de leads e auditoria.
   - **Total Consolidado da API CarX**: **107/107 testes passando com 100% de sucesso** em 15 suítes.
 
+#### Tarefa T2.10: Super Admin: Frontend (`apps/admin`) 🖥️
+Implementada a aplicação frontend corporativa do Super Admin (`admin.carx.com.br`, container 5) para o proprietário do negócio operar contratos, analisar o faturamento recorrente, gerenciar licenças, provisionar oficinas e auditar intervenções administrativas:
+- **Fundação Técnica & Design System**:
+  - Aplicação React 18 SPA estruturada com Vite 5 e Tailwind CSS 3.4 integrado aos tokens oficiais do CarX (`asfalto`, `grafite`, `aco`, `linha`, `texto`, `volt` e semânticos).
+  - Tipagem TypeScript 100% estrita sem erros de compilação (`tsc --noEmit`), com build de produção otimizado e minificado em 5.4s.
+- **Autenticação em Duas Etapas com 2FA TOTP (`LoginPage.tsx` & `AuthContext.tsx`)**:
+  - Suporte ao fluxo de desafio 2FA TOTP (6 dígitos) com validação de chaves via aplicativo autenticador.
+  - Interceptação de respostas HTTP 401 para encerramento automático de sessões expiradas.
+- **Painel Geral de Métricas SaaS (`DashboardPage.tsx`)**:
+  - Cards de alta densidade para MRR corrente, ARR projetado, oficinas ativas/trials/suspensas, taxa de churn (%) e volume de inadimplência.
+  - Tabela com indicadores visuais de participação de receita por plano (Start, Pro, Prime, Enterprise).
+  - Indicadores de infraestrutura global (unidades, usuários, ordens de serviço e armazenamento S3).
+- **Gestão de Oficinas Clientes & Impersonação (`TenantsPage.tsx`)**:
+  - Tabela com densidade de dados corporativa, busca textual e filtros rápidos por status.
+  - **Modal de Impersonação Auditada**: Coleta de justificativa obrigatória para suporte e emissão de token temporário de 1 hora com botão para abertura direta do app da loja.
+  - **Proteção Contra Ações Destrutivas (Critério de Aceite)**: Suspensão de oficinas requer preenchimento obrigatório de justificativa e **confirmação de segurança com a senha master do Super Admin**.
+- **Assistente Corporativo de Provisionamento (`TenantWizardPage.tsx`)**:
+  - Fluxo assistido em 4 etapas (Oficina, Proprietário, Plano/Trial e Confirmação) com geração e higienização automática de slugs de subdomínio em tempo real.
+- **Módulos de Negócio e Compliance**:
+  - **Contratos e Licenças (`ContractsPage.tsx`)**: Monitoramento de ciclos de faturamento, preços negociados, descontos e status vigentes.
+  - **Cobranças e Faturas (`InvoicesPage.tsx`)**: Histórico de faturas, conciliação e métodos de pagamento (Pix, Boleto, Cartão).
+  - **Gerenciador de WhatsApp Multi-tenant (`WhatsAppManagerPage.tsx`)**: Visão operacional das conexões Baileys/Evolution por loja, consumo da cota de disparos e comando de reinicialização de sessão.
+  - **Funil de Leads (`LeadsPage.tsx`)**: Gestão de leads originários da landing page com modal de conversão instantânea em cliente CarX.
+  - **Trilha de Auditoria Imutável (`AuditLogsPage.tsx`)**: Histórico de conformidade com metadados de IP, user-agent e visualização do payload JSON expandido.
+
+
 
 

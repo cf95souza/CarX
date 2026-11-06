@@ -582,14 +582,23 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T2.10 — Super Admin: Frontend (`apps/admin`)
+### [x] T2.10 — Super Admin: Frontend (`apps/admin`)
 - **Descrição:** Painel administrativo corporativo para o dono do SaaS operar contratos, ver faturamento e gerenciar licenças.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 11.1: Módulos do Super Admin (Linhas 371–386)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L371-L386)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T2.10 (Linhas 571–574)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L571-L574)
-- **Assets Visuais:** Estilo baseado no Design System CarX com foco em densidade de dados e gráficos corporativos.
-- **Entrega:** Aplicação `apps/admin` (container 5) com telas de: Visão Geral de MRR, Tabela de Oficinas, Contratos/Faturas, Gerenciador de WhatsApp e Trilha de Auditoria.
-- **Pronto quando:** O acesso é protegido por 2FA e ações destrutivas (suspensão de loja) exigem confirmação com senha.
+- **Assets Visuais:** Estilo baseado no Design System CarX com foco em densidade de dados e gráficos corporativos (Dark Volt, Asfalto `#0E1116`, Grafite `#171C24`, Aço `#232A35` e Volt `#C8F52E`).
+- **Entrega Concluída:**
+  - **Arquitetura e Build da Aplicação (`apps/admin`)**: Configuração com Vite + React 18 + Tailwind CSS 3.4 integrado aos tokens oficiais CarX, tipagem estrita TypeScript (`tsc --noEmit` sem erros) e build de produção compilado em 5.4s.
+  - **Autenticação com 2FA TOTP Obrigatório (`LoginPage.tsx`)**: Fluxo em duas etapas com validação de credenciais master (`admin@carx.com.br`) e tela de desafio TOTP de 6 dígitos para o authenticator, interceptor automático de expiração e logout em caso de token revogado.
+  - **Visão Geral e Métricas de SaaS (`DashboardPage.tsx`)**: KPIs corporativos de MRR corrente, ARR projetado, base ativa/trials/suspensões, taxa de Churn, volume de inadimplência, ranking e percentual de receita por plano (Start, Pro, Prime, Enterprise) e contadores de unidades, usuários e armazenamento S3.
+  - **Tabela de Oficinas com Impersonação e Suspensão Segura (`TenantsPage.tsx`)**: Filtros em tempo real por status e busca textual, modal de **Impersonação Auditada** com justificativa obrigatória e emissão de token delimitado a 1h, e modal de **Suspensão com Confirmação de Senha Master** (cumprindo estritamente o critério de bloqueio de ações destrutivas).
+  - **Assistente Corporativo de Provisionamento (`TenantWizardPage.tsx`)**: Wizard em 4 etapas (Oficina, Proprietário, Plano/Trial e Confirmação) com geração e validação de slug em tempo real.
+  - **Contratos e Licenças (`ContractsPage.tsx`)**: Painel de vigência, status de contrato (ativo, trial, suspenso, cancelado), ciclo de faturamento e valores negociados.
+  - **Faturas e Cobranças (`InvoicesPage.tsx`)**: Histórico de cobranças por Pix, cartão e boleto, status de pagamento e conciliação.
+  - **Gerenciador de WhatsApp Multi-tenant (`WhatsAppManagerPage.tsx`)**: Monitoramento de status de conexões Baileys/Evolution por loja, consumo da cota diária de disparos e reset de sessão.
+  - **Funil de Leads (`LeadsPage.tsx`)**: Visualização de interessados da landing page com modal de conversão instantânea em oficina oficial CarX.
+  - **Trilha de Auditoria Imutável (`AuditLogsPage.tsx`)**: Tabela de compliance com paginação, filtros, metadados de IP/User-Agent e expansão do payload JSON auditado.
 
 ---
 
