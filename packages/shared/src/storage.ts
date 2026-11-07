@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const StorageFileCategory = {
   WORK_ORDER: 'work_order',
   INSPECTION: 'inspection',
+  WARRANTY: 'warranty',
   BRANDING: 'branding',
   DOCUMENT: 'document',
   GENERAL: 'general',

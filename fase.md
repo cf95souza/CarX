@@ -966,13 +966,34 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.9 — Controle de Qualidade (QA), Garantia e Certificado com QR
+### [x] T3.9 — Controle de Qualidade (QA), Garantia e Certificado com QR `(Concluído)`
 - **Descrição:** Gate de validação pós-serviço (QA Audit) para liberação de entrega e emissão de Certificado de Garantia com QR Code público de autenticidade (Passaporte do Veículo).
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 6: Onda 2 / Item 7 (Linhas 216–217)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L216-L217)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.9 (Linhas 619–622)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L619-L622)
-- **Entrega:** Tabelas `qa_audits` e `warranties`. Geração de PDF do certificado e página pública (`/v/{token}`) para qualquer pessoa escanear o QR e validar a garantia e o lote do material aplicado sem expor dados pessoais do cliente.
-- **Pronto quando:** Escanear o QR Code impresso no certificado abre a página pública autenticada mostrando data de vencimento e lote da película/vitrificador.
+- **Entrega Concluída:**
+  - **Migration 019 (`019_qa_warranties_passports.up.sql`)**:
+    - Tabela `qa_audits`: Auditoria de qualidade pós-serviço (`work_order_id`, `inspector_id`, `status` [`approved`, `rejected_rework`], `score` [1 a 5 estrelas], `checklist_items` JSONB, `rework_reason`, `notes`).
+    - Tabela `warranties`: Certificados de garantia e passaporte digital (`work_order_id`, `customer_id`, `vehicle_id`, `service_id`, `service_name`, `material_roll_id`, `material_lot_number`, `warranty_months`, `starts_at`, `expires_at`, `verification_token` UUID único, `pdf_file_id`, `status` [`active`, `revoked`, `expired`]).
+    - RLS ativado e forçado compulsório (`FORCE ROW LEVEL SECURITY`) com a política canônica `tenant_isolation_policy`.
+  - **Contratos e DTOs Zod (`packages/shared/src/schemas.ts`)**:
+    - `QaAuditDto`, `CreateQaAuditSchema`, `WarrantyDto`, `CreateWarrantySchema`, `PublicVehiclePassportDto`, `QaStatusEnum`, `WarrantyStatusEnum`.
+  - **Serviço de Negócio (`apps/api/src/qa/qa-service.ts`)**:
+    - `createAudit`: Aprovação transiciona OS para `READY` e registra trilha imutável `QA_APPROVED`; reprovação marca `is_rework = true`, grava motivo e retorna OS para `IN_PROGRESS` no topo da fila.
+    - `createWarranty`: Registro da garantia com lote do material/bobina, cálculo atômico de validade e compilação automática do certificado em PDF.
+    - `generateWarrantyPdf`: Motor server-side com `pdfkit` e `qrcode` compilando certificado com marca da oficina, dados do carro, termos de garantia e QR Code vetorial escaneável para `/v/:token`. O PDF é armazenado fisicamente no MinIO (`StorageFileCategory.WARRANTY`).
+    - `verifyPublicPassport`: Endpoint de consulta pública com **blindagem estrita à LGPD** (mascara a placa como `OPR-***6`, oculta CPF, e-mail e telefone do cliente, e exibe dados de autenticidade, lote do material aplicado e status).
+    - `revokeWarranty`: Revogação formal de cobertura com justificativa, refletida em tempo real na consulta pública.
+  - **Rotas Fastify (`apps/api/src/routes/qa-routes.ts`)**:
+    - `GET /public/passports/:token` e `GET /v/:token` (rotas públicas sem JWT com proteção LGPD).
+    - `POST /qa/audits` (restrito a Owner/Gestor).
+    - `GET /qa/audits/:id` e `GET /work-orders/:workOrderId/qa-audits`.
+    - `POST /warranties`, `GET /warranties/:id`, `GET /work-orders/:workOrderId/warranties`, `GET /vehicles/:vehicleId/warranties`.
+    - `POST /warranties/:id/revoke` e `GET /warranties/:id/pdf` (download/stream de PDF).
+  - **Validação Automatizada com Sucesso**:
+    - 9 testes dedicados em [`apps/api/src/qa/qa.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/qa/qa.test.ts) cobrindo aprovação no QA, rejeição com retrabalho, emissão de garantia com lote, verificação pública por QR Code com LGPD blindada, download de PDF com cabeçalho `%PDF-`, revogação e isolamento RLS cross-tenant.
+    - **Total Consolidado da API CarX**: **221/221 testes passando com 100% de sucesso** em 26 suítes completas.
+    - **Typecheck Monorepo**: `tsc -b` aprovado com 0 erros.
 
 ---
 

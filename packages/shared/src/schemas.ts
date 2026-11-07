@@ -1228,6 +1228,112 @@ export interface TechnicianQueueItemDto {
   createdAt: string;
 }
 
+// ============================================================================
+// 19. CONTROLE DE QUALIDADE (QA), GARANTIA E PASSAPORTE DO VEÍCULO (T3.9)
+// ============================================================================
+
+export const QaStatusEnum = {
+  APPROVED: 'approved',
+  REJECTED_REWORK: 'rejected_rework',
+} as const;
+export type QaStatusType = (typeof QaStatusEnum)[keyof typeof QaStatusEnum];
+
+export const WarrantyStatusEnum = {
+  ACTIVE: 'active',
+  REVOKED: 'revoked',
+  EXPIRED: 'expired',
+} as const;
+export type WarrantyStatusType = (typeof WarrantyStatusEnum)[keyof typeof WarrantyStatusEnum];
+
+export const QaChecklistItemSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(2),
+  passed: z.boolean(),
+  notes: z.string().optional().nullable(),
+});
+export type QaChecklistItem = z.infer<typeof QaChecklistItemSchema>;
+
+export const CreateQaAuditSchema = z.object({
+  workOrderId: z.string().uuid(),
+  status: z.enum(['approved', 'rejected_rework']),
+  score: z.number().int().min(1).max(5).optional().nullable(),
+  checklistItems: z.array(QaChecklistItemSchema).default([]),
+  reworkReason: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type CreateQaAuditInputDto = z.infer<typeof CreateQaAuditSchema>;
+
+export interface QaAuditDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  inspectorId: string;
+  inspectorName?: string;
+  status: QaStatusType;
+  score: number | null;
+  checklistItems: QaChecklistItem[];
+  reworkReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const CreateWarrantySchema = z.object({
+  workOrderId: z.string().uuid(),
+  serviceId: z.string().uuid().optional().nullable(),
+  serviceName: z.string().min(2),
+  materialRollId: z.string().uuid().optional().nullable(),
+  materialLotNumber: z.string().optional().nullable(),
+  warrantyMonths: z.number().int().positive().default(12),
+  notes: z.string().optional().nullable(),
+});
+export type CreateWarrantyInputDto = z.infer<typeof CreateWarrantySchema>;
+
+export interface WarrantyDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  customerId: string;
+  vehicleId: string;
+  serviceId: string | null;
+  serviceName: string;
+  materialRollId: string | null;
+  materialLotNumber: string | null;
+  warrantyMonths: number;
+  startsAt: string;
+  expiresAt: string;
+  verificationToken: string;
+  pdfFileId: string | null;
+  status: WarrantyStatusType;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PublicVehiclePassportDto {
+  verificationToken: string;
+  isValid: boolean;
+  status: WarrantyStatusType;
+  serviceName: string;
+  materialLotNumber: string | null;
+  warrantyMonths: number;
+  startsAt: string;
+  expiresAt: string;
+  remainingDays: number;
+  vehicle: {
+    brand: string;
+    model: string;
+    plateMasked: string;
+    year: number;
+    color: string | null;
+  };
+  workshop: {
+    tradeName: string;
+    phone: string | null;
+    city: string | null;
+  };
+}
+
 
 
 

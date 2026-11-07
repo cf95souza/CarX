@@ -908,6 +908,44 @@ Implementado o subsistema do operador e execução de serviços no chão de ofic
   - 10 testes dedicados em [`apps/api/src/technician/technician.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician.test.ts) cobrindo fila por escopo, prioridade no topo de retrabalho, início/pausa/retomada/parada de cronômetro, persistência atômica após recarregar, regra de foco único, checklist integrado e isolamento RLS cross-tenant.
   - **Total Consolidado da API CarX**: **212/212 testes passando com 100% de sucesso** em 25 suítes completas.
 
+---
+
+#### Tarefa T3.9: Controle de Qualidade (QA), Garantia e Certificado com QR 🛡️
+Implementado o subsistema pós-execução de controle de qualidade (QA Audit) para liberação de veículos e emissão de Certificados de Garantia com QR Code de autenticidade (Passaporte Digital do Veículo) com proteção estrita à LGPD:
+- **Migration 019 — Tabelas de QA e Garantias (`019_qa_warranties_passports.up.sql`)**:
+  - `qa_audits`: Auditoria realizada pelo gestor (`work_order_id`, `inspector_id`, `status` [`approved`, `rejected_rework`], `score` [1 a 5 estrelas], `checklist_items` em JSONB, `rework_reason`, `notes`).
+  - `warranties`: Certificados de garantia emitidos (`work_order_id`, `customer_id`, `vehicle_id`, `service_id`, `service_name`, `material_roll_id`, `material_lot_number`, `warranty_months`, `starts_at`, `expires_at`, `verification_token` UUID global único, `pdf_file_id`, `status` [`active`, `revoked`, `expired`]).
+  - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com política `tenant_isolation_policy`.
+- **Serviço de Negócio (`QaService`)**:
+  - **Gate de Qualidade e Máquina de Estados (`createAudit`)**:
+    - **Aprovação (`approved`)**: Transiciona automaticamente a OS para `READY` (pronta para entrega ao cliente) e gera registro imutável em `audit_logs` (`QA_APPROVED`).
+    - **Reprovação com Retrabalho (`rejected_rework`)**: Marca na OS `is_rework = true` e grava a justificativa (`rework_reason`), retornando a OS para `IN_PROGRESS`. Essa marcação reposiciona a OS no topo absoluto da fila do operador no App do Técnico.
+  - **Certificado de Garantia e Passaporte Digital (`createWarranty`)**:
+    - Vinculação com a OS, veículo e número de lote da bobina (`material_rolls` ou lote digitado).
+    - Cálculo atômico e determinístico das datas de início e expiração.
+    - Compilação imediata do PDF do certificado oficial e upload no MinIO Storage sob a categoria `warranty`.
+  - **Verificação Pública do Passaporte do Veículo (`verifyPublicPassport`)**:
+    - Acesso público irrestrito via URL `/v/:token` e leitura do QR Code sem necessidade de login.
+    - **Critério Fundamental de Proteção LGPD**:
+      - A placa do veículo é parcialmente ofuscada (ex: `OPR-***6`).
+      - Nenhum dado pessoal (nome completo, CPF, telefone ou e-mail do proprietário) é retornado ou exposto.
+      - Exibição de autenticidade, serviço coberto, validade, dias restantes, lote do material aplicado e dados institucionais da oficina.
+  - **Compilador Server-Side de Certificados em PDF (`generateWarrantyPdf`)**:
+    - Geração em alta fidelidade vetorial com `pdfkit` e renderização de QR Code vetorial via `qrcode`.
+    - Cabeçalho preto/Volt da oficina, quadro de dados do carro, termos de cuidados de conservação, período de cura de 72h e selo de autenticidade com QR Code apontando para a verificação online.
+  - **Revogação de Garantia (`revokeWarranty`)**:
+    - Revogação de cobertura por mau uso ou perda total com gravação de justificativa, refletida instantaneamente na consulta pública como `isValid = false` e status `revoked`.
+- **Rotas Fastify (`qa-routes.ts`)**:
+  - `GET /public/passports/:token` e `GET /v/:token`: Endpoints públicos sem JWT.
+  - `POST /qa/audits`: Auditoria de QA (RBAC restrito a `owner` e `gestor`).
+  - `GET /qa/audits/:id`, `GET /work-orders/:workOrderId/qa-audits`.
+  - `POST /warranties`, `GET /warranties/:id`, `GET /work-orders/:workOrderId/warranties`, `GET /vehicles/:vehicleId/warranties`.
+  - `POST /warranties/:id/revoke`, `GET /warranties/:id/pdf` (download/stream inline de PDF).
+- **Validação Automatizada com Sucesso**:
+  - 9 testes dedicados em [`apps/api/src/qa/qa.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/qa/qa.test.ts) cobrindo aprovação no QA, reprovação com retrabalho, emissão de garantia com lote, verificação pública LGPD, download de PDF vetorial com assinatura mágica `%PDF-`, revogação e isolamento RLS cross-tenant.
+  - **Total Consolidado da API CarX**: **221/221 testes passando com 100% de sucesso** em 26 suítes completas.
+
+
 
 
 
