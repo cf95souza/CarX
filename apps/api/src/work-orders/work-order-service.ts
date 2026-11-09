@@ -1,6 +1,7 @@
 import { tenantQuery, tenantTransaction } from '../database/tenant-query.js';
 import { auditService } from '../audit/audit-service.js';
 import { stockService } from '../stock/stock-service.js';
+import { realtimeHub } from '../realtime/realtime-hub.js';
 import {
   WorkOrderDto,
   CreateWorkOrderDto,
@@ -656,6 +657,27 @@ export class WorkOrderService {
     }
 
     const updated = await this.getById(tenantId, id);
+
+    // Emissão de evento pontual leve em tempo real para TV da Loja e App do Técnico
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      workOrderId: updated.id,
+      osNumber: updated.osNumber,
+      status: updated.status,
+      previousStatus: currentStatus,
+      progress: updated.progress,
+      vehiclePlate: updated.vehicle?.plate || null,
+      technicianId: updated.technicianId || null,
+      technicianName: updated.technician?.name || null,
+    });
+
+    if (targetStatus === WorkOrderStatus.READY) {
+      realtimeHub.publish(tenantId, 'work_order.ready', {
+        workOrderId: updated.id,
+        osNumber: updated.osNumber,
+        vehiclePlate: updated.vehicle?.plate || null,
+        customerName: updated.customer?.name || null,
+      });
+    }
 
     if (actorUserId) {
       await auditService.record({

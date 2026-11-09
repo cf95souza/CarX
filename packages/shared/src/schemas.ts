@@ -1534,6 +1534,66 @@ export interface TechnicianRankingItemDto {
   lastReworkDate: string | null;
 }
 
+// ==============================================================================
+// T3.12 — ATUALIZAÇÃO EM TEMPO REAL (SSE / WEBSOCKETS)
+// ==============================================================================
+
+export type RealtimeEventType =
+  | 'work_order.updated'
+  | 'work_order.ready'
+  | 'appointment.created'
+  | 'stock.low'
+  | 'heartbeat'
+  | 'connected';
+
+export interface WorkOrderUpdatedPayload {
+  workOrderId: string;
+  osNumber: number;
+  status: string;
+  previousStatus?: string | null;
+  progress: number;
+  vehiclePlate?: string | null;
+  technicianId?: string | null;
+  technicianName?: string | null;
+}
+
+export interface WorkOrderReadyPayload {
+  workOrderId: string;
+  osNumber: number;
+  vehiclePlate?: string | null;
+  customerName?: string | null;
+}
+
+export interface AppointmentCreatedPayload {
+  appointmentId: string;
+  bayId: string;
+  scheduledAt: string;
+  clientName?: string | null;
+}
+
+export interface StockLowPayload {
+  materialId: string;
+  materialName: string;
+  currentStock: number;
+  minStock: number;
+  unit: string;
+}
+
+export interface RealtimeEventDto<T = any> {
+  id: string;
+  tenantId: string;
+  event: RealtimeEventType;
+  timestamp: string;
+  data: T;
+}
+
+export const PublishRealtimeEventSchema = z.object({
+  event: z.enum(['work_order.updated', 'work_order.ready', 'appointment.created', 'stock.low']),
+  data: z.record(z.any()),
+});
+export type PublishRealtimeEventInputDto = z.infer<typeof PublishRealtimeEventSchema>;
+
+
 
 
 

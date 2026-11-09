@@ -25,6 +25,7 @@ import { technicianRoutes } from './routes/technician-routes.js';
 import { qaRoutes } from './routes/qa-routes.js';
 import { npsRoutes } from './routes/nps-routes.js';
 import { financialRoutes } from './routes/financial-routes.js';
+import { realtimeRoutes } from './routes/realtime-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -107,6 +108,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Financeiro, Comissões e Relatórios no Servidor (T3.11)
   app.register(financialRoutes);
+
+  // Domínio Automotivo: Barramento de Eventos e Tempo Real SSE (T3.12)
+  app.register(realtimeRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

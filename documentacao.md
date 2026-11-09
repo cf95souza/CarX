@@ -981,46 +981,38 @@ Implementado o subsistema completo de mensuração de satisfação do cliente (N
 
 ---
 
-#### Tarefa T3.11: Financeiro, Comissões e Relatórios no Servidor 💰
-Implementado o motor financeiro e contábil nativo do CarX, com apuração de DRE exclusivamente no PostgreSQL, cálculo inteligente de comissões por OS e ranking de produtividade com streak auditado:
-- **Migration 021 — Comissões, DRE e Ranking (`021_commissions_financial_reports.up.sql`)**:
-  - `commission_rules`: Regras parametrizadas por técnico e/ou serviço, tipos percentual (`percentage`) ou valor fixo em centavos (`fixed_cents`), e modos de base de cálculo (`gross_service` ou `net_service_minus_material` com dedução automática do CMV de materiais).
-  - `commission_entries`: Extrato de lançamentos por OS (`work_order_id`, `service_item_id`, `technician_id`, `rule_id`, `gross_amount_cents`, `deductions_cents`, `commission_cents`, `status` [`pending`, `approved`, `paid`, `canceled`], `paid_at`, `notes`).
-  - Habilitação obrigatória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com políticas canônicas e triggers de `updated_at`.
-- **Serviço de Domínio Financeiro (`FinancialService`)**:
-  - **DRE Gerencial no Servidor (`getDreReport`)**:
-    - **Solução Arquitetural Definitiva**: Elimina 100% a falha legada de carregar todas as OS na memória do browser para agregar métricas financeiras. Todas as agregações são computadas no PostgreSQL via queries nativas otimizadas.
-    - Métricas:
-      - **Receita Bruta**: Soma de `total_cents` das ordens de serviço faturadas/ativas no período.
-      - **Descontos**: Soma de `discount_cents` concedidos nas ordens do período.
-      - **Receita Líquida**: Receita Bruta - Descontos.
-      - **Custos de Materiais (CMV)**: Custo real das bobinas e consumíveis alocados nas OS através de `stock_movements` (`movement_type = 'os_consumption'`).
-      - **Custos de Comissões**: Soma dos lançamentos válidos de comissões das OS do período (`commission_entries`).
-      - **Margem de Contribuição**:
-        $$\text{Margem Contribuição R\$} = \text{Receita Líquida} - (\text{CMV} + \text{Comissões})$$
-        $$\text{Margem Contribuição \%} = \left(\frac{\text{Margem Contribuição R\$}}{\text{Receita Líquida}}\right) \times 100$$
-      - **Inadimplência / A Receber**: Saldo a receber de ordens concluídas/entregues (`final_cents - paid_cents`).
-  - **Ranking de Produtividade e Streak Real Auditado (`getTechniciansRanking`)**:
-    - Contagem de ordens de serviço produzidas, faturamento gerado e média de notas nas inspeções de QA.
-    - **Critério Fundamental**: Cálculo determinístico em tempo real do **Streak de dias sem retrabalho** a partir de fatos auditados no banco:
-      - Um retrabalho é registrado quando `work_orders.is_rework = true` ou quando a auditoria de qualidade é reprovada (`qa_audits.status = 'rejected_rework'`).
-      - Se houver falha auditada, o streak calcula a diferença em dias entre a data atual e a data do último retrabalho.
-      - Se nunca houve retrabalho, o streak conta a partir da primeira OS produzida pelo técnico.
-      - Erradicado de forma definitiva o valor fictício que o sistema legado mantinha solto no `localStorage` do navegador.
-  - **Motor de Comissões (`calculateWorkOrderCommissions`, `payCommissionEntry`)**:
-    - Apuração automática de comissões na conclusão da OS respeitando a precedência: regra específica de Técnico+Serviço > regra de Técnico > regra de Serviço > regra padrão da oficina.
-    - Suporte a dedução de custos de insumos (`net_service_minus_material`).
-    - Liquidação (pagamento) com timestamp `paid_at`, registro na trilha de auditoria imutável (`audit_logs`) e bloqueio de pagamento duplicado (HTTP 400 `COMMISSION_ALREADY_PAID`).
-- **Rotas Fastify (`financial-routes.ts`)**:
-  - `GET /reports/dre`: Relatório DRE gerencial do servidor (restrito a `owner` e `gestor`).
-  - `GET /reports/technicians/ranking`: Ranking com streak auditado (restrito a `owner` e `gestor`).
-  - `POST /commissions/rules`, `GET /commissions/rules`, `DELETE /commissions/rules/:id`: Gestão de regras.
-  - `POST /commissions/calculate/:workOrderId`: Apuração de comissão por OS.
-  - `GET /commissions/entries`: Extrato de comissões (filtrado por técnico caso o requisitante seja `tecnico`).
-  - `PATCH /commissions/entries/:id/pay`: Liquidação de comissão.
+#### Tarefa T3.12: Atualização em Tempo Real (SSE / WebSockets) ⚡
+Implementado o barramento de eventos em tempo real do CarX via Server-Sent Events (SSE) nativo de alta performance HTTP/2 e HTTP/1.1, eliminando a necessidade de polling agressivo nos painéis de produção, Monitor de TV e apps de chão de oficina:
+- **Arquitetura de Barramento em Tempo Real (`RealtimeHub`)**:
+  - `apps/api/src/realtime/realtime-hub.ts`: Hub singleton de gerenciamento de conexões ativas indexadas por `tenantId` (`Map<string, Set<RealtimeClient>>`).
+  - **Isolamento Estrito Multi-Tenant (Critério de Aceite Fundamental)**:
+    - O canal de eventos é estritamente particionado por `tenant_id`.
+    - Um painel de TV, recepção ou técnico conectado a uma loja jamais recebe notificações, mudanças de status de OS ou alertas de estoque de outra loja.
+  - **Transmissão Unidirecional Leve e Padrão SSE (`text/event-stream; charset=utf-8`)**:
+    - Cabeçalhos HTTP configurados: `Content-Type: text/event-stream`, `Cache-Control: no-cache, no-transform`, `Connection: keep-alive`, `X-Accel-Buffering: no` (essencial para proxy reverso Nginx sem buffering).
+    - **Heartbeat Periódico (Keep-Alive)**: Disparo a cada 15 segundos de comentário SSE (`: ping\n\n`) com `timer.unref()` para manter conexões e proxies abertos sem impedir encerramento gracioso do Node.js.
+  - **Zero Vazamento de Memória (Memory Leak Prevention)**:
+    - Monitoramento do evento de encerramento do socket HTTP (`request.raw.on('close')`). Ao desconectar, o cliente é imediatamente removido do `Set` do tenant correspondente.
+    - Se o tenant não possuir mais clientes ativos, a chave é deletada do mapa em memória.
+- **Autenticação Dupla Flexível para Navegadores**:
+  - A API aceita autenticação JWT padrão via header HTTP `Authorization: Bearer <token>` ou via query parameter `?token=<token>`.
+  - Essa flexibilidade é crucial pois a API nativa `EventSource` dos navegadores não permite injeção de cabeçalhos HTTP customizados.
+- **Tipagem e Schemas em `@carx/shared`**:
+  - `RealtimeEventType`: `work_order.updated`, `work_order.ready`, `appointment.created`, `stock.low`, `nps.detractor_alert`.
+  - `RealtimeEventDto`, `WorkOrderUpdatedPayload`, `WorkOrderReadyPayload`, `StockLowPayload`.
+  - **Critério de Eficiência**: Envio estrito de payloads leves contendo referências essenciais (ex: IDs, status anterior, novo status, timestamp), encorajando o cliente a revalidar cache/dados conforme necessário sem sobrecarregar a rede com objetos pesados desnecessários.
+- **Gatilhos Automáticos de Domínio**:
+  - Integrado em `workOrderService.transitionStatus`:
+    - Disparo automático de `work_order.updated` em qualquer transição de status da OS.
+    - Disparo complementar de `work_order.ready` quando a OS atinge o estado `READY` (aprovada no QA e pronta para entrega ao cliente), acionando notificação imediata para recepção e clientes.
+- **Rotas Fastify (`realtime-routes.ts`)**:
+  - `GET /realtime/events`: Endpoint de conexão SSE para escuta de eventos do tenant autenticado.
+  - `POST /realtime/publish`: Disparo pontual de eventos customizados pelo backend/módulos internos.
+  - `GET /realtime/stats`: Consulta em tempo real da quantidade de clientes conectados por loja e total global (restrito a `owner` e `gestor`).
 - **Validação Automatizada com Sucesso**:
-  - 9 testes dedicados em [`apps/api/src/financial/financial.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial.test.ts) cobrindo regras, apuração bruta e líquida com dedução de material, valor fixo, extrato por role, liquidação, DRE nativo SQL, ranking com streak auditado e isolamento multi-tenant RLS.
-  - **Total Consolidado da API CarX**: **241/241 testes passando com 100% de sucesso** em 28 suítes completas.
+  - 7 testes dedicados em [`apps/api/src/realtime/realtime.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/realtime/realtime.test.ts) cobrindo autenticação por header e query string, isolamento estrito entre tenants, publicação manual, disparo automático na transição de status da OS, métricas de conexões ativas e desconexão limpa com liberação de recursos.
+  - **Total Consolidado da API CarX**: **248/248 testes passando com 100% de sucesso** em 29 suítes completas.
+
 
 
 

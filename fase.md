@@ -1060,7 +1060,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.12 — Atualização em Tempo Real (SSE / WebSockets)
+### [x] T3.12 — Atualização em Tempo Real (SSE / WebSockets) `(Concluído)`
 - **Descrição:** Barramento de eventos pontuais leves para atualização em tempo real do Monitor TV e da Fila do Operador, eliminando o padrão ineficiente de "refetch de lista inteira".
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 1.4: Problema 5 (Linha 71)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L71)
@@ -1070,6 +1070,23 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
   - [TV da Loja (Monitor de produção com veículos em execução, horários e barra inferior)](file:///d:/Repositorios/CarX/rebraind/TV%20da%20loja@2x.png)
 - **Entrega:** Canal SSE (Server-Sent Events) ou WebSocket autenticado emitindo payloads compactos (`work_order.updated`, `work_order.ready`).
 - **Pronto quando:** Concluir uma etapa no celular do operador move o card correspondente na TV em menos de 500ms sem recarregar a página inteira, e a TV de uma loja nunca recebe eventos de outra.
+- **Status da Validação:**
+  - **Hub de Tempo Real (`RealtimeHub`)**:
+    - Gerenciador singleton em memória com canais estritamente isolados por `tenant_id`.
+    - Suporte a cabeçalhos nativos SSE (`text/event-stream; charset=utf-8`, `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no` para Caddy/Nginx).
+    - Desconexão limpa: captura o evento `close` da requisição e desaloca o stream do mapa imediatamente (zero memory leaks).
+    - Heartbeat automático periódico (`: heartbeat <timestamp>\n\n`) com `unref()` para manter conexões e proxies reversos vivos sem travar testes ou encerramento de processos.
+  - **Rotas Fastify (`realtime-routes.ts`)**:
+    - `GET /realtime/events`: Canal contínuo SSE. Suporta tanto cabeçalho padrão `Authorization: Bearer <token>` quanto query param `?token=<jwt>` (indispensável para clientes web com `EventSource` nativo do browser).
+    - `POST /realtime/publish`: Disparo manual de eventos restrito a `owner` e `gestor`.
+    - `GET /realtime/stats`: Métricas de conexões ativas por tenant para observabilidade.
+  - **Eventos Pontuais Integrados no Núcleo de OS**:
+    - `work_order.updated`: Emitido a cada transição de estado da OS com payload compacto (`workOrderId`, `osNumber`, `status`, `previousStatus`, `progress`, `vehiclePlate`, `technicianId`, `technicianName`).
+    - `work_order.ready`: Emitido especificamente na transição para `READY` para notificar a TV e recepcionistas com dados do carro e cliente.
+  - **Testes Automatizados**:
+    - 7 testes dedicados em [`apps/api/src/realtime/realtime.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/realtime/realtime.test.ts) cobrindo autenticação, handshake, recepção formatada, isolamento multi-tenant (Oficina Beta nunca recebe eventos da Oficina Alpha), disparo em cascata via `workOrderService.transitionStatus`, cleanup de memória e estatísticas.
+    - **Total Consolidado da API CarX**: **248/248 testes passando com 100% de sucesso** em 29 suítes completas.
+    - **Typecheck Monorepo**: `tsc -b` aprovado com 0 erros.
 
 ---
 
