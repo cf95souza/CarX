@@ -1452,6 +1452,89 @@ export interface MaintenanceReminderDto {
   updatedAt: string;
 }
 
+// ==============================================================================
+// T3.11 — COMISSÕES E RELATÓRIOS FINANCEIROS (DRE & RANKING COM STREAK AUDITADO)
+// ==============================================================================
+
+export type CommissionType = 'percentage' | 'fixed_cents';
+export type BaseCalculationType = 'gross_service' | 'net_service_minus_material';
+export type CommissionStatus = 'pending' | 'approved' | 'paid' | 'canceled';
+
+export const CreateCommissionRuleSchema = z.object({
+  technicianId: z.string().uuid().optional().nullable(),
+  serviceId: z.string().uuid().optional().nullable(),
+  commissionType: z.enum(['percentage', 'fixed_cents']).default('percentage'),
+  commissionValue: z.number().int().nonnegative(),
+  baseCalculation: z.enum(['gross_service', 'net_service_minus_material']).default('gross_service'),
+  isActive: z.boolean().optional().default(true),
+});
+export type CreateCommissionRuleInputDto = z.infer<typeof CreateCommissionRuleSchema>;
+
+export interface CommissionRuleDto {
+  id: string;
+  tenantId: string;
+  technicianId: string | null;
+  technicianName?: string | null;
+  serviceId: string | null;
+  serviceName?: string | null;
+  commissionType: CommissionType;
+  commissionValue: number;
+  baseCalculation: BaseCalculationType;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommissionEntryDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  osNumber?: number;
+  serviceItemId: string | null;
+  technicianId: string;
+  technicianName?: string;
+  ruleId: string | null;
+  grossAmountCents: number;
+  deductionsCents: number;
+  commissionCents: number;
+  status: CommissionStatus;
+  paidAt: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const PayCommissionEntrySchema = z.object({
+  paidAt: z.string().datetime().optional(),
+  notes: z.string().optional().nullable(),
+});
+export type PayCommissionEntryInputDto = z.infer<typeof PayCommissionEntrySchema>;
+
+export interface DreReportDto {
+  startDate: string;
+  endDate: string;
+  grossRevenueCents: number;
+  discountsCents: number;
+  netRevenueCents: number;
+  materialCostsCents: number;
+  commissionCostsCents: number;
+  contributionMarginCents: number;
+  contributionMarginPercent: number;
+  pendingReceivablesCents: number;
+  workOrdersCount: number;
+}
+
+export interface TechnicianRankingItemDto {
+  technicianId: string;
+  technicianName: string;
+  workOrdersCount: number;
+  totalProducedCents: number;
+  averageQaScore: number;
+  streakDaysWithoutRework: number;
+  lastReworkDate: string | null;
+}
+
+
 
 
 

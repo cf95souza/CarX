@@ -24,6 +24,7 @@ import { inspectionRoutes } from './routes/inspection-routes.js';
 import { technicianRoutes } from './routes/technician-routes.js';
 import { qaRoutes } from './routes/qa-routes.js';
 import { npsRoutes } from './routes/nps-routes.js';
+import { financialRoutes } from './routes/financial-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -103,6 +104,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Pesquisa NPS, Pós-Venda e Lembretes de Revisão (T3.10)
   app.register(npsRoutes);
+
+  // Domínio Automotivo: Financeiro, Comissões e Relatórios no Servidor (T3.11)
+  app.register(financialRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

@@ -1032,7 +1032,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.11 — Financeiro, Comissões e Relatórios no Servidor
+### [x] T3.11 — Financeiro, Comissões e Relatórios no Servidor `(Concluído)`
 - **Descrição:** Cálculo de DRE, margem real por serviço, comissões de técnicos e ranking de produtividade (streak baseado em histórico de QA) calculado exclusivamente por SQL no backend.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 1.3: O que o código faz hoje / Comissões e Ranking (Linhas 55–57)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L55-L57)
@@ -1040,6 +1040,23 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 - **Assets Visuais:** [Gestor · Painel (Faturamento convertido, pátio ao vivo)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Painel@2x.png)
 - **Entrega:** Endpoints para DRE e extrato de comissões (`commissions_rules`, `commissions_entries`), com streak de dias sem retrabalho calculado de fatos auditados.
 - **Pronto quando:** O valor de faturamento do dashboard bate rigorosamente com a soma dos pagamentos e custos de materiais, sem depender de agregação em memória no browser.
+- **Status da Validação:**
+  - **Migration 021 Criada e Aplicada**:
+    - `commission_rules`: regras flexíveis por técnico e/ou serviço, tipos percentual (`percentage`) ou valor fixo em centavos (`fixed_cents`), e bases `gross_service` ou `net_service_minus_material` (dedução automática de CMV).
+    - `commission_entries`: extrato com histórico atômico, status (`pending`, `paid`, `canceled`), timestamp de liquidação `paid_at` e auditoria imutável.
+    - Políticas de RLS (`ENABLE` + `FORCE ROW LEVEL SECURITY`) e integridade referencial com validação aprovada em `test:rls`.
+  - **DRE Gerencial no Servidor (`GET /reports/dre`)**:
+    - Calculado exclusivamente via agregações SQL nativas no PostgreSQL, eliminando a falha arquitetural legada de cálculo em memória no browser.
+    - Métricas: Receita Bruta, Descontos, Receita Líquida, Custos de Materiais (CMV das bobinas/insumos consumidos via `stock_movements`), Custos de Comissões, Margem de Contribuição (R$ e %) e Inadimplência/A Receber.
+  - **Ranking de Técnicos e Streak Real Auditado (`GET /reports/technicians/ranking`)**:
+    - Ranking ordenado por faturamento produzido, total de OS entregues e média de notas no QA.
+    - **Critério Fundamental**: Streak de dias sem retrabalho calculado em tempo real a partir de fatos auditados (`qa_audits.status = 'rejected_rework'` e `work_orders.is_rework = true`), erradicando de forma definitiva o valor fictício armazenado no `localStorage` do sistema antigo.
+  - **Gestão de Comissões (`/commissions/rules` e `/commissions/entries`)**:
+    - Criação de regras com validação de limites (bloqueio > 100%), apuração automática na conclusão da OS e liquidação com bloqueio estrito de pagamento repetido (HTTP 400).
+  - **Testes Automatizados**:
+    - 9 testes em `apps/api/src/financial/financial.test.ts` cobrindo regras, apuração bruta e líquida com dedução de material, valor fixo, extrato por role, liquidação, DRE, streak auditado e isolamento multi-tenant.
+    - **Total Consolidado da API CarX**: **241/241 testes passando com 100% de sucesso** em 28 suítes completas.
+    - **Typecheck Monorepo**: `tsc -b` aprovado com 0 erros.
 
 ---
 

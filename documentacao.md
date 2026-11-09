@@ -979,6 +979,50 @@ Implementado o subsistema completo de mensuração de satisfação do cliente (N
   - 11 testes dedicados em [`apps/api/src/nps/nps.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/nps.test.ts) cobrindo criação, idempotência, resposta pública, bloqueio de resposta duplicada (409), alerta de detrator, scorecard do gestor, lembretes de revisão e isolamento RLS cross-tenant.
   - **Total Consolidado da API CarX**: **232/232 testes passando com 100% de sucesso** em 27 suítes completas.
 
+---
+
+#### Tarefa T3.11: Financeiro, Comissões e Relatórios no Servidor 💰
+Implementado o motor financeiro e contábil nativo do CarX, com apuração de DRE exclusivamente no PostgreSQL, cálculo inteligente de comissões por OS e ranking de produtividade com streak auditado:
+- **Migration 021 — Comissões, DRE e Ranking (`021_commissions_financial_reports.up.sql`)**:
+  - `commission_rules`: Regras parametrizadas por técnico e/ou serviço, tipos percentual (`percentage`) ou valor fixo em centavos (`fixed_cents`), e modos de base de cálculo (`gross_service` ou `net_service_minus_material` com dedução automática do CMV de materiais).
+  - `commission_entries`: Extrato de lançamentos por OS (`work_order_id`, `service_item_id`, `technician_id`, `rule_id`, `gross_amount_cents`, `deductions_cents`, `commission_cents`, `status` [`pending`, `approved`, `paid`, `canceled`], `paid_at`, `notes`).
+  - Habilitação obrigatória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com políticas canônicas e triggers de `updated_at`.
+- **Serviço de Domínio Financeiro (`FinancialService`)**:
+  - **DRE Gerencial no Servidor (`getDreReport`)**:
+    - **Solução Arquitetural Definitiva**: Elimina 100% a falha legada de carregar todas as OS na memória do browser para agregar métricas financeiras. Todas as agregações são computadas no PostgreSQL via queries nativas otimizadas.
+    - Métricas:
+      - **Receita Bruta**: Soma de `total_cents` das ordens de serviço faturadas/ativas no período.
+      - **Descontos**: Soma de `discount_cents` concedidos nas ordens do período.
+      - **Receita Líquida**: Receita Bruta - Descontos.
+      - **Custos de Materiais (CMV)**: Custo real das bobinas e consumíveis alocados nas OS através de `stock_movements` (`movement_type = 'os_consumption'`).
+      - **Custos de Comissões**: Soma dos lançamentos válidos de comissões das OS do período (`commission_entries`).
+      - **Margem de Contribuição**:
+        $$\text{Margem Contribuição R\$} = \text{Receita Líquida} - (\text{CMV} + \text{Comissões})$$
+        $$\text{Margem Contribuição \%} = \left(\frac{\text{Margem Contribuição R\$}}{\text{Receita Líquida}}\right) \times 100$$
+      - **Inadimplência / A Receber**: Saldo a receber de ordens concluídas/entregues (`final_cents - paid_cents`).
+  - **Ranking de Produtividade e Streak Real Auditado (`getTechniciansRanking`)**:
+    - Contagem de ordens de serviço produzidas, faturamento gerado e média de notas nas inspeções de QA.
+    - **Critério Fundamental**: Cálculo determinístico em tempo real do **Streak de dias sem retrabalho** a partir de fatos auditados no banco:
+      - Um retrabalho é registrado quando `work_orders.is_rework = true` ou quando a auditoria de qualidade é reprovada (`qa_audits.status = 'rejected_rework'`).
+      - Se houver falha auditada, o streak calcula a diferença em dias entre a data atual e a data do último retrabalho.
+      - Se nunca houve retrabalho, o streak conta a partir da primeira OS produzida pelo técnico.
+      - Erradicado de forma definitiva o valor fictício que o sistema legado mantinha solto no `localStorage` do navegador.
+  - **Motor de Comissões (`calculateWorkOrderCommissions`, `payCommissionEntry`)**:
+    - Apuração automática de comissões na conclusão da OS respeitando a precedência: regra específica de Técnico+Serviço > regra de Técnico > regra de Serviço > regra padrão da oficina.
+    - Suporte a dedução de custos de insumos (`net_service_minus_material`).
+    - Liquidação (pagamento) com timestamp `paid_at`, registro na trilha de auditoria imutável (`audit_logs`) e bloqueio de pagamento duplicado (HTTP 400 `COMMISSION_ALREADY_PAID`).
+- **Rotas Fastify (`financial-routes.ts`)**:
+  - `GET /reports/dre`: Relatório DRE gerencial do servidor (restrito a `owner` e `gestor`).
+  - `GET /reports/technicians/ranking`: Ranking com streak auditado (restrito a `owner` e `gestor`).
+  - `POST /commissions/rules`, `GET /commissions/rules`, `DELETE /commissions/rules/:id`: Gestão de regras.
+  - `POST /commissions/calculate/:workOrderId`: Apuração de comissão por OS.
+  - `GET /commissions/entries`: Extrato de comissões (filtrado por técnico caso o requisitante seja `tecnico`).
+  - `PATCH /commissions/entries/:id/pay`: Liquidação de comissão.
+- **Validação Automatizada com Sucesso**:
+  - 9 testes dedicados em [`apps/api/src/financial/financial.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial.test.ts) cobrindo regras, apuração bruta e líquida com dedução de material, valor fixo, extrato por role, liquidação, DRE nativo SQL, ranking com streak auditado e isolamento multi-tenant RLS.
+  - **Total Consolidado da API CarX**: **241/241 testes passando com 100% de sucesso** em 28 suítes completas.
+
+
 
 
 
