@@ -1593,6 +1593,124 @@ export const PublishRealtimeEventSchema = z.object({
 });
 export type PublishRealtimeEventInputDto = z.infer<typeof PublishRealtimeEventSchema>;
 
+// ==============================================================================
+// T3.13 — PORTAL DO CLIENTE SEGURO ("MEU VEÍCULO") COM DESAFIO OTP
+// ==============================================================================
+
+export const RequestPortalOtpSchema = z.object({
+  identifier: z
+    .string()
+    .min(3, 'Identificador (telefone ou e-mail) deve ter no mínimo 3 caracteres')
+    .max(255, 'Identificador muito longo'),
+});
+export type RequestPortalOtpInputDto = z.infer<typeof RequestPortalOtpSchema>;
+
+export const VerifyPortalOtpSchema = z.object({
+  identifier: z
+    .string()
+    .min(3, 'Identificador deve ter no mínimo 3 caracteres')
+    .max(255),
+  code: z
+    .string()
+    .regex(/^\d{6}$/, 'O código de confirmação deve conter exatamente 6 dígitos numéricos'),
+});
+export type VerifyPortalOtpInputDto = z.infer<typeof VerifyPortalOtpSchema>;
+
+export interface PortalCustomerDto {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  document: string | null;
+  documentType: string | null;
+  city: string | null;
+  state: string | null;
+}
+
+export interface PortalVehicleDto {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  color: string | null;
+  modelYear: number | null;
+  sizeClass: string;
+  currentKm: number | null;
+}
+
+export interface PortalWorkOrderListItemDto {
+  id: string;
+  osNumber: number;
+  status: string;
+  progress: number;
+  vehiclePlate: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  totalCents: number;
+  discountCents: number;
+  finalCents: number;
+  paidCents: number;
+  isFullyPaid: boolean;
+  trackingToken: string;
+  estimatedDeliveryDate: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+}
+
+export interface PortalWorkOrderDetailDto extends PortalWorkOrderListItemDto {
+  notes: string | null;
+  items: Array<{
+    id: string;
+    serviceName: string;
+    description: string | null;
+    quantity: number;
+    unitPriceCents: number;
+    finalPriceCents: number;
+    warrantyMonths: number;
+  }>;
+}
+
+export interface PortalWorkOrderTimelineEventDto {
+  id: string;
+  eventType: string;
+  fromStatus: string | null;
+  toStatus: string;
+  title: string;
+  description: string | null;
+  createdAt: string;
+}
+
+export interface PortalPhotoDto {
+  id: string;
+  angle: string;
+  phase: 'before' | 'during' | 'after';
+  caption: string | null;
+  url: string;
+  createdAt: string;
+}
+
+export interface PortalWarrantyDto {
+  id: string;
+  workOrderId: string;
+  osNumber?: number;
+  serviceName: string;
+  vehiclePlate: string;
+  vehicleModel: string;
+  warrantyMonths: number;
+  startsAt: string;
+  expiresAt: string;
+  daysRemaining: number;
+  status: string;
+  verificationToken: string;
+  pdfDownloadUrl?: string;
+}
+
+export interface PortalAuthResponseDto {
+  token: string;
+  customer: PortalCustomerDto;
+}
+
+
 
 
 

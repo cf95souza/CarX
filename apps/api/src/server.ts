@@ -26,6 +26,7 @@ import { qaRoutes } from './routes/qa-routes.js';
 import { npsRoutes } from './routes/nps-routes.js';
 import { financialRoutes } from './routes/financial-routes.js';
 import { realtimeRoutes } from './routes/realtime-routes.js';
+import { customerPortalRoutes } from './routes/customer-portal-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -111,6 +112,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Barramento de Eventos e Tempo Real SSE (T3.12)
   app.register(realtimeRoutes);
+
+  // Domínio Automotivo: Portal do Cliente Seguro ("Meu Veículo") com Desafio OTP (T3.13)
+  app.register(customerPortalRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

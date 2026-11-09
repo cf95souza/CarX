@@ -34,6 +34,15 @@ export const authenticateBearer: preHandlerHookHandler = async (request: Fastify
       });
     }
 
+    // CRITÉRIO DE ACEITE T3.13: Token do Portal do Cliente é sumariamente rejeitado em rotas de equipe de loja
+    if (payload.scope === 'customer_portal') {
+      return reply.code(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'Tokens do Portal do Cliente não possuem permissão para acesso a rotas de gestão de oficina.',
+      });
+    }
+
     request.user = payload;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Token inválido';

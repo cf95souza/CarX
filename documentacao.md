@@ -1013,6 +1013,45 @@ Implementado o barramento de eventos em tempo real do CarX via Server-Sent Event
   - 7 testes dedicados em [`apps/api/src/realtime/realtime.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/realtime/realtime.test.ts) cobrindo autenticação por header e query string, isolamento estrito entre tenants, publicação manual, disparo automático na transição de status da OS, métricas de conexões ativas e desconexão limpa com liberação de recursos.
   - **Total Consolidado da API CarX**: **248/248 testes passando com 100% de sucesso** em 29 suítes completas.
 
+---
+
+#### Tarefa T3.13: Portal do Cliente Seguro ("Meu Veículo") 📱
+Implementada a reestruturação completa da área pública e segura do cliente final ("Meu Veículo"), erradicando de forma definitiva a grave vulnerabilidade do sistema legado de login apenas por telefone sem senha e o modo de demonstração fictício com dados falsos:
+- **Migration 022 — Desafios OTP do Portal do Cliente (`022_customer_portal_otps.up.sql`)**:
+  - Tabela `customer_portal_otps`: Armazena os desafios de autenticação de clientes (`tenant_id`, `customer_id`, `destination`, `channel` [`whatsapp`, `email`], `otp_hash`, `attempts_count`, `max_attempts` [5], `expires_at` [10 min], `consumed_at`).
+  - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com a política `tenant_isolation_policy`.
+- **Arquitetura de Autenticação Segura com Proteção Anti-Enumeração**:
+  - `POST /portal/auth/request-otp`:
+    - Busca o cliente pelo número de WhatsApp ou e-mail no tenant atual.
+    - **Proteção Anti-Enumeração (Critério Fundamental)**: Caso o número/e-mail não pertença a nenhum cliente do tenant, o endpoint responde com status **HTTP 200** e uma mensagem genérica (`"Se o número informado estiver cadastrado, um código de verificação foi enviado."`), impossibilitando que atacantes façam varredura ou enumeração de telefones de clientes da oficina.
+    - Geração de código numérico aleatório de 6 dígitos criptograficamente seguro (`crypto.randomInt(100000, 1000000)`).
+    - Armazenamento em hash HMAC-SHA256 utilizando pepper interno de servidor, garantindo que o código em texto plano nunca fique vulnerável no banco de dados.
+    - Janela de expiração estrita de 10 minutos.
+  - `POST /portal/auth/verify-otp`:
+    - Validação com temporização constante (`crypto.timingSafeEqual`) contra *timing side-channel attacks*.
+    - **Bloqueio por Brute-Force**: Contador de tentativas atômico (`attempts_count`). Ao atingir 5 tentativas incorretas, o código é invalidado imediatamente e o cliente é bloqueado com **HTTP 429 Too Many Requests**.
+    - Ao validar com sucesso, consome o OTP (`consumed_at = NOW()`) e emite um JWT seguro delimitado com `scope: 'customer_portal'`.
+- **Erradicação Definitiva do Modo Demonstração Fake**:
+  - No sistema antigo, qualquer telefone desconhecido injetava uma OS fictícia com dados estáticos para simulação.
+  - No CarX, todo dado servido no portal provém estritamente do banco de dados relacional filtrado pelo RLS e pelo ID do cliente autenticado. Clientes sem OS recebem `workOrders: []` (zero dados falsos/mockados em produção).
+- **Barreiras de Segurança e Permissões no Backend**:
+  - **Rejeição Mútua Estrita**: Tokens com `scope: 'customer_portal'` são sumariamente rejeitados com **HTTP 403 Forbidden** ao tentar acessar qualquer rota interna de colaboradores, gestores ou módulos de configuração.
+  - **Privacidade Cross-Customer**: Um cliente autenticado que tentar acessar o detalhe ou fotos de uma OS de outro cliente da mesma oficina recebe **HTTP 404 Not Found**, prevenindo vazamento de histórico.
+  - **Isolamento Cross-Tenant (RLS)**: Token de um cliente da Oficina Alpha tentando acessar o portal da Oficina Beta é bloqueado com **HTTP 403 Forbidden**.
+- **Endpoints HTTP do Portal (`apps/api/src/routes/customer-portal-routes.ts`)**:
+  - `POST /portal/auth/request-otp`: Solicitação de código de acesso por WhatsApp ou E-mail.
+  - `POST /portal/auth/verify-otp`: Validação do código de 6 dígitos e emissão do JWT do portal.
+  - `GET /portal/me`: Dados cadastrais e perfil do cliente autenticado.
+  - `GET /portal/vehicles`: Lista dos veículos vinculados ao cliente.
+  - `GET /portal/work-orders`: Lista resumida de ordens de serviço do cliente com status e valores.
+  - `GET /portal/work-orders/:id`: Detalhes completos da OS, serviços realizados e totalizadores.
+  - `GET /portal/work-orders/:id/timeline`: Linha do tempo visual de todos os eventos da OS (criação, início, execução, QA e liberação).
+  - `GET /portal/work-orders/:id/photos`: Galeria de fotos de inspeção guiadas antes e depois do serviço.
+  - `GET /portal/warranties`: Certificados de garantia emitidos para os serviços do cliente.
+- **Validação Automatizada com Sucesso**:
+  - 20 testes dedicados em [`apps/api/src/customer-portal/customer-portal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customer-portal/customer-portal.test.ts) cobrindo anti-enumeração, geração de OTP, validação, incremento de tentativas, bloqueio por força bruta (429), bloqueio de código consumido/expirado, bloqueio em rotas internas de oficina (403), erradicação do modo demo, endpoints do portal, privacidade cross-customer (404) e isolamento RLS cross-tenant.
+  - **Total Consolidado da API CarX**: **268/268 testes passando com 100% de sucesso** em 30 suítes completas.
+
 
 
 
