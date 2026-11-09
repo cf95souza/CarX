@@ -945,6 +945,41 @@ Implementado o subsistema pós-execução de controle de qualidade (QA Audit) pa
   - 9 testes dedicados em [`apps/api/src/qa/qa.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/qa/qa.test.ts) cobrindo aprovação no QA, reprovação com retrabalho, emissão de garantia com lote, verificação pública LGPD, download de PDF vetorial com assinatura mágica `%PDF-`, revogação e isolamento RLS cross-tenant.
   - **Total Consolidado da API CarX**: **221/221 testes passando com 100% de sucesso** em 26 suítes completas.
 
+---
+
+#### Tarefa T3.10: Pesquisa NPS, Pós-Venda e Lembretes de Revisão 📈
+Implementado o subsistema completo de mensuração de satisfação do cliente (Net Promoter Score), classificação em Promotores/Neutros/Detratores, incentivo de reputação no Google, alertas em tempo real de resgate e régua periódica de lembretes de revisão de garantias:
+- **Migration 020 — Pesquisas NPS e Lembretes de Manutenção (`020_nps_surveys_reminders.up.sql`)**:
+  - `nps_surveys`: Tabela com token único não adivinhável (`work_order_id`, `customer_id`, `token`, `score` [0 a 10], `classification` [`promoter`, `passive`, `detractor`], `comment`, `status` [`pending`, `answered`, `expired`], `google_review_clicked`, `sent_at`, `answered_at`).
+  - `maintenance_reminders`: Tabela de agendamento de retorno preventivo (`work_order_id`, `warranty_id`, `customer_id`, `vehicle_id`, `service_name`, `reminder_type` [`warranty_check`, `maintenance_return`, `seasonal_care`], `scheduled_for`, `status` [`scheduled`, `sent`, `canceled`, `completed`], `message_preview`).
+  - Habilitação compulsória de `ROW LEVEL SECURITY` e `FORCE ROW LEVEL SECURITY` com política canônica `tenant_isolation_policy`.
+- **Serviço de Negócio (`NpsService`)**:
+  - **Ciclo de Pesquisa com Idempotência (`createSurvey`)**:
+    - Geração de pesquisa para ordens de serviço concluídas/entregues. Requisições repetidas para a mesma OS retornam o token existente, garantindo unicidade.
+  - **Consulta Pública (`getSurveyByToken`)**:
+    - Endpoint público sem JWT para o smartphone do cliente. Proteção LGPD exibindo apenas o primeiro nome do cliente e placa mascarada (`OPR-***6`).
+  - **Coleta de Feedback e Bloqueio Anti-Fraude (`answerSurvey`)**:
+    - **Critério de Aceite Fundamental**: Tentar responder pela segunda vez ao mesmo link gera erro imediato HTTP 409 Conflict (`SURVEY_ALREADY_ANSWERED`), impedindo qualquer distorção de métricas.
+    - Classificação estrita internacional:
+      - **Promotor (9 ou 10)**: Sugere link de avaliação 5 estrelas no Google Meu Negócio da oficina.
+      - **Neutro / Passivo (7 ou 8)**: Registra feedback para melhorias de processo.
+      - **Detrator (0 a 6)**: Dispara alerta prioritário no backend registrado em `audit_logs` (`NPS_DETRACTOR_ALERT`) para resgate imediato do cliente insatisfeito.
+  - **Scorecard Consolidado de Métricas (`getMetrics`)**:
+    - Apuração matemática atômica no PostgreSQL do Score NPS (de -100 a +100):
+      $$\text{NPS Score} = \% \text{Promotores} - \% \text{Detratores}$$
+    - Contagem e percentuais de cada faixa, média aritmética das notas e taxa de conversão/resposta.
+  - **Régua de Lembretes de Revisão (`createReminder`, `listReminders`, `updateReminderStatus`)**:
+    - Agendamento de retornos preventivos de garantias de PPF e vitrificação (ex: 6 meses ou 1 ano).
+    - Gestão de status de envio com registro automático do timestamp `sent_at`.
+- **Rotas Fastify (`nps-routes.ts`)**:
+  - `GET /public/nps/:token` e `POST /public/nps/:token` (públicos sem autenticação).
+  - `POST /nps/surveys`, `GET /nps/surveys` e `GET /nps/metrics` (painel gerencial).
+  - `POST /maintenance/reminders`, `GET /maintenance/reminders` e `PATCH /maintenance/reminders/:id/status`.
+- **Validação Automatizada com Sucesso**:
+  - 11 testes dedicados em [`apps/api/src/nps/nps.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/nps.test.ts) cobrindo criação, idempotência, resposta pública, bloqueio de resposta duplicada (409), alerta de detrator, scorecard do gestor, lembretes de revisão e isolamento RLS cross-tenant.
+  - **Total Consolidado da API CarX**: **232/232 testes passando com 100% de sucesso** em 27 suítes completas.
+
+
 
 
 

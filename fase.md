@@ -997,15 +997,38 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.10 — Pesquisa NPS, Pós-Venda e Lembretes de Revisão
+### [x] T3.10 — Pesquisa NPS, Pós-Venda e Lembretes de Revisão `(Concluído)`
 - **Descrição:** Coleta de NPS por token único (sem necessidade de login do cliente), classificação em Promotor/Neutro/Detrator e alertas de revisões de garantia periódicas.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 4: Domínio Automotivo (Linha 161)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L161)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.10 (Linhas 623–626)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L623-L626)
 - **Assets e Telas de Referência:**
   - [Gestor · Relatórios NPS (Score NPS, detratores, promotores, satisfação)](file:///d:/Repositorios/CarX/rebraind/Gestor%20%C2%B7%20Relat%C3%B3rios%20NPS@2x.png)
-- **Entrega:** Tabela `nps_surveys` persistida, jobs agendados de disparo e tela do Gestor com métricas reais (eliminando o antigo mock de NPS).
-- **Pronto quando:** O cliente responde o NPS via link seguro e os dados atualizam o scorecard do gestor instantaneamente; responder ao mesmo link duas vezes é bloqueado.
+- **Entrega Concluída:**
+  - **Migration 020 (`020_nps_surveys_reminders.up.sql`)**:
+    - Tabela `nps_surveys`: Pesquisas de satisfação com token UUID único, notas de 0 a 10, classificação em `promoter`, `passive`, `detractor`, comentários e marcação de clique em avaliação do Google.
+    - Tabela `maintenance_reminders`: Lembretes agendados de pós-venda e garantia (`warranty_check`, `maintenance_return`, `seasonal_care`) com data de agendamento, status (`scheduled`, `sent`, `completed`, `canceled`) e vínculo com OS/Garantia.
+    - Habilitação compulsória de **Row Level Security (RLS)** e `FORCE ROW LEVEL SECURITY` com a política `tenant_isolation_policy`.
+  - **Contratos e DTOs Zod (`packages/shared/src/schemas.ts`)**:
+    - `NpsSurveyDto`, `CreateNpsSurveySchema`, `AnswerNpsSurveySchema`, `NpsMetricsDto`, `MaintenanceReminderDto`, `CreateReminderSchema`, `UpdateReminderStatusSchema`.
+  - **Serviço de Negócio (`apps/api/src/nps/nps-service.ts`)**:
+    - `createSurvey`: Geração de pesquisa com token público e idempotência total por OS.
+    - `getSurveyByToken`: Consulta pública sem JWT com blindagem LGPD (primeiro nome do cliente e placa mascarada `OPR-***6`).
+    - `answerSurvey`:
+      - **Critério de Aceite Fundamental**: Responder pela segunda vez ao mesmo token é estritamente bloqueado no backend com HTTP 409 Conflict (`SURVEY_ALREADY_ANSWERED`), impedindo adulterações ou duplicidade.
+      - Classificação automática: Promotor (9-10), Neutro/Passivo (7-8), Detrator (0-6).
+      - Promotores recebem incentivo e redirecionamento para o Google Meu Negócio da loja.
+      - Detratores disparam alerta imediato de resgate registrado na trilha de auditoria (`NPS_DETRACTOR_ALERT`).
+    - `getMetrics`: Cálculo matemático consolidado do Score NPS (-100 a +100), taxa de resposta, % de promotores, passivos e detratores e média aritmética das notas direto no PostgreSQL.
+    - `createReminder`, `listReminders`, `updateReminderStatus`: Gestão da régua periódica de pós-venda.
+  - **Rotas Fastify (`apps/api/src/routes/nps-routes.ts`)**:
+    - `GET /public/nps/:token` e `POST /public/nps/:token` (públicas sem autenticação).
+    - `POST /nps/surveys`, `GET /nps/surveys` e `GET /nps/metrics` (painel do gestor).
+    - `POST /maintenance/reminders`, `GET /maintenance/reminders` e `PATCH /maintenance/reminders/:id/status`.
+  - **Validação Automatizada com Sucesso**:
+    - 11 testes dedicados em [`apps/api/src/nps/nps.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/nps.test.ts) cobrindo criação, idempotência, resposta pública, bloqueio de resposta duplicada (409), alerta de detrator, scorecard do gestor, lembretes de revisão e isolamento RLS cross-tenant.
+    - **Total Consolidado da API CarX**: **232/232 testes passando com 100% de sucesso** em 27 suítes completas.
+    - **Typecheck Monorepo**: `tsc -b` aprovado com 0 erros.
 
 ---
 
@@ -1034,7 +1057,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 ---
 
 ### [ ] T3.13 — Portal do Cliente Seguro ("Meu Veículo")
-- **Descrição:** Reestruturação do portal do cliente com login seguro via OTP (código temporário via WhatsApp ou e-mail), eliminando a vulnerabilidade de login apenas por telefone e o antigo modo demonstração com dados fictícios.
+- **Descrição:** Reestruturação do portal do cliente com login seguro via OTP (código temporário via WhatsApp ou e-mail), eliminando a vulnerabilidade de login apenas por telefone e o antigo modo demonstração com dados fictícios. 
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 1.3: Portal Meu Veículo (Linha 61)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L61)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.13 (Linhas 635–638)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L635-L638)

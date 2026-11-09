@@ -23,6 +23,7 @@ import { appointmentRoutes } from './routes/appointment-routes.js';
 import { inspectionRoutes } from './routes/inspection-routes.js';
 import { technicianRoutes } from './routes/technician-routes.js';
 import { qaRoutes } from './routes/qa-routes.js';
+import { npsRoutes } from './routes/nps-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -99,6 +100,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Controle de Qualidade (QA), Garantia e Passaporte do Veículo (T3.9)
   app.register(qaRoutes);
+
+  // Domínio Automotivo: Pesquisa NPS, Pós-Venda e Lembretes de Revisão (T3.10)
+  app.register(npsRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

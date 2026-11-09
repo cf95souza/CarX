@@ -1334,6 +1334,124 @@ export interface PublicVehiclePassportDto {
   };
 }
 
+// ============================================================================
+// 20. PESQUISA NPS, PÓS-VENDA E LEMBRETES DE REVISÃO (T3.10)
+// ============================================================================
+
+export const NpsClassificationEnum = {
+  PROMOTER: 'promoter',
+  PASSIVE: 'passive',
+  DETRACTOR: 'detractor',
+} as const;
+export type NpsClassificationType = (typeof NpsClassificationEnum)[keyof typeof NpsClassificationEnum];
+
+export const NpsStatusEnum = {
+  PENDING: 'pending',
+  ANSWERED: 'answered',
+  EXPIRED: 'expired',
+} as const;
+export type NpsStatusType = (typeof NpsStatusEnum)[keyof typeof NpsStatusEnum];
+
+export const ReminderTypeEnum = {
+  WARRANTY_CHECK: 'warranty_check',
+  MAINTENANCE_RETURN: 'maintenance_return',
+  SEASONAL_CARE: 'seasonal_care',
+} as const;
+export type ReminderType = (typeof ReminderTypeEnum)[keyof typeof ReminderTypeEnum];
+
+export const ReminderStatusEnum = {
+  SCHEDULED: 'scheduled',
+  SENT: 'sent',
+  CANCELED: 'canceled',
+  COMPLETED: 'completed',
+} as const;
+export type ReminderStatus = (typeof ReminderStatusEnum)[keyof typeof ReminderStatusEnum];
+
+export const CreateNpsSurveySchema = z.object({
+  workOrderId: z.string().uuid(),
+});
+export type CreateNpsSurveyInputDto = z.infer<typeof CreateNpsSurveySchema>;
+
+export const AnswerNpsSurveySchema = z.object({
+  score: z.number().int().min(0).max(10),
+  comment: z.string().optional().nullable(),
+  googleReviewClicked: z.boolean().optional().default(false),
+});
+export type AnswerNpsSurveyInputDto = z.infer<typeof AnswerNpsSurveySchema>;
+
+export interface NpsSurveyDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  osNumber?: number;
+  customerId: string;
+  customerName?: string;
+  customerPhone?: string | null;
+  token: string;
+  score: number | null;
+  classification: NpsClassificationType | null;
+  comment: string | null;
+  status: NpsStatusType;
+  sentAt: string | null;
+  answeredAt: string | null;
+  googleReviewClicked: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NpsMetricsDto {
+  npsScore: number; // -100 a +100
+  totalSurveys: number;
+  totalAnswered: number;
+  responseRate: number; // 0% a 100%
+  averageScore: number; // 0.0 a 10.0
+  promotersCount: number;
+  promotersPercent: number;
+  passivesCount: number;
+  passivesPercent: number;
+  detractorsCount: number;
+  detractorsPercent: number;
+}
+
+export const CreateReminderSchema = z.object({
+  workOrderId: z.string().uuid(),
+  warrantyId: z.string().uuid().optional().nullable(),
+  serviceName: z.string().min(2),
+  reminderType: z.enum(['warranty_check', 'maintenance_return', 'seasonal_care']).default('warranty_check'),
+  scheduledFor: z.string().datetime(),
+  messagePreview: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+export type CreateReminderInputDto = z.infer<typeof CreateReminderSchema>;
+
+export const UpdateReminderStatusSchema = z.object({
+  status: z.enum(['scheduled', 'sent', 'canceled', 'completed']),
+});
+export type UpdateReminderStatusInputDto = z.infer<typeof UpdateReminderStatusSchema>;
+
+export interface MaintenanceReminderDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  osNumber?: number;
+  warrantyId: string | null;
+  customerId: string;
+  customerName?: string;
+  customerPhone?: string | null;
+  vehicleId: string;
+  vehiclePlate?: string;
+  vehicleModel?: string;
+  serviceName: string;
+  reminderType: ReminderType;
+  scheduledFor: string;
+  status: ReminderStatus;
+  sentAt: string | null;
+  messagePreview: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 
 
