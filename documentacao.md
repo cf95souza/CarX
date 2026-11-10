@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Tela 1/10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 e 2 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1101,6 +1101,17 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - Interface construída com os componentes oficiais `Button`, `Input`, `Card`, `Badge` de `@carx/ui`.
   - Tratamento de exceções com mensagens claras em Português do Brasil e suporte a contato direto com o administrador via WhatsApp.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 2: Painel do Gestor (Dashboard & Pátio ao Vivo — `apps/web/src/pages/Dashboard.tsx`)**:
+  - Migrado 100% de `Dashboard.jsx` para TypeScript e `@tanstack/react-query`.
+  - Erradicação de hooks legados baseados em Supabase (`useOrders`, `useClients`, `useCatalog`).
+  - Consumo em tempo real da API Fastify: `api.workOrders.list()`, `api.reports.getDre()`, `api.reports.getNpsMetrics()`.
+  - Pátio Operacional ao Vivo (Kanban) dividido em 4 colunas industriais: *Check-in & Fila*, *Em Execução*, *Inspeção QA* e *Prontos p/ Retirada*.
+  - Integração com Server-Sent Events (SSE) para atualização instantânea em menos de 500ms dos cards sem reload da página.
+  - Cards executivos: Faturamento Líquido (DRE oficial do servidor), Total de Carros no Pátio, Serviços em Execução e Pontuação NPS.
+  - Modal de Detalhes da OS interativo com dados do veículo, cliente, técnico encarregado e valores em R$.
+  - Estado de pátio vazio com componente oficial `EmptyState` de `@carx/ui`.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+
 
 
 

@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Tela 1/10 Concluída)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 e 2 de 10 Concluídas)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1180,7 +1180,24 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - Redirecionamento dinâmico baseado em papéis (`/operador` para técnicos e `/` para gestores/owners).
     - Design System Dark Volt CarX aplicado com componentes `Button`, `Input`, `Card`, `Badge` de `@carx/ui`.
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 2: Painel do Gestor (Dashboard & Pátio ao Vivo)** `(Próxima)`
+  - [x] **Tela 2: Painel do Gestor (Dashboard & Pátio ao Vivo — `apps/web/src/pages/Dashboard.tsx`)**:
+    - Migrado 100% de `Dashboard.jsx` para TypeScript e `@tanstack/react-query`.
+    - Erradicação de hooks legados baseados em Supabase (`useOrders`, `useClients`, `useCatalog`).
+    - Consumo em tempo real da API Fastify: `api.workOrders.list()`, `api.reports.getDre()`, `api.reports.getNpsMetrics()`.
+    - Pátio Operacional ao Vivo (Kanban) dividido em 4 colunas industriais: *Check-in & Fila*, *Em Execução*, *Inspeção QA* e *Prontos p/ Retirada*.
+    - Integração com Server-Sent Events (SSE) para atualização instantânea em menos de 500ms dos cards sem reload da página.
+    - Cards executivos: Faturamento Líquido (DRE oficial do servidor), Total de Carros no Pátio, Serviços em Execução e Pontuação NPS.
+    - Modal de Detalhes da OS interativo com dados do veículo, cliente, técnico encarregado e valores em R$.
+    - Estado de pátio vazio com componente oficial `EmptyState` de `@carx/ui`.
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 3: Nova OS e Orçamentos** `(Próxima)`
+  - [ ] **Tela 4: Agenda Inteligente por Box**
+  - [ ] **Tela 5: Fila do Operador / PWA do Técnico**
+  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial**
+  - [ ] **Tela 7: Laudo de Inspeção Digital e QA**
+  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking com Streak Auditado e NPS)**
+  - [ ] **Tela 9: Monitor TV da Loja**
+  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo")**
   - [ ] **Tela 3: Nova OS e Orçamentos**
   - [ ] **Tela 4: Agenda Inteligente por Box**
   - [ ] **Tela 5: Fila do Operador / PWA do Técnico**
