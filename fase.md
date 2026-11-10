@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 6 de 10 Concluídas — 60% do Frontend)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 7 de 10 Concluídas — 70% do Frontend)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1227,8 +1227,13 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - Diário técnico do operador com observações e números de série de bobinas.
     - Modal de confirmação de entrega com transição automática para QA (`api.workOrders.updateStatus(workOrderId, 'QA')`).
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 7: Laudo de Inspeção Digital e QA (`CustomerStatus.tsx` / `QaChecklistModal.tsx`)** `(Próxima)`
-  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)**
+  - [x] **Tela 7: Laudo de Inspeção Digital e QA (`CustomerStatus.tsx` / `QaChecklistModal.tsx` / `VcrReportModal.tsx`)**:
+    - Substituição completa de mocks e `localStorage` por auditoria relacional com `api.qa.createAudit` e transição de estado da OS.
+    - `QaChecklistModal.tsx`: Critérios objetivos de conformidade visual (alinhamento, bolhas, limpeza, acabamento), classificação por estrelas (1 a 5), aprovação para `READY` com emissão de garantia e incremento de streak do técnico, ou rejeição com justificativa obrigatória, marcação de retrabalho (`is_rework = true`), redefinição de streak e envio imediato ao topo da fila do operador com badge prioritária.
+    - `CustomerStatus.tsx`: Portal público sem necessidade de login JWT para acompanhamento em tempo real (`/status/:token`) com proteção LGPD de dados sensíveis e IDOR, timeline de eventos da OS, dados do veículo e links para WhatsApp e certificados.
+    - `VcrReportModal.tsx`: Modal interativo do laudo VCR com pontos de avaria na silhueta, severidades, fotos de inspeção guiada e download do PDF oficial vetorial (`api.inspections.getPdfUrl`).
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)** `(Próxima)`
   - [ ] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)**
   - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**
 

@@ -315,6 +315,10 @@ export const api = {
     getTimeline: async (id: string) => {
       return fetchClient<any[]>(`/work-orders/${id}/timeline`);
     },
+
+    getPublicTracking: async (token: string) => {
+      return fetchClient<any>(`/work-orders/tracking/${token}`);
+    },
   },
 
   // --- PAGAMENTOS & ADIANTAMENTOS (SINAL) ---
@@ -477,6 +481,10 @@ export const api = {
       }),
     generatePdf: async (id: string) =>
       fetchClient<any>(`/inspections/${id}/generate-pdf`, { method: 'POST' }),
+    getPdfUrl: (id: string) => {
+      const token = getStoredToken();
+      return `${API_BASE_URL}/inspections/${id}/pdf${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    },
   },
 
   // --- ARMAZENAMENTO DE ARQUIVOS (MinIO / S3) ---
@@ -515,7 +523,14 @@ export const api = {
 
   // --- CONTROLE DE QUALIDADE (QA) & GARANTIAS ---
   qa: {
-    createAudit: async (data: any) =>
+    createAudit: async (data: {
+      workOrderId: string;
+      status: 'approved' | 'rejected_rework';
+      score: number;
+      checklistItems: Array<{ id: string; label: string; checked: boolean }>;
+      reworkReason?: string;
+      notes?: string;
+    }) =>
       fetchClient<any>('/qa/audits', { method: 'POST', body: JSON.stringify(data) }),
     getAudits: async (workOrderId: string) =>
       fetchClient<{ audits: any[] }>(`/work-orders/${workOrderId}/qa-audits`),
@@ -523,6 +538,12 @@ export const api = {
       fetchClient<any>('/warranties', { method: 'POST', body: JSON.stringify(data) }),
     getWarranties: async (workOrderId: string) =>
       fetchClient<{ warranties: any[] }>(`/work-orders/${workOrderId}/warranties`),
+    verifyPassport: async (token: string) =>
+      fetchClient<any>(`/public/passports/${token}`),
+    getWarrantyPdfUrl: (warrantyId: string) => {
+      const token = getStoredToken();
+      return `${API_BASE_URL}/warranties/${warrantyId}/pdf${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+    },
   },
 
   // --- TEMPO REAL SSE ---

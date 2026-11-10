@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 5 de 10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 7 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1147,6 +1147,24 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - Diário técnico do operador para anotações de serviço e números de lote das bobinas de PPF/Insulfilm.
   - Modal de confirmação com transição da OS para o status `QA` (`api.workOrders.updateStatus(workOrderId, 'QA')`).
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 7: Laudo de Inspeção Digital e QA (`CustomerStatus.tsx`, `QaChecklistModal.tsx` e `VcrReportModal.tsx`)**:
+  - **Eliminação de Mock e Persistência Relacional Auditada**: No legado OsSystem, o histórico de QA era gravado em `localStorage.getItem('ossystem_qa_history')` e o streak de conformidade do técnico era manipulado arbitrariamente em `localStorage.setItem('ossystem_tecnico_streak_${id}')`. No CarX, a auditoria é 100% persistida no PostgreSQL através de `api.qa.createAudit` (`qa_audits`), disparando a máquina de estados oficial da OS.
+  - **`QaChecklistModal.tsx` (Controle de Qualidade e Liberação)**:
+    - Interface com tokens Dark Volt de `@carx/ui` e modal de alta densidade técnica.
+    - Seção de critérios de conformidade com checkboxes objetivos (ex: alinhamento perfeito de películas, ausência total de bolhas de ar e poeira, acabamento refinado de cantos e bordas, limpeza interna e externa completa, conferência de itens do checklist inicial).
+    - Classificação por estrelas (1 a 5 estrelas) com feedback visual interativo.
+    - Fluxo de Aprovação: transiciona a OS para `READY` (Pronto para Retirada), emite o passaporte/garantia digital, incrementa o streak auditado do técnico no servidor e dispara notificação em tempo real.
+    - Fluxo de Reprovação (Retrabalho): exige justificativa textual detalhada obrigatória, zera o streak de dias do colaborador, marca a OS com `is_rework = true` e move a ordem imediatamente para o topo da fila de execução do operador com badge prioritária vermelha.
+  - **`CustomerStatus.tsx` (Portal Público de Acompanhamento e Passaporte Digital)**:
+    - Rota pública segura (`/status/:token`) consumindo `api.workOrders.getPublicTracking(token)` e `api.qa.verifyPassport(token)` sem necessidade de autenticação JWT corporativa.
+    - Proteção de dados por design: imunidade contra IDOR através de tokens criptográficos opacos e mascaramento de dados sensíveis e placa do veículo (conformidade estrita com LGPD).
+    - Visualização Dark Volt com badges de status em tempo real, barra de progresso visual de etapas, linha do tempo de eventos auditados, dados técnicos do veículo e botões diretos de contato via WhatsApp com a loja.
+    - Botão de verificação e download do Certificado de Garantia emitido pelo backend.
+  - **`VcrReportModal.tsx` (Laudo VCR de Vistoria)**:
+    - Modal interativo renderizando o laudo de inspeção inicial com silhueta do veículo e pontos de avaria plotados.
+    - Listagem descritiva das avarias com gravidades (Leve, Média, Grave), fotos de inspeção guiada anexadas e botão para download do PDF oficial vetorial gerado pelo backend (`api.inspections.getPdfUrl`).
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+
 
 
 
