@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../services/api';
 import { SuperadminInvoiceDto } from '@carx/shared';
+import { Pagination } from '../components/Pagination';
 import {
   Receipt,
   DollarSign,
@@ -28,6 +29,10 @@ export function InvoicesPage() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   // Estado para execução da régua de cobrança
   const [runningDunning, setRunningDunning] = useState(false);
@@ -260,7 +265,10 @@ export function InvoicesPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Buscar por oficina ou ID da fatura..."
             className="w-full pl-9 pr-3.5 py-2 bg-asfalto/80 border border-aco rounded-input text-xs text-texto placeholder:text-muted/60 focus:outline-none focus:border-volt transition-colors"
           />
@@ -279,7 +287,10 @@ export function InvoicesPage() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setFilter(tab.id)}
+              onClick={() => {
+                setFilter(tab.id);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 filter === tab.id
                   ? 'bg-volt text-asfalto font-semibold'
@@ -323,7 +334,9 @@ export function InvoicesPage() {
                   </td>
                 </tr>
               ) : (
-                filteredInvoices.map((inv) => (
+                filteredInvoices
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((inv) => (
                   <tr key={inv.id} className="hover:bg-aco/20 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-white text-sm">
@@ -396,6 +409,17 @@ export function InvoicesPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredInvoices.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredInvoices.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 15, 25, 50, 100]}
+          />
+        )}
       </div>
 
       {/* Modal de Baixa Manual */}

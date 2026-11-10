@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../services/api';
 import { LeadDto, ConvertLeadDto } from '@carx/shared';
+import { Pagination } from '../components/Pagination';
 import {
   Users2,
   Phone,
@@ -20,6 +21,10 @@ export function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   // Conversão de Lead
   const [selectedLead, setSelectedLead] = useState<LeadDto | null>(null);
@@ -168,7 +173,10 @@ export function LeadsPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Buscar por nome, email ou empresa..."
             className="w-full pl-9 pr-3.5 py-2 bg-asfalto/80 border border-aco rounded-input text-xs text-texto placeholder:text-muted/60 focus:outline-none focus:border-volt transition-colors"
           />
@@ -214,7 +222,9 @@ export function LeadsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredLeads.map((lead) => (
+                filteredLeads
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((lead) => (
                   <tr key={lead.id} className="hover:bg-aco/20 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-white text-sm">{lead.name}</div>
@@ -273,6 +283,17 @@ export function LeadsPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredLeads.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredLeads.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 15, 25, 50, 100]}
+          />
+        )}
       </div>
 
       {/* Modal de Conversão de Lead */}

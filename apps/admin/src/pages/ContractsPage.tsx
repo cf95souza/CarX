@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../services/api';
 import { ContractDto } from '@carx/shared';
+import { Pagination } from '../components/Pagination';
 import {
   FileSignature,
   Building2,
@@ -19,6 +20,10 @@ export function ContractsPage() {
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   const loadContracts = async () => {
     setLoading(true);
@@ -120,7 +125,10 @@ export function ContractsPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Buscar por oficina, plano ou id..."
             className="w-full pl-9 pr-3.5 py-2 bg-asfalto/80 border border-aco rounded-input text-xs text-texto placeholder:text-muted/60 focus:outline-none focus:border-volt transition-colors"
           />
@@ -139,7 +147,10 @@ export function ContractsPage() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setFilter(tab.id)}
+              onClick={() => {
+                setFilter(tab.id);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 filter === tab.id
                   ? 'bg-volt text-asfalto font-semibold'
@@ -191,7 +202,9 @@ export function ContractsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredContracts.map((contract) => (
+                filteredContracts
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((contract) => (
                   <tr key={contract.id} className="hover:bg-aco/20 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-white text-sm">
@@ -239,6 +252,17 @@ export function ContractsPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredContracts.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredContracts.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 15, 25, 50, 100]}
+          />
+        )}
       </div>
     </div>
   );

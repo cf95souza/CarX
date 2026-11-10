@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../services/api';
 import { AdminTenantSummaryDto, ImpersonateTenantResponse } from '@carx/shared';
+import { Pagination } from '../components/Pagination';
 import {
   Building2,
   Search,
@@ -27,6 +28,10 @@ export function TenantsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState<string | null>(null);
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   // Modais
   const [selectedTenant, setSelectedTenant] = useState<AdminTenantSummaryDto | null>(null);
@@ -81,6 +86,7 @@ export function TenantsPage() {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setCurrentPage(1);
     loadTenants();
   };
 
@@ -252,7 +258,10 @@ export function TenantsPage() {
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
+              onClick={() => {
+                setStatusFilter(tab.id);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
                 statusFilter === tab.id
                   ? 'bg-volt text-asfalto font-semibold'
@@ -304,7 +313,9 @@ export function TenantsPage() {
                   </td>
                 </tr>
               ) : (
-                tenants.map((tenant) => (
+                tenants
+                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                  .map((tenant) => (
                   <tr key={tenant.id} className="hover:bg-aco/20 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="font-semibold text-white text-sm">{tenant.trade_name}</div>
@@ -385,6 +396,17 @@ export function TenantsPage() {
             </tbody>
           </table>
         </div>
+
+        {tenants.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={tenants.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 15, 25, 50, 100]}
+          />
+        )}
       </div>
 
       {/* Modal de Impersonação */}

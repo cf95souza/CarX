@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Pagination } from '../components/Pagination';
 import {
   MessageSquareCode,
   CheckCircle2,
@@ -68,6 +69,10 @@ export function WhatsAppManagerPage() {
   ]);
 
   const [filter, setFilter] = useState('all');
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
 
   const filteredInstances = instances.filter((i) => {
     if (filter === 'all') return true;
@@ -174,7 +179,10 @@ export function WhatsAppManagerPage() {
             {['all', 'connected', 'qrcode_pending', 'disconnected'].map((s) => (
               <button
                 key={s}
-                onClick={() => setFilter(s)}
+                onClick={() => {
+                  setFilter(s);
+                  setCurrentPage(1);
+                }}
                 className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   filter === s
                     ? 'bg-volt text-asfalto font-semibold'
@@ -206,7 +214,9 @@ export function WhatsAppManagerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-aco/20">
-              {filteredInstances.map((inst) => {
+              {filteredInstances
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map((inst) => {
                 const percent = ((inst.messagesToday / inst.dailyLimit) * 100).toFixed(0);
                 return (
                   <tr key={inst.id} className="hover:bg-aco/20 transition-colors">
@@ -258,6 +268,17 @@ export function WhatsAppManagerPage() {
             </tbody>
           </table>
         </div>
+
+        {filteredInstances.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filteredInstances.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+            itemsPerPageOptions={[10, 15, 25, 50, 100]}
+          />
+        )}
       </div>
     </div>
   );
