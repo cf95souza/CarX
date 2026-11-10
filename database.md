@@ -224,21 +224,54 @@ Registro de auditoria para ações críticas (exclusão de dados, alterações d
 - `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW())
 
 ### 12. `api_keys` (Credenciais de Integração Externa)
-Autenticação programática por tenant para ERPs, sistemas de faturamento e parceiros.
+Autenticação programática por tenant para ERPs, sistemas de faturamento e parceiros externos com hash SHA-256 no banco e escopos granulares:
 - `id` (UUID, PK, Default: `gen_random_uuid()`)
 - `tenant_id` (UUID, NOT NULL, FK -> `tenants.id`, ON DELETE CASCADE)
 - `name` (VARCHAR(100), NOT NULL)
-- `key_hash` (VARCHAR(255), NOT NULL, UNIQUE)
-- `prefix` (VARCHAR(10), NOT NULL)
-- `permissions` (JSONB, NOT NULL, DEFAULT '[]')
+- `key_hash` (VARCHAR(255), NOT NULL, UNIQUE) — Hash SHA-256 do token (token plaintext nunca armazenado)
+- `prefix` (VARCHAR(50), NOT NULL) — Prefixo público para exibição segura (ex: `carx_live_9f8a...3b21`)
+- `permissions` (JSONB, NOT NULL, DEFAULT '[]') — Escopos atribuídos (ex: `read:work_orders`, `write:work_orders`, `read:customers`, `read:nps`)
+- `status` (VARCHAR(20), NOT NULL, DEFAULT 'active') — `active` ou `revoked`
+- `rate_limit_per_minute` (INTEGER, NOT NULL, DEFAULT 60) — Cota máxima de requisições por minuto
+- `created_by` (UUID, FK -> `users.id`, ON DELETE SET NULL) — Usuário que gerou a credencial
 - `last_used_at` (TIMESTAMPTZ)
 - `expires_at` (TIMESTAMPTZ)
+- `revoked_at` (TIMESTAMPTZ) — Timestamp de revogação imediata
 - `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW())
 
-### 13. `webhook_endpoints` e `webhook_deliveries` (Mensageria para Tenants)
-Disparo de eventos em tempo real para os tenants (ex: `os.completed`, `invoice.paid`).
-- `webhook_endpoints`: `id`, `tenant_id`, `url`, `secret`, `events`, `is_active`, `created_at`, `updated_at`
-- `webhook_deliveries`: `id`, `endpoint_id`, `event`, `payload`, `status_code`, `response_body`, `duration_ms`, `error`, `created_at`
+### 13. `webhook_endpoints` e `webhook_deliveries` (Mensageria e Webhooks Reais para Tenants)
+Disparo de eventos em tempo real com assinatura HMAC-SHA256 (`X-CarX-Signature`), log de entrega e reentrega com backoff exponencial:
+- `webhook_endpoints`:
+  - `id` (UUID, PK, Default: `gen_random_uuid()`)
+  - `tenant_id` (UUID, NOT NULL, FK -> `tenants.id`, ON DELETE CASCADE)
+  - `name` (VARCHAR(150), NOT NULL, DEFAULT 'Webhook Integration')
+  - `description` (TEXT)
+  - `url` (TEXT, NOT NULL) — URL de destino (HTTPS)
+  - `secret` (VARCHAR(255), NOT NULL) — Chave secreta compartilhada para cálculo do HMAC (`whsec_...`)
+  - `events` (TEXT[], NOT NULL, DEFAULT '{}') — Eventos subscritos (ex: `work_order.created`, `work_order.updated`, `work_order.ready`, `work_order.delivered`, `nps.answered`, `*`)
+  - `is_active` (BOOLEAN, NOT NULL, DEFAULT true)
+  - `status` (VARCHAR(20), NOT NULL, DEFAULT 'active') — `active`, `inactive`, `failing`
+  - `failure_count` (INTEGER, NOT NULL, DEFAULT 0) — Contador consecutivo de falhas
+  - `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW())
+  - `updated_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW())
+- `webhook_deliveries`:
+  - `id` (UUID, PK, Default: `gen_random_uuid()`)
+  - `tenant_id` (UUID, NOT NULL, FK -> `tenants.id`, ON DELETE CASCADE)
+  - `endpoint_id` (UUID, NOT NULL, FK -> `webhook_endpoints.id`, ON DELETE CASCADE)
+  - `event` (VARCHAR(100), NOT NULL)
+  - `payload` (JSONB, NOT NULL, DEFAULT '{}')
+  - `signature` (VARCHAR(255)) — Assinatura `sha256=<hmac>` gerada no envio
+  - `status_code` (INTEGER) — Código de resposta HTTP recebido (ex: 200, 500)
+  - `response_body` (TEXT) — Resumo da resposta do servidor receptor
+  - `duration_ms` (INTEGER) — Tempo de resposta em milissegundos
+  - `error` (TEXT) — Descrição de erro ou timeout de conexão
+  - `status` (VARCHAR(20), NOT NULL, DEFAULT 'pending') — `pending`, `success`, `failed`, `retrying`
+  - `attempts` (INTEGER, NOT NULL, DEFAULT 1) — Quantidade de tentativas executadas
+  - `max_attempts` (INTEGER, NOT NULL, DEFAULT 3) — Limite máximo de retentativas
+  - `next_retry_at` (TIMESTAMPTZ) — Data/hora agendada para próxima tentativa com backoff
+  - `delivered_at` (TIMESTAMPTZ) — Timestamp de sucesso
+  - `failed_at` (TIMESTAMPTZ) — Timestamp de falha definitiva
+  - `created_at` (TIMESTAMPTZ, NOT NULL, DEFAULT NOW())
 
 ---
 

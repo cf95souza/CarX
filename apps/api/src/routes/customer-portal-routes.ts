@@ -275,3 +275,4 @@ export const customerPortalRoutes: FastifyPluginAsync = async (fastify: FastifyI
     }
   );
 };
+

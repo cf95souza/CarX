@@ -45,3 +45,4 @@ CREATE TRIGGER trg_customer_portal_otps_updated_at
     BEFORE UPDATE ON customer_portal_otps
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
+

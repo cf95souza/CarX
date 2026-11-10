@@ -1710,6 +1710,130 @@ export interface PortalAuthResponseDto {
   customer: PortalCustomerDto;
 }
 
+// ==============================================================================
+// T3.14 — API PÚBLICA, CHAVES DE API E WEBHOOKS REAIS
+// ==============================================================================
+
+export const API_KEY_SCOPES = [
+  'read:work_orders',
+  'write:work_orders',
+  'read:customers',
+  'write:customers',
+  'read:vehicles',
+  'read:nps',
+  'read:warranties',
+  '*',
+] as const;
+export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
+
+export const WEBHOOK_EVENTS = [
+  'work_order.created',
+  'work_order.updated',
+  'work_order.ready',
+  'work_order.delivered',
+  'nps.answered',
+  'customer.created',
+  'warranty.issued',
+  '*',
+] as const;
+export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
+
+export const CreateApiKeySchema = z.object({
+  name: z.string().min(2, 'O nome da chave deve ter no mínimo 2 caracteres').max(100),
+  permissions: z.array(z.string()).min(1, 'Selecione ao menos uma permissão/escopo').default(['read:work_orders', 'read:customers']),
+  rateLimitPerMinute: z.number().int().min(1).max(1000).default(60),
+  expiresInDays: z.number().int().min(1).max(365).optional().nullable(),
+});
+export type CreateApiKeyInputDto = z.infer<typeof CreateApiKeySchema>;
+
+export interface ApiKeyDto {
+  id: string;
+  tenantId: string;
+  name: string;
+  prefix: string;
+  permissions: string[];
+  status: 'active' | 'revoked';
+  rateLimitPerMinute: number;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateApiKeyResponseDto {
+  apiKey: ApiKeyDto;
+  token: string; // Exibido apenas uma única vez na geração
+}
+
+export const CreateWebhookEndpointSchema = z.object({
+  name: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres').max(150),
+  description: z.string().max(500).optional().nullable(),
+  url: z.string().url('URL de webhook inválida. Deve iniciar com https:// ou http://'),
+  events: z.array(z.string()).min(1, 'Selecione pelo menos um evento para o webhook'),
+});
+export type CreateWebhookEndpointInputDto = z.infer<typeof CreateWebhookEndpointSchema>;
+
+export const UpdateWebhookEndpointSchema = z.object({
+  name: z.string().min(2).max(150).optional(),
+  description: z.string().max(500).optional().nullable(),
+  url: z.string().url().optional(),
+  events: z.array(z.string()).min(1).optional(),
+  isActive: z.boolean().optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+});
+export type UpdateWebhookEndpointInputDto = z.infer<typeof UpdateWebhookEndpointSchema>;
+
+export interface WebhookEndpointDto {
+  id: string;
+  tenantId: string;
+  name: string;
+  description: string | null;
+  url: string;
+  events: string[];
+  isActive: boolean;
+  status: 'active' | 'inactive' | 'failing';
+  failureCount: number;
+  secret: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WebhookDeliveryDto {
+  id: string;
+  tenantId: string;
+  endpointId: string;
+  event: string;
+  payload: Record<string, unknown>;
+  signature: string | null;
+  statusCode: number | null;
+  responseBody: string | null;
+  durationMs: number | null;
+  error: string | null;
+  status: 'pending' | 'success' | 'failed' | 'retrying';
+  attempts: number;
+  maxAttempts: number;
+  nextRetryAt: string | null;
+  deliveredAt: string | null;
+  failedAt: string | null;
+  createdAt: string;
+}
+
+export const PublicWorkOrderQuerySchema = z.object({
+  status: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+export type PublicWorkOrderQueryInput = z.infer<typeof PublicWorkOrderQuerySchema>;
+
+export const PublicCreateWorkOrderSchema = z.object({
+  customerId: z.string().uuid(),
+  vehicleId: z.string().uuid(),
+  notes: z.string().optional(),
+  scheduledAt: z.string().datetime().optional().nullable(),
+});
+export type PublicCreateWorkOrderInput = z.infer<typeof PublicCreateWorkOrderSchema>;
+
+
 
 
 

@@ -26,7 +26,7 @@ function base64UrlDecode(str: string): string {
 
 export interface JwtPayload {
   sub: string;
-  email: string;
+  email?: string;
   name?: string;
   tenant_id?: string | null;
   role?: string;

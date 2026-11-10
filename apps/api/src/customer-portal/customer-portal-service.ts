@@ -226,6 +226,7 @@ export class CustomerPortalService {
         role: 'customer',
         scope: 'customer_portal',
         name: c.name,
+        email: c.email || undefined,
         phone: c.phone,
       },
       7 * 24 * 3600

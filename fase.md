@@ -1121,13 +1121,41 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.14 — API Pública e Webhooks Reais
+### [x] T3.14 — API Pública e Webhooks Reais `(Concluído)`
 - **Descrição:** Substituição do antigo mock em localStorage por uma camada de integração real com autenticação por chave de API (com hash no banco) e webhooks assinados com HMAC.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 1.3: API Pública e Webhooks (Linha 54)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L54)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.14 (Linhas 639–642)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L639-L642)
-- **Entrega:** Tabelas `api_keys`, `webhook_endpoints`, `webhook_deliveries`, fila de reentrega com backoff exponencial e documentação interativa OpenAPI/Swagger.
-- **Pronto quando:** Um evento de OS aprovada dispara um webhook para uma URL externa de teste com cabeçalho `X-CarX-Signature` válido.
+- **Entrega Concluída:**
+  - **Migration 023 (`023_api_keys_webhooks.up.sql`)**:
+    - `api_keys`: ampliação de prefixo para formato seguro de exibição (`carx_live_xxxx...yyyy`), colunas `status` (`active`, `revoked`), `revoked_at`, `rate_limit_per_minute` (1 a 1000) e `created_by`. Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY`.
+    - `webhook_endpoints`: campos `name`, `description`, `status` (`active`, `inactive`, `failing`) e `failure_count`.
+    - `webhook_deliveries`: histórico detalhado de entregas com `signature` HMAC, `status` (`pending`, `success`, `failed`, `retrying`), `attempts`, `max_attempts` (3), `next_retry_at`, `delivered_at` e `failed_at`.
+  - **Segurança de Chaves e Hash no Banco**:
+    - Geração criptográfica com 32 bytes de entropia (`carx_live_<64 hex chars>`).
+    - O token em texto plano é retornado uma única vez no momento da criação.
+    - O banco persiste exclusivamente o hash SHA-256 (`key_hash`). Nem o token nem o hash são expostos em listagens.
+  - **Critério Obrigatório — Revogação Imediata**:
+    - Chave revogada (`DELETE /integrations/api-keys/:id`) para de funcionar no mesmo instante (HTTP 401 Unauthorized `Chave de API revogada`).
+  - **Escopos Granulares e Rate Limiting**:
+    - Controle fino de permissões (`read:work_orders`, `write:work_orders`, `read:customers`, `read:nps`, `*`). Acesso sem escopo necessário é bloqueado com HTTP 403 Forbidden.
+    - Rate limit em janela deslizante por chave com injeção automática dos cabeçalhos padrão de mercado: `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset`. Excesso bloqueado com HTTP 429 (`RATE_LIMIT_EXCEEDED`).
+  - **Webhooks com Assinatura HMAC-SHA256**:
+    - Disparo de eventos reais com segredo exclusivo (`whsec_...`).
+    - Cabeçalhos transmitidos: `X-CarX-Signature: sha256=<hmac_hex>`, `X-CarX-Event`, `X-CarX-Delivery`, `X-CarX-Timestamp`.
+  - **Critério Obrigatório — Reentrega com Backoff e Log**:
+    - Webhook com falha (HTTP 4xx/5xx ou queda de rede) gera delivery com `status = 'retrying'` e `next_retry_at` agendado com backoff exponencial.
+    - Registro detalhado em `webhook_deliveries` com tempo de resposta em milissegundos e código de status recebido.
+    - Reenvio manual via `POST /integrations/webhooks/deliveries/:deliveryId/retry` incrementando `attempts`.
+  - **API Pública v1 e OpenAPI 3.0 / Swagger UI**:
+    - Endpoints sob `/v1/*` (`/v1/work-orders`, `/v1/work-orders/:id`, `/v1/customers`, `/v1/nps`).
+    - Criação de OS integrada via `POST /v1/work-orders` com numeração sequencial por tenant e disparo automático de webhook em background.
+    - Especificação OpenAPI 3.0 em `GET /v1/openapi.json`.
+    - Interface Swagger UI interativa com tema Dark CarX em `GET /docs`.
+  - **Validação Automatizada com Sucesso**:
+    - 19 testes dedicados em [`apps/api/src/integrations/integrations.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/integrations/integrations.test.ts) passando 100%.
+    - **Total Consolidado da API CarX**: **287/287 testes passando com 100% de sucesso** em 31 suítes completas.
+    - **Typecheck Monorepo**: `tsc -b` aprovado com 0 erros.
 
 ---
 

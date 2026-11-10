@@ -27,6 +27,7 @@ import { npsRoutes } from './routes/nps-routes.js';
 import { financialRoutes } from './routes/financial-routes.js';
 import { realtimeRoutes } from './routes/realtime-routes.js';
 import { customerPortalRoutes } from './routes/customer-portal-routes.js';
+import { integrationRoutes } from './routes/integration-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -115,6 +116,9 @@ export function buildServer() {
 
   // Domínio Automotivo: Portal do Cliente Seguro ("Meu Veículo") com Desafio OTP (T3.13)
   app.register(customerPortalRoutes);
+
+  // Integrações: API Pública v1, Chaves de API e Webhooks Reais (T3.14)
+  app.register(integrationRoutes);
 
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);

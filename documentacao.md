@@ -1052,6 +1052,37 @@ Implementada a reestruturação completa da área pública e segura do cliente f
   - 20 testes dedicados em [`apps/api/src/customer-portal/customer-portal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customer-portal/customer-portal.test.ts) cobrindo anti-enumeração, geração de OTP, validação, incremento de tentativas, bloqueio por força bruta (429), bloqueio de código consumido/expirado, bloqueio em rotas internas de oficina (403), erradicação do modo demo, endpoints do portal, privacidade cross-customer (404) e isolamento RLS cross-tenant.
   - **Total Consolidado da API CarX**: **268/268 testes passando com 100% de sucesso** em 30 suítes completas.
 
+---
+
+#### Tarefa T3.14: API Pública, Chaves de API e Webhooks Reais (Base) 🔌
+Implementada a substituição completa do antigo mock em `localStorage` da interface por uma infraestrutura de integração real de nível corporativo, com persistência segura de credenciais, assinatura de mensagens em tempo real e reentrega com backoff exponencial:
+- **Migration 023 — Evolução de Chaves de API e Webhooks (`023_api_keys_webhooks.up.sql`)**:
+  - `api_keys`: Expansão da coluna `prefix` para VARCHAR(50) suportando a máscara de visualização segura `carx_live_xxxx...yyyy`, adição das colunas `status` (`active`, `revoked`), `revoked_at`, `rate_limit_per_minute` (1 a 1000) e `created_by` (FK -> `users.id`). Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY`.
+  - `webhook_endpoints`: Adição de `name`, `description`, `status` (`active`, `inactive`, `failing`) e `failure_count`.
+  - `webhook_deliveries`: Registro de tentativas com `signature` HMAC-SHA256, `status` (`pending`, `success`, `failed`, `retrying`), `attempts`, `max_attempts` (3), `next_retry_at`, `delivered_at` e `failed_at`.
+- **Serviço de Chaves de API (`ApiKeyService`)**:
+  - **Geração Segura com 32 Bytes de Entropia**: Tokens gerados como `carx_live_<64 hex chars>`. O token em texto plano é retornado apenas no momento da criação.
+  - **Hash SHA-256 no Banco**: O banco armazena unicamente o hash SHA-256 (`key_hash`). Nem o token nem o hash são vazados em listagens ou consultas.
+  - **Critério Obrigatório — Revogação Imediata**: Chaves revogadas via `DELETE /integrations/api-keys/:id` param de funcionar no mesmo instante com HTTP 401 Unauthorized (`Chave de API revogada`).
+  - **Rate Limiting em Janela Deslizante de 1 Minuto**: Controle por chave com injeção automática dos cabeçalhos `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset`. Excesso bloqueado com HTTP 429 (`RATE_LIMIT_EXCEEDED`).
+  - **Escopos Granulares**: Validação estrita de permissões (`read:work_orders`, `write:work_orders`, `read:customers`, `read:nps`, `*`), bloqueando acesso indevido com HTTP 403 Forbidden.
+- **Serviço de Webhooks Reais (`WebhookService`)**:
+  - **Segredos Criptográficos e Assinatura HMAC-SHA256**: Cada endpoint gera um segredo `whsec_<48 hex chars>`. Disparos assinam o payload JSON via HMAC-SHA256 e transmitem o cabeçalho `X-CarX-Signature: sha256=<hmac_hex>` junto a `X-CarX-Event`, `X-CarX-Delivery` e `X-CarX-Timestamp`.
+  - **Critério Obrigatório — Reentrega com Backoff Exponencial**:
+    - Disparos com falha (HTTP 4xx/5xx ou queda de conexão) geram registro com `status = 'retrying'` e agendam `next_retry_at` no futuro.
+    - Suporte a reexecução manual via `POST /integrations/webhooks/deliveries/:deliveryId/retry` com incremento do contador `attempts`.
+    - Histórico e observabilidade em `GET /integrations/webhooks/:id/deliveries` com tempo de resposta em ms e códigos de retorno.
+- **API Pública v1 (`/v1/*`)**:
+  - `GET /v1/work-orders` e `GET /v1/work-orders/:id`: Listagem e detalhes com filtragem RLS atômica da oficina dona da chave de API.
+  - `POST /v1/work-orders`: Criação de ordens de serviço por ERPs externos, gerando numeração sequencial por loja e disparando webhook `work_order.created` em segundo plano.
+  - `GET /v1/customers` e `GET /v1/nps`: Consulta de clientes e pesquisas NPS.
+- **Documentação OpenAPI 3.0 e Swagger UI**:
+  - `GET /v1/openapi.json`: Especificação completa OpenAPI 3.0 em JSON.
+  - `GET /docs` e `GET /v1/docs`: Interface interativa Swagger UI estilizada com o tema Dark do Design System CarX (Asfalto e Dark Volt).
+- **Validação Automatizada com Sucesso**:
+  - 19 testes dedicados em [`apps/api/src/integrations/integrations.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/integrations/integrations.test.ts) cobrindo documentação OpenAPI, geração de chaves com hash, listagem segura, consumo autenticado da API v1, revogação imediata, validação de escopos granulares, criação externa de OS, rate limiting em memória, cadastro de webhooks com HMAC, validação matemática da assinatura, reentrega com backoff, histórico de entregas, isolamento cross-tenant e bloqueio de tokens do portal.
+  - **Total Consolidado da API CarX**: **287/287 testes passando com 100% de sucesso** em 31 suítes completas.
+
 
 
 
