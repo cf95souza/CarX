@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 e 2 de 10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1, 2 e 3 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1111,6 +1111,16 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - Modal de Detalhes da OS interativo com dados do veículo, cliente, técnico encarregado e valores em R$.
   - Estado de pátio vazio com componente oficial `EmptyState` de `@carx/ui`.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 3: Nova OS e Orçamentos (`OrdensServico.tsx` e `NovoOrcamentoModal.tsx`)**:
+  - Wizard em 4 passos com os componentes do Design System CarX (`Button`, `Input`, `Card`, `Badge`).
+  - Passo 1: Busca em tempo real e cadastro ágil de cliente integrado a `api.customers`.
+  - Passo 2: Seleção e cadastro ágil de veículo com porte (`Hatch`, `Sedan`, `SUV`, `Pickup`, `Esportivo`, `Moto`) vinculado ao cliente via `api.vehicles`.
+  - Passo 3: Catálogo dinâmico de serviços com precificação e tempos estimados via `api.catalog.getServices()`.
+  - Passo 4: Resumo comercial, cálculo de desconto, agendamento de data/hora, notas técnicas e registro de sinal/adiantamento atômico via `api.payments.create`.
+  - Emissão de OS em status `QUOTE` (Orçamento) ou `APPROVED` (Aprovada) via `api.workOrders.create`.
+  - Gestão de Ordens com listagem paginada, filtros por status, busca por placa/cliente/número, transição de status (`CHECKED_IN`, `DELIVERED`), modal de quitação de saldo e detalhes completos da OS.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+
 
 
 

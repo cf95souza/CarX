@@ -315,6 +315,22 @@ export const api = {
     },
   },
 
+  // --- PAGAMENTOS & ADIANTAMENTOS (SINAL) ---
+  payments: {
+    create: async (workOrderId: string, data: { amountCents: number; method: string; notes?: string }) => {
+      return fetchClient<any>(`/work-orders/${workOrderId}/payments`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    refund: async (paymentId: string, data: { amountCents: number; reason: string }) => {
+      return fetchClient<any>(`/payments/${paymentId}/refund`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+  },
+
   // --- CLIENTES E VEÍCULOS ---
   customers: {
     list: async (search?: string) => {
