@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1, 2, 3 e 4 de 10 Concluídas)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1, 2, 3, 4 e 5 de 10 Concluídas — 50% do Frontend)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1207,18 +1207,22 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - Modal integrado para criação de agendamento diretamente no Box com validação de slot e prevenção anti-conflito.
     - Ações rápidas de cancelamento (liberação de box) e integração com portal público de Self-Booking.
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 5: Fila do Operador / PWA do Técnico** `(Próxima)`
-  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial**
-  - [ ] **Tela 7: Laudo de Inspeção Digital e QA**
-  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking com Streak Auditado e NPS)**
-  - [ ] **Tela 9: Monitor TV da Loja**
-  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo")**
-  - [ ] **Tela 5: Fila do Operador / PWA do Técnico**
-  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial**
-  - [ ] **Tela 7: Laudo de Inspeção Digital e QA**
-  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking com Streak Auditado e NPS)**
-  - [ ] **Tela 9: Monitor TV da Loja**
-  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo")**
+  - [x] **Tela 5: Fila do Operador / PWA do Técnico (`apps/web/src/pages/OperadorHome.tsx`)**:
+    - Migrada para TypeScript e `@tanstack/react-query` consumindo `api.technician.getQueue()`.
+    - Eliminação completa de mocks em `localStorage` (como o streak fictício antigo): streak e performance agora auditados pelo backend (`/reports/technicians/ranking` e histórico de QA).
+    - Interface tátil Mobile-First otimizada para uso com luvas na oficina (botões de 56px `Button size="mobile"`).
+    - Placas em destaque industrial automotivo estilo Mercosul (`font-mono tracking-wider font-extrabold`).
+    - Badges táteis com `Badge`: Retrabalho com prioridade máxima (`variant="error"`), Checklist de Entrada (`variant="volt"` vs `variant="alert"`) e status da OS.
+    - Integração de cronômetro oficial do servidor com componente `Stopwatch` exibindo contagem acumulada.
+    - Seletor tátil de 3 pilares rápidos da oficina: *Minhas OS*, *Fila Oficina (Disponíveis)* e *Todas*.
+    - Sincronização sob demanda com vibração háptica (`navigator.vibrate`) e polling automático de 15s.
+    - Compatibilidade retroativa e suave com o `ExecutorView` e navegação de rotas.
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial (`apps/web/src/pages/ExecutorView.tsx`)** `(Próxima)`
+  - [ ] **Tela 7: Laudo de Inspeção Digital e QA (`CustomerStatus.tsx` / `QaChecklistModal.tsx`)**
+  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)**
+  - [ ] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)**
+  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**
 
 ---
 

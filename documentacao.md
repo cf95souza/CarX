@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 4 de 10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 5 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1127,6 +1127,16 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - Modal integrado para criação de agendamento diretamente no Box selecionado com validação e prevenção de conflito.
   - Banner para compartilhamento do link de auto-agendamento 24h (Self-Booking).
   - Ações rápidas de cancelamento e liberação de horário no box.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 5: Fila do Operador / PWA do Técnico (`apps/web/src/pages/OperadorHome.tsx`)**:
+  - Migrada de `OperadorHome.jsx` para TypeScript e `@tanstack/react-query` consumindo `api.technician.getQueue()`.
+  - Erradicação de mocks e dados inventados em `localStorage` (como o streak fictício antigo): métricas de gamificação e performance agora auditadas pelo backend (`/reports/technicians/ranking` e histórico de QA).
+  - Layout Mobile-First industrial otimizado para operação de oficina com luvas: botões de 56px (`Button size="mobile"`), cards táteis e tipografia de placa de veículo Mercosul (`font-mono tracking-wider font-extrabold`).
+  - Badges de alto contraste com `Badge`: Retrabalho com prioridade máxima (`variant="error"`), Checklist de Entrada (`variant="volt"` vs `variant="alert"`) e status da OS.
+  - Integração do cronômetro oficial calculado no backend com componente `Stopwatch` exibindo contagem acumulada.
+  - Seletor tátil de 3 pilares da oficina: *Minhas OS*, *Fila Oficina (Disponíveis)* e *Todas*.
+  - Botão de sincronização sob demanda com feedback por vibração háptica (`navigator.vibrate`) e polling automático a cada 15 segundos.
+  - Compatibilidade garantida com o fluxo de execução (`onSelectOS`) e transição para `ExecutorView`.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
 
 

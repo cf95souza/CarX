@@ -4,6 +4,8 @@ import type {
   NpsMetricsDto,
   ApiKeyDto,
   WebhookEndpointDto,
+  TechnicianQueueItemDto,
+  TechnicianRankingItemDto,
 } from '@carx/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -388,7 +390,16 @@ export const api = {
 
   // --- APP DO TÉCNICO & CRONÔMETRO OFICIAL ---
   technician: {
-    getQueue: async () => fetchClient<{ workOrders: any[] }>('/technician/queue'),
+    getQueue: async (params?: { scope?: 'mine' | 'all'; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.scope) q.append('scope', params.scope);
+      if (params?.status) q.append('status', params.status);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      const data = await fetchClient<any>(`/technician/queue${qs}`);
+      if (Array.isArray(data)) return data as TechnicianQueueItemDto[];
+      if (data?.workOrders && Array.isArray(data.workOrders)) return data.workOrders as TechnicianQueueItemDto[];
+      return [] as TechnicianQueueItemDto[];
+    },
     start: async (workOrderId: string) =>
       fetchClient<any>(`/technician/work-orders/${workOrderId}/start`, { method: 'POST' }),
     pause: async (workOrderId: string, reason?: string) =>
@@ -423,7 +434,16 @@ export const api = {
       const queryStr = q.toString() ? `?${q.toString()}` : '';
       return fetchClient<any>(`/reports/dre${queryStr}`);
     },
-    getRanking: async () => fetchClient<{ technicians: any[] }>('/reports/technicians/ranking'),
+    getRanking: async (params?: { startDate?: string; endDate?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.startDate) q.append('startDate', params.startDate);
+      if (params?.endDate) q.append('endDate', params.endDate);
+      const queryStr = q.toString() ? `?${q.toString()}` : '';
+      const data = await fetchClient<any>(`/reports/technicians/ranking${queryStr}`);
+      if (Array.isArray(data)) return data as TechnicianRankingItemDto[];
+      if (data?.technicians && Array.isArray(data.technicians)) return data.technicians as TechnicianRankingItemDto[];
+      return [] as TechnicianRankingItemDto[];
+    },
     getNpsMetrics: async () => fetchClient<NpsMetricsDto>('/nps/metrics'),
   },
 
