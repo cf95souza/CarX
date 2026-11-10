@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 8 de 10 Concluídas — 80% do Frontend)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 9 de 10 Concluídas — 90% do Frontend)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1240,8 +1240,17 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - `NpsDashboard.tsx`: Scorecard oficial do NPS (-100 a +100) consumindo `api.nps.getMetrics` e `api.nps.listSurveys`, com distribuição de Promotores, Neutros e Detratores, alertas de pós-venda e contato direto por WhatsApp.
     - `ComissoesDashboard.tsx`: Extrato financeiro de comissões por colaborador com regras automáticas (`api.commissions.listEntries`) e liquidação rápida (`api.commissions.payEntry`).
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)** `(Próxima)`
-  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**
+  - [x] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)**:
+    - Substituição completa de `MonitorTV.jsx` por TypeScript com design Dark Volt industrial de alto impacto.
+    - Telão em tempo real otimizado para galpão e recepção com visibilidade nítida à distância (5 a 10 metros).
+    - Conexão nativa com Server-Sent Events (SSE) via `api.realtime.getEventsUrl()` escutando eventos de OS (`work_order.updated`, `work_order.ready`), invalidando o cache do React Query em segundo plano sem reload da página e com indicador "SSE Ao Vivo" pulsante.
+    - Suporte a modo Fullscreen nativo em 1 clique (`toggleFullscreen`).
+    - Relógio de precisão digital em tempo real no topo com formatação em Português do Brasil.
+    - Modo de exibição flexível com integração de vídeo institucional do YouTube da loja (`branding.youtube_id` em tela dividida 50/50) ou grade expandida com cards automotivos de 2x2.
+    - Cards gigantes exibindo placa Mercosul em alto contraste, modelo do veículo, cliente, técnico encarregado, box de atendimento, badge do status da OS e barra de progresso com animação shimmer.
+    - Destaque com badge prioritária vermelha pulsante para ordens de serviço marcadas com retrabalho (`is_rework: true`).
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)** `(Próxima)`
 
 ---
 

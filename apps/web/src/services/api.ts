@@ -614,5 +614,10 @@ export const api = {
       return `${API_BASE_URL}/realtime/events?token=${encodeURIComponent(token || '')}`;
     },
   },
+
+  // --- BRANDING & IDENTIDADE VISUAL ---
+  branding: {
+    get: async () => fetchClient<any>('/tenant/branding'),
+  },
 };
 

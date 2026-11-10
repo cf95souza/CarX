@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 8 de 10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 9 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1168,7 +1168,7 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - **Erradicação Completa de Mocks e Cálculos no Cliente**: No legado *OsSystem*, o DRE era calculado por iterações em arrays em memória no navegador, despesas fixas ficavam gravadas em `localStorage.getItem('ossystem_dre_despesas_fixas')`, o ranking era montado cruzando `pesquisas_nps_local` e o streak era manipulado arbitrariamente em `localStorage.setItem('ossystem_tecnico_streak_${id}')`. No CarX, 100% das métricas são calculadas por queries agregadas em SQL no PostgreSQL servidas pela API Fastify tipada (`@tanstack/react-query`).
   - **`Relatorios.tsx` (Painel Estratégico Multidimensional)**:
     - Navegação em abas industriais Dark Volt: *Visão Gerencial*, *DRE no Servidor*, *Ranking de Técnicos*, *NPS & Retenção* e *Comissões & Extrato*.
-    - Seletor de período temporal (data inicial e final) sincronizado globalmente entre todas as abas.
+    - Seção com filtros de período temporal (data inicial e final) sincronizado globalmente entre todas as abas.
     - Função de ocultação de valores financeiros (`hideValues`) para apresentações públicas e privacidade no balcão da loja.
     - Suporte a impressão limpa sem cabeçalhos e controles com classes utilitárias `@media print` (`no-print`).
   - **`DreDashboard.tsx` (Demonstrativo do Resultado do Exercício 100% no Servidor)**:
@@ -1189,6 +1189,23 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - **`ComissoesDashboard.tsx` (Extrato e Liquidação Financeira)**:
     - Consulta de comissões por colaborador (`api.commissions.listEntries`) geradas pelas regras pré-configuradas.
     - Ação de liquidação financeira com registro de data (`api.commissions.payEntry`) e invalidação automática das queries de DRE.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)**:
+  - **Arquitetura de Telão Industrial de Alto Impacto**: Substituição do antigo `MonitorTV.jsx` por TypeScript com identidade visual Dark Volt (`#0E1116`, `#171C24`, `#232A35`, `#C8F52E`), desenhado para TV e monitores de galpão e recepção com legibilidade à distância (5 a 10 metros).
+  - **Sincronização em Tempo Real com SSE (Server-Sent Events)**:
+    - Conexão nativa com `api.realtime.getEventsUrl()` (`/realtime/events`) através da API `EventSource` do navegador.
+    - Ao capturar eventos de ordens de serviço (`work_order.updated`, `work_order.ready`, `work_order.created`), invalida as queries do React Query instantaneamente em segundo plano sem necessidade de recarregar a tela inteira (eliminação do antigo bug do legado de recarregar a tela toda por refetch).
+    - Polling de contingência a cada 30 segundos com detecção de estado de conexão e indicador luminoso "SSE Ao Vivo" pulsante.
+  - **Cards de Produção e Pátio ao Vivo**:
+    - Monitoramento das OS nos estados `CHECKED_IN`, `IN_PROGRESS`, `QA` e `READY`.
+    - Placa Mercosul com tipografia automotiva de alto contraste (`font-mono tracking-widest font-black`).
+    - Dados do veículo (marca/modelo), cliente, técnico encarregado com ícone e box de atendimento físico.
+    - Barra de progresso visual de conclusão com animação de gradiente contínuo shimmer nos veículos em execução.
+    - Prioridade de Retrabalho: OS marcadas com `is_rework: true` recebem badge vermelha pulsante e sobem ao topo da lista.
+  - **Modo Vídeo YouTube Institucional e Layout Flexível**:
+    - Suporte a vídeo de apresentação ou playlist em loop via `branding.youtube_id` dividindo a tela 50/50 com a fila de produção.
+    - Se o vídeo for desativado ou não estiver cadastrado, expande a fila em grade automotiva de 2x2 cards gigantes.
+    - Botão de alternância de tela cheia nativa (`toggleFullscreen`) e relógio digital de precisão com data por extenso.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
 
 
