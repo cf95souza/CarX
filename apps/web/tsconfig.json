@@ -3,8 +3,9 @@
   "compilerOptions": {
     "composite": true,
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
   },
   "include": ["src", "vite.config.js"]
 }
-

@@ -1,7 +1,18 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.jsx'
 import './index.css'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 1000 * 30, // 30 segundos
+    },
+  },
+})
 
 window.addEventListener('error', (event) => {
   document.body.innerHTML = `<div style="color:white;padding:20px;font-family:monospace;z-index:9999;position:absolute;inset:0;background:#9f1239"><h1>Global Error Captured</h1><pre style="white-space:pre-wrap">${event.error?.stack || event.message}</pre></div>`;
@@ -44,7 +55,9 @@ class ErrorBoundary extends React.Component {
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )

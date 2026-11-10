@@ -1083,6 +1083,26 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
   - 19 testes dedicados em [`apps/api/src/integrations/integrations.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/integrations/integrations.test.ts) cobrindo documentação OpenAPI, geração de chaves com hash, listagem segura, consumo autenticado da API v1, revogação imediata, validação de escopos granulares, criação externa de OS, rate limiting em memória, cadastro de webhooks com HMAC, validação matemática da assinatura, reentrega com backoff, histórico de entregas, isolamento cross-tenant e bloqueio de tokens do portal.
   - **Total Consolidado da API CarX**: **287/287 testes passando com 100% de sucesso** em 31 suítes completas.
 
+---
+
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Tela 1/10) 🖥️
+Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
+
+- **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
+  - `@tanstack/react-query` v5 configurado com `QueryClientProvider` em `apps/web/src/main.jsx`.
+  - Cliente HTTP tipado centralizando contratos e chamadas para autenticação, ordens de serviço, clientes, veículos, catálogo, agenda, app do técnico, checklists, QA, relatórios, auditoria e eventos em tempo real (SSE).
+  - Gestão de tokens JWT com interceptor de renovação silenciosa (`POST /auth/refresh`) e injeção automática dos cabeçalhos multitenant `x-tenant-id` e `x-tenant-slug`.
+  - Integração dos presets Tailwind (`carxTailwindPreset`) e inclusão do pacote `@carx/ui` no pipeline de build do Vite.
+- **Tela 1: Login & Autenticação da Loja (`apps/web/src/pages/LoginPage.tsx` e `AuthContext.tsx`)**:
+  - Remoção completa do Supabase no ciclo de autenticação corporativa.
+  - Suporte a credenciais corporativas (e-mail, senha e código/slug opcional de loja).
+  - Fluxo nativo de segundo fator (2FA TOTP): renderização dinâmica do desafio de 6 dígitos numéricos com botões de validação e retorno ao login.
+  - Redirecionamento dinâmico baseado no cargo: técnicos são direcionados diretamente para a fila operacional (`/operador`), enquanto proprietários, gestores e atendentes acessam o painel administrativo (`/`).
+  - Interface construída com os componentes oficiais `Button`, `Input`, `Card`, `Badge` de `@carx/ui`.
+  - Tratamento de exceções com mensagens claras em Português do Brasil e suporte a contato direto com o administrador via WhatsApp.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+
+
 
 
 

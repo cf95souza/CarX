@@ -1159,14 +1159,36 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System
-- **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`.
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Tela 1/10 Concluída)`
+- **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.15 (Linhas 643–646)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L643-L646)
 - **Assets de Telas:** Todos os mockups de [rebraind/](file:///d:/Repositorios/CarX/rebraind/).
 - **Entrega:** Telas migradas para TypeScript consumindo a nova API: Painel do Gestor, Nova OS, Agenda, Fila do Operador, Execução, Laudo, Relatórios e Monitor TV.
 - **Pronto quando:** O comando `grep -r "supabase" apps/web` retorna 0 ocorrências e o `localStorage` armazena exclusivamente preferências de tema ou UI.
+- **Status do Progresso das Telas:**
+  - [x] **Infraestrutura Base & API Client (`apps/web/src/services/api.ts`)**:
+    - Instalação do `@tanstack/react-query` v5 e instanciação do `QueryClientProvider` em `main.jsx`.
+    - Cliente HTTP tipado centralizando endpoints de autenticação, ordens de serviço, clientes, veículos, catálogo, agenda, app do técnico, QA, relatórios, auditoria e tempo real (SSE).
+    - Interceptor automático com renovação silenciosa de tokens (`/auth/refresh`) e injeção de headers multitenant (`x-tenant-id`, `x-tenant-slug`).
+    - Integração de `@carx/ui` e presets de tema CarX (`carxTailwindPreset`) no Tailwind e Vite.
+  - [x] **Tela 1: Login & Autenticação da Loja (`apps/web/src/pages/LoginPage.tsx` e `AuthContext.tsx`)**:
+    - Supabase erradicado completamente do módulo de autenticação.
+    - Suporte a credenciais corporativas com e-mail, senha e slug opcional de loja.
+    - Suporte completo ao fluxo de 2FA TOTP (Google Authenticator / Authy) com campo numérico dinâmico de 6 dígitos.
+    - Redirecionamento dinâmico baseado em papéis (`/operador` para técnicos e `/` para gestores/owners).
+    - Design System Dark Volt CarX aplicado com componentes `Button`, `Input`, `Card`, `Badge` de `@carx/ui`.
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 2: Painel do Gestor (Dashboard & Pátio ao Vivo)** `(Próxima)`
+  - [ ] **Tela 3: Nova OS e Orçamentos**
+  - [ ] **Tela 4: Agenda Inteligente por Box**
+  - [ ] **Tela 5: Fila do Operador / PWA do Técnico**
+  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial**
+  - [ ] **Tela 7: Laudo de Inspeção Digital e QA**
+  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking com Streak Auditado e NPS)**
+  - [ ] **Tela 9: Monitor TV da Loja**
+  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo")**
 
 ---
 
