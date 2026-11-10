@@ -363,10 +363,19 @@ export const api = {
 
   // --- AGENDA INTELIGENTE POR BOX ---
   appointments: {
-    getBays: async () => fetchClient<{ bays: any[] }>('/bays'),
-    list: async (date?: string) => {
+    getBays: async () => fetchClient<any[]>('/bays'),
+    list: async (params?: { startDate?: string; endDate?: string; bayId?: string; status?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.startDate) q.append('startDate', params.startDate);
+      if (params?.endDate) q.append('endDate', params.endDate);
+      if (params?.bayId) q.append('bayId', params.bayId);
+      if (params?.status) q.append('status', params.status);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<any[]>(`/appointments${qs}`);
+    },
+    getAvailability: async (date?: string) => {
       const q = date ? `?date=${date}` : '';
-      return fetchClient<{ appointments: any[] }>(`/appointments${q}`);
+      return fetchClient<any[]>(`/appointments/availability${q}`);
     },
     create: async (data: any) =>
       fetchClient<any>('/appointments', { method: 'POST', body: JSON.stringify(data) }),

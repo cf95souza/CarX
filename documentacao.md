@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1, 2 e 3 de 10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 4 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1120,6 +1120,15 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - Emissão de OS em status `QUOTE` (Orçamento) ou `APPROVED` (Aprovada) via `api.workOrders.create`.
   - Gestão de Ordens com listagem paginada, filtros por status, busca por placa/cliente/número, transição de status (`CHECKED_IN`, `DELIVERED`), modal de quitação de saldo e detalhes completos da OS.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 4: Agenda Inteligente por Box (`apps/web/src/pages/Agenda.tsx`)**:
+  - Visualização em colunas por Boxes de Atendimento Físicos (`bays`) da oficina com cores de identificação.
+  - Navegador temporal por dia com atalhos de "Dia Anterior", "Hoje" e "Próximo Dia".
+  - Cards de agendamento por horário com início/fim, modelo do carro, placa, cliente e serviço.
+  - Modal integrado para criação de agendamento diretamente no Box selecionado com validação e prevenção de conflito.
+  - Banner para compartilhamento do link de auto-agendamento 24h (Self-Booking).
+  - Ações rápidas de cancelamento e liberação de horário no box.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+
 
 
 

@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1, 2 e 3 de 10 Concluídas)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1, 2, 3 e 4 de 10 Concluídas)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1199,7 +1199,20 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - Emissão de OS em status `QUOTE` (Orçamento) ou `APPROVED` (Aprovada) via `api.workOrders.create`.
     - Gestão de Ordens com listagem paginada, filtros por status, busca por placa/cliente/número, transição de status (`CHECKED_IN`, `DELIVERED`), modal de quitação de saldo e detalhes completos da OS.
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 4: Agenda Inteligente por Box** `(Próxima)`
+  - [x] **Tela 4: Agenda Inteligente por Box (`apps/web/src/pages/Agenda.tsx`)**:
+    - Migrada para TypeScript e `@tanstack/react-query` consumindo `api.appointments`.
+    - Visualização estruturada por Boxes Físicos de atendimento (`bays`).
+    - Navegador temporal por dia com seleção rápida ("Dia Anterior", "Hoje", "Próximo Dia" e data picker).
+    - Detalhes de agendamento por horário com início/fim, modelo, placa, cliente e serviço.
+    - Modal integrado para criação de agendamento diretamente no Box com validação de slot e prevenção anti-conflito.
+    - Ações rápidas de cancelamento (liberação de box) e integração com portal público de Self-Booking.
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 5: Fila do Operador / PWA do Técnico** `(Próxima)`
+  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial**
+  - [ ] **Tela 7: Laudo de Inspeção Digital e QA**
+  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking com Streak Auditado e NPS)**
+  - [ ] **Tela 9: Monitor TV da Loja**
+  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo")**
   - [ ] **Tela 5: Fila do Operador / PWA do Técnico**
   - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial**
   - [ ] **Tela 7: Laudo de Inspeção Digital e QA**
