@@ -1207,6 +1207,30 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
     - Se o vídeo for desativado ou não estiver cadastrado, expande a fila em grade automotiva de 2x2 cards gigantes.
     - Botão de alternância de tela cheia nativa (`toggleFullscreen`) e relógio digital de precisão com data por extenso.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**:
+  - **Erradicação do Modo Demonstração Fake**: O legado *OsSystem* (`ClientPortal.jsx`) possuía um "modo demo" que forjava carros de luxo (BMW, Porsche) e fotos aleatórias da internet no `localStorage` caso o cliente não possuísse ordens cadastradas. No CarX, isso foi terminantemente erradicado: o portal reflete a realidade da oficina sob estrito isolamento RLS, exibindo `EmptyState` acolhedor quando não houver dados e nunca informações forjadas.
+  - **Autenticação Segura via OTP em Duas Etapas (Sem Senha)**:
+    - Etapa 1 (`/portal/auth/request-otp`): O cliente informa seu celular/WhatsApp ou e-mail cadastrado na recepção da oficina. A API aplica proteção anti-enumeração (retorna a mesma mensagem neutra caso o identificador exista ou não). Em ambiente local de desenvolvimento, disponibiliza `devOtpCode` para preenchimento com 1 clique.
+    - Etapa 2 (`/portal/auth/verify-otp`): Validação do código numérico de 6 dígitos criptografado com HMAC-SHA256, expiração em 10 minutos e limite de 5 tentativas. Emite token JWT com escopo restrito `customer_portal` e dados do perfil.
+    - Sessão isolada mantida via `PORTAL_TOKEN_KEY = 'carx_portal_token'`, sem colidir com as credenciais administrativas da oficina.
+  - **Minha Frota (Seletor Dinâmico de Veículos)**:
+    - Consumo tipado de `api.portal.getVehicles()`.
+    - Card mestre "Todos os Veículos" com contador consolidado de serviços.
+    - Cards individuais para cada veículo registrado com placa no padrão Mercosul, marca, modelo, ano de fabricação e contador de ordens de serviço.
+    - Filtragem reativa instantânea de todo o histórico e certificados ao selecionar um veículo.
+  - **Timeline de Histórico, Execução e Evidências Fotográficas**:
+    - Consumo em tempo real de `api.portal.getWorkOrders()`, exibindo status atualizado com badges de alta visibilidade, barra de progresso no box (0 a 100%) e status de pagamento (quitado vs pendente na entrega).
+    - Detalhes sob demanda ao expandir a OS:
+      - Serviços e itens contratados com valores transparentes formatados em BRL (`api.portal.getWorkOrderDetail`).
+      - Linha do tempo auditada de eventos cronológicos com hora e descrição (`api.portal.getWorkOrderTimeline`).
+      - Evidências fotográficas reais tiradas pelo operador no box categorizadas por fase (*Antes*, *Durante*, *Depois*) via `api.portal.getWorkOrderPhotos`.
+      - Lightbox fullscreen em alta resolução ao clicar em qualquer evidência fotográfica.
+  - **Certificados Digitais de Garantia & Integrações**:
+    - Seção dedicada de Certificados de Garantia ativos (`api.portal.getWarranties`), com contagem regressiva de dias restantes e link público para o Passaporte Digital auditado (`/status/:token`).
+    - Modal de impressão/download de Certificado de Garantia e Recibo de OS.
+    - Sincronização direta de compromissos com Apple, Google e Outlook Calendar (`CalendarSyncModal`).
+    - Botão de atendimento direto com a recepção da oficina via WhatsApp oficial (`brand.whatsapp`).
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
 
 
 

@@ -11,6 +11,14 @@ import type {
   CommissionEntryDto,
   CreateCommissionRuleInputDto,
   PayCommissionEntryInputDto,
+  PortalCustomerDto,
+  PortalVehicleDto,
+  PortalWorkOrderListItemDto,
+  PortalWorkOrderDetailDto,
+  PortalWorkOrderTimelineEventDto,
+  PortalPhotoDto,
+  PortalWarrantyDto,
+  PortalAuthResponseDto,
 } from '@carx/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -88,6 +96,37 @@ export function clearStoredAuth(): void {
   localStorage.removeItem(USER_INFO_KEY);
   localStorage.removeItem(TENANT_ID_KEY);
   localStorage.removeItem(TENANT_SLUG_KEY);
+}
+
+// --- SESSÃO ESPECÍFICA DO PORTAL DO CLIENTE ("MEU VEÍCULO") ---
+export const PORTAL_TOKEN_KEY = 'carx_portal_token';
+export const PORTAL_CUSTOMER_KEY = 'carx_portal_customer';
+
+export function getStoredPortalToken(): string | null {
+  return localStorage.getItem(PORTAL_TOKEN_KEY);
+}
+
+export function setStoredPortalToken(token: string): void {
+  localStorage.setItem(PORTAL_TOKEN_KEY, token);
+}
+
+export function getStoredPortalCustomer(): PortalCustomerDto | null {
+  const raw = localStorage.getItem(PORTAL_CUSTOMER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredPortalCustomer(customer: PortalCustomerDto): void {
+  localStorage.setItem(PORTAL_CUSTOMER_KEY, JSON.stringify(customer));
+}
+
+export function clearStoredPortalAuth(): void {
+  localStorage.removeItem(PORTAL_TOKEN_KEY);
+  localStorage.removeItem(PORTAL_CUSTOMER_KEY);
 }
 
 // ==============================================================================
@@ -206,6 +245,41 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   return data as T;
+}
+
+export async function portalFetchClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = getStoredPortalToken();
+  const tenantSlug = getStoredTenantSlug();
+  const tenantId = getStoredTenantId();
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  if (tenantSlug) {
+    headers['x-tenant-slug'] = tenantSlug;
+  }
+  if (tenantId) {
+    headers['x-tenant-id'] = tenantId;
+  }
+
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    clearStoredPortalAuth();
+    window.dispatchEvent(new Event('carx:portal-auth-expired'));
+  }
+
+  return handleResponse<T>(response);
 }
 
 // ==============================================================================
@@ -618,6 +692,58 @@ export const api = {
   // --- BRANDING & IDENTIDADE VISUAL ---
   branding: {
     get: async () => fetchClient<any>('/tenant/branding'),
+  },
+
+  // --- PORTAL DO CLIENTE ("MEU VEÍCULO") ---
+  portal: {
+    requestOtp: async (data: { identifier: string; tenantId?: string }) => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const tenantId = data.tenantId || getStoredTenantId();
+      const tenantSlug = getStoredTenantSlug();
+      if (tenantId) headers['x-tenant-id'] = tenantId;
+      if (tenantSlug) headers['x-tenant-slug'] = tenantSlug;
+
+      const res = await fetch(`${API_BASE_URL}/portal/auth/request-otp`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ identifier: data.identifier }),
+      });
+      return handleResponse<{ success: boolean; message: string; devOtpCode?: string }>(res);
+    },
+
+    verifyOtp: async (data: { identifier: string; code: string; tenantId?: string }) => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const tenantId = data.tenantId || getStoredTenantId();
+      const tenantSlug = getStoredTenantSlug();
+      if (tenantId) headers['x-tenant-id'] = tenantId;
+      if (tenantSlug) headers['x-tenant-slug'] = tenantSlug;
+
+      const res = await fetch(`${API_BASE_URL}/portal/auth/verify-otp`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ identifier: data.identifier, code: data.code }),
+      });
+      const auth = await handleResponse<PortalAuthResponseDto>(res);
+      setStoredPortalToken(auth.token);
+      setStoredPortalCustomer(auth.customer);
+      return auth;
+    },
+
+    getProfile: async () => portalFetchClient<PortalCustomerDto>('/portal/me'),
+    getVehicles: async () => portalFetchClient<{ vehicles: PortalVehicleDto[] }>('/portal/vehicles'),
+    getWorkOrders: async () =>
+      portalFetchClient<{ workOrders: PortalWorkOrderListItemDto[] }>('/portal/work-orders'),
+    getWorkOrderDetail: async (id: string) =>
+      portalFetchClient<PortalWorkOrderDetailDto>(`/portal/work-orders/${id}`),
+    getWorkOrderTimeline: async (id: string) =>
+      portalFetchClient<{ events: PortalWorkOrderTimelineEventDto[] }>(`/portal/work-orders/${id}/timeline`),
+    getWorkOrderPhotos: async (id: string) =>
+      portalFetchClient<{ photos: PortalPhotoDto[] }>(`/portal/work-orders/${id}/photos`),
+    getWarranties: async () =>
+      portalFetchClient<{ warranties: PortalWarrantyDto[] }>('/portal/warranties'),
+    logout: () => {
+      clearStoredPortalAuth();
+    },
   },
 };
 

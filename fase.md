@@ -1159,13 +1159,13 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 9 de 10 Concluídas — 90% do Frontend)`
+### [x] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Concluído — 10 de 10 Telas Entregues — 100% do Frontend)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
   - [CarX_Documento_Unico.md — Seção Parte II: Tarefa T3.15 (Linhas 643–646)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L643-L646)
 - **Assets de Telas:** Todos os mockups de [rebraind/](file:///d:/Repositorios/CarX/rebraind/).
-- **Entrega:** Telas migradas para TypeScript consumindo a nova API: Painel do Gestor, Nova OS, Agenda, Fila do Operador, Execução, Laudo, Relatórios e Monitor TV.
+- **Entrega:** Telas migradas para TypeScript consumindo a nova API: Painel do Gestor, Nova OS, Agenda, Fila do Operador, Execução, Laudo, Relatórios, Monitor TV e Portal do Cliente.
 - **Pronto quando:** O comando `grep -r "supabase" apps/web` retorna 0 ocorrências e o `localStorage` armazena exclusivamente preferências de tema ou UI.
 - **Status do Progresso das Telas:**
   - [x] **Infraestrutura Base & API Client (`apps/web/src/services/api.ts`)**:
@@ -1250,7 +1250,16 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - Cards gigantes exibindo placa Mercosul em alto contraste, modelo do veículo, cliente, técnico encarregado, box de atendimento, badge do status da OS e barra de progresso com animação shimmer.
     - Destaque com badge prioritária vermelha pulsante para ordens de serviço marcadas com retrabalho (`is_rework: true`).
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)** `(Próxima)`
+  - [x] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**:
+    - Substituição completa de `ClientPortal.jsx` por TypeScript e `@tanstack/react-query`, erradicando por completo o antigo modo demonstração fictício de `localStorage` (carros e fotos fakes quando não havia OS).
+    - Autenticação por OTP em duas etapas (`api.portal.requestOtp` e `api.portal.verifyOtp`) sem senhas e com estrita proteção anti-enumeração de clientes, gerando tokens JWT com escopo restrito `customer_portal` e isolamento RLS.
+    - Seletor de frota do cliente com placas estilo Mercosul e contagem dinâmica de ordens de serviço por veículo (`api.portal.getVehicles`).
+    - Linha do tempo e histórico de serviços em tempo real (`api.portal.getWorkOrders`), com progresso da execução no box, status financeiro (quitado vs pendente) e acionamento de detalhes sob demanda.
+    - Galeria de evidências fotográficas em alta resolução categorizadas por fase (*Antes*, *Durante*, *Depois*) via `api.portal.getWorkOrderPhotos`, com modal Lightbox fullscreen em um clique.
+    - Linha do tempo de eventos auditada (`api.portal.getWorkOrderTimeline`) com carimbo de data e hora.
+    - Visualização e emissão de Certificados Digitais de Garantia ativos com cálculo de dias restantes e link para o Passaporte Digital público (`/status/:token`).
+    - Sincronização direta de compromissos com Apple, Google e Outlook Calendar (`CalendarSyncModal`), emissão de recibos e botão de contato direto via WhatsApp oficial da loja.
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
 
 ---
 
