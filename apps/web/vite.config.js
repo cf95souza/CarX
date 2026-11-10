@@ -6,6 +6,16 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+const createApiProxy = (target = 'http://localhost:3000') => ({
+  target,
+  changeOrigin: true,
+  bypass: (req) => {
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+      return '/index.html';
+    }
+  },
+});
+
 // https://vitejs.dev/config/ - CarX Web Platform
 export default defineConfig({
   define: {
@@ -19,30 +29,30 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/auth': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/work-orders': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/customers': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/reports': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/integrations': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
-      '/customer-portal': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-      },
+      '/auth': createApiProxy(),
+      '/work-orders': createApiProxy(),
+      '/customers': createApiProxy(),
+      '/vehicles': createApiProxy(),
+      '/catalog': createApiProxy(),
+      '/payments': createApiProxy(),
+      '/stock': createApiProxy(),
+      '/appointments': createApiProxy(),
+      '/inspections': createApiProxy(),
+      '/technician': createApiProxy(),
+      '/qa': createApiProxy(),
+      '/warranties': createApiProxy(),
+      '/nps': createApiProxy(),
+      '/commissions': createApiProxy(),
+      '/financial': createApiProxy(),
+      '/realtime': createApiProxy(),
+      '/storage': createApiProxy(),
+      '/tenant': createApiProxy(),
+      '/plans': createApiProxy(),
+      '/portal': createApiProxy(),
+      '/public': createApiProxy(),
+      '/reports': createApiProxy(),
+      '/integrations': createApiProxy(),
+      '/customer-portal': createApiProxy(),
     },
   },
   plugins: [
