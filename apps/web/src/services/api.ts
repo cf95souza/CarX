@@ -6,6 +6,11 @@ import type {
   WebhookEndpointDto,
   TechnicianQueueItemDto,
   TechnicianRankingItemDto,
+  DreReportDto,
+  CommissionRuleDto,
+  CommissionEntryDto,
+  CreateCommissionRuleInputDto,
+  PayCommissionEntryInputDto,
 } from '@carx/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -431,14 +436,14 @@ export const api = {
 
   // --- RELATÓRIOS & FINANCEIRO ---
   reports: {
-    getDre: async (params?: { startDate?: string; endDate?: string }) => {
+    getDre: async (params?: { startDate?: string; endDate?: string }): Promise<DreReportDto> => {
       const q = new URLSearchParams();
       if (params?.startDate) q.append('startDate', params.startDate);
       if (params?.endDate) q.append('endDate', params.endDate);
       const queryStr = q.toString() ? `?${q.toString()}` : '';
-      return fetchClient<any>(`/reports/dre${queryStr}`);
+      return fetchClient<DreReportDto>(`/reports/dre${queryStr}`);
     },
-    getRanking: async (params?: { startDate?: string; endDate?: string }) => {
+    getRanking: async (params?: { startDate?: string; endDate?: string }): Promise<TechnicianRankingItemDto[]> => {
       const q = new URLSearchParams();
       if (params?.startDate) q.append('startDate', params.startDate);
       if (params?.endDate) q.append('endDate', params.endDate);
@@ -449,6 +454,62 @@ export const api = {
       return [] as TechnicianRankingItemDto[];
     },
     getNpsMetrics: async () => fetchClient<NpsMetricsDto>('/nps/metrics'),
+  },
+
+  // --- COMISSÕES DE TÉCNICOS & REGRAS ---
+  commissions: {
+    listRules: async (): Promise<CommissionRuleDto[]> =>
+      fetchClient<CommissionRuleDto[]>('/commissions/rules'),
+    createRule: async (data: CreateCommissionRuleInputDto): Promise<CommissionRuleDto> =>
+      fetchClient<CommissionRuleDto>('/commissions/rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    deleteRule: async (id: string): Promise<{ success: boolean }> =>
+      fetchClient<{ success: boolean }>(`/commissions/rules/${id}`, { method: 'DELETE' }),
+    listEntries: async (filters?: {
+      technicianId?: string;
+      workOrderId?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+    }): Promise<CommissionEntryDto[]> => {
+      const q = new URLSearchParams();
+      if (filters?.technicianId) q.append('technicianId', filters.technicianId);
+      if (filters?.workOrderId) q.append('workOrderId', filters.workOrderId);
+      if (filters?.status) q.append('status', filters.status);
+      if (filters?.startDate) q.append('startDate', filters.startDate);
+      if (filters?.endDate) q.append('endDate', filters.endDate);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<CommissionEntryDto[]>(`/commissions/entries${qs}`);
+    },
+    payEntry: async (id: string, data?: PayCommissionEntryInputDto): Promise<CommissionEntryDto> =>
+      fetchClient<CommissionEntryDto>(`/commissions/entries/${id}/pay`, {
+        method: 'PATCH',
+        body: JSON.stringify(data || {}),
+      }),
+    calculate: async (workOrderId: string): Promise<CommissionEntryDto[]> =>
+      fetchClient<CommissionEntryDto[]>(`/commissions/calculate/${workOrderId}`, {
+        method: 'POST',
+      }),
+  },
+
+  // --- NPS & PESQUISAS DE SATISFAÇÃO ---
+  nps: {
+    getMetrics: async (): Promise<NpsMetricsDto> => fetchClient<NpsMetricsDto>('/nps/metrics'),
+    listSurveys: async (params?: { classification?: string; status?: string }): Promise<any[]> => {
+      const q = new URLSearchParams();
+      if (params?.classification) q.append('classification', params.classification);
+      if (params?.status) q.append('status', params.status);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<any[]>(`/nps/surveys${qs}`);
+    },
+    createSurvey: async (workOrderId: string): Promise<any> =>
+      fetchClient<any>('/nps/surveys', {
+        method: 'POST',
+        body: JSON.stringify({ workOrderId }),
+      }),
+    listReminders: async (): Promise<any[]> => fetchClient<any[]>('/maintenance/reminders'),
   },
 
   // --- LAUDO DE INSPEÇÃO DIGITAL (VCR) & CHECKLIST ---

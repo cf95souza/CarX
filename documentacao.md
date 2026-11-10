@@ -1085,7 +1085,7 @@ Implementada a substituição completa do antigo mock em `localStorage` da inter
 
 ---
 
-#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 7 de 10) 🖥️
+#### Tarefa T3.15: Frontend — Camada de Dados TanStack Query e Design System CarX (Telas 1 a 8 de 10) 🖥️
 Iniciada a migração do frontend (`apps/web`), com a erradicação da dependência legada `@supabase/supabase-js`, implementação do cliente HTTP fortemente tipado consumindo a API Fastify e aplicação dos componentes do Design System CarX oficial (`@carx/ui`) com os tokens visuais Asfalto (`#0E1116`), Grafite (`#171C24`), Aço (`#232A35`) e Volt (`#C8F52E`).
 
 - **Infraestrutura Base e API Client (`apps/web/src/services/api.ts`)**:
@@ -1164,6 +1164,33 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
     - Modal interativo renderizando o laudo de inspeção inicial com silhueta do veículo e pontos de avaria plotados.
     - Listagem descritiva das avarias com gravidades (Leve, Média, Grave), fotos de inspeção guiada anexadas e botão para download do PDF oficial vetorial gerado pelo backend (`api.inspections.getPdfUrl`).
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)**:
+  - **Erradicação Completa de Mocks e Cálculos no Cliente**: No legado *OsSystem*, o DRE era calculado por iterações em arrays em memória no navegador, despesas fixas ficavam gravadas em `localStorage.getItem('ossystem_dre_despesas_fixas')`, o ranking era montado cruzando `pesquisas_nps_local` e o streak era manipulado arbitrariamente em `localStorage.setItem('ossystem_tecnico_streak_${id}')`. No CarX, 100% das métricas são calculadas por queries agregadas em SQL no PostgreSQL servidas pela API Fastify tipada (`@tanstack/react-query`).
+  - **`Relatorios.tsx` (Painel Estratégico Multidimensional)**:
+    - Navegação em abas industriais Dark Volt: *Visão Gerencial*, *DRE no Servidor*, *Ranking de Técnicos*, *NPS & Retenção* e *Comissões & Extrato*.
+    - Seletor de período temporal (data inicial e final) sincronizado globalmente entre todas as abas.
+    - Função de ocultação de valores financeiros (`hideValues`) para apresentações públicas e privacidade no balcão da loja.
+    - Suporte a impressão limpa sem cabeçalhos e controles com classes utilitárias `@media print` (`no-print`).
+  - **`DreDashboard.tsx` (Demonstrativo do Resultado do Exercício 100% no Servidor)**:
+    - Consumo oficial de `api.reports.getDre(period)` retornando DTO consolidado: Receita Bruta, Descontos Comerciais, Receita Operacional Líquida (ROL), Custo de Materiais/CMV (insumos e bobinas de PPF/película consumidas), Comissões da Equipe, Margem de Contribuição Operacional (R$ e %) e Saldo a Receber (inadimplência).
+    - Presets temporais instantâneos ("Mês Atual", "Mês Anterior", "Últimos 90 Dias", "Ano Atual").
+    - Tabela analítica vertical no padrão contábil/gerencial com numeração ordenada e indicadores visuais.
+    - Barra de progresso dinâmica com a taxa percentual de margem de contribuição.
+  - **`TecnicosRanking.tsx` (Ranking de Produtividade & Gamificação com Streak Real)**:
+    - Consumo oficial de `api.reports.getRanking(period)` com agregação de fatos operacionais reais.
+    - Pódio dos Top 3 com troféus de destaque, badges dinâmicas de mérito e contadores de OS produzidas.
+    - Streak Real Auditado: dias ininterruptos sem retrabalho derivado de auditorias formais em `qa_audits` e `work_orders.is_rework`.
+    - Ordenação interativa por Streak Invicto, Nota Média de QA, Faturamento Produzido e Volume de OS entregues.
+  - **`NpsDashboard.tsx` (Scorecard de NPS e Retenção Ativa)**:
+    - Consumo de `api.nps.getMetrics()` e `api.nps.listSurveys()` com notas de 0 a 10.
+    - Classificação automática da loja: Zona de Excelência (>= 75), Zona de Qualidade (>= 50), Aperfeiçoamento ou Zona Crítica (< 0).
+    - Barra comparativa de distribuição tripartida (Promotores 9-10, Neutros 7-8, Detratores 0-6).
+    - Tabela de depoimentos de clientes com botão de acionamento imediato por WhatsApp (SLA 24h para recuperação de detratores).
+  - **`ComissoesDashboard.tsx` (Extrato e Liquidação Financeira)**:
+    - Consulta de comissões por colaborador (`api.commissions.listEntries`) geradas pelas regras pré-configuradas.
+    - Ação de liquidação financeira com registro de data (`api.commissions.payEntry`) e invalidação automática das queries de DRE.
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+
 
 
 

@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 7 de 10 Concluídas — 70% do Frontend)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 8 de 10 Concluídas — 80% do Frontend)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1233,8 +1233,14 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - `CustomerStatus.tsx`: Portal público sem necessidade de login JWT para acompanhamento em tempo real (`/status/:token`) com proteção LGPD de dados sensíveis e IDOR, timeline de eventos da OS, dados do veículo e links para WhatsApp e certificados.
     - `VcrReportModal.tsx`: Modal interativo do laudo VCR com pontos de avaria na silhueta, severidades, fotos de inspeção guiada e download do PDF oficial vetorial (`api.inspections.getPdfUrl`).
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)** `(Próxima)`
-  - [ ] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)**
+  - [x] **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)**:
+    - `Relatorios.tsx`: Navegação estratégica em abas (*Visão Gerencial*, *DRE no Servidor*, *Ranking de Técnicos*, *NPS & Retenção*, *Comissões & Extrato*).
+    - `DreDashboard.tsx`: Demonstrativo de Resultado do Exercício com agregação SQL 100% no servidor (`api.reports.getDre`), exibindo receita bruta, descontos, receita líquida, custos variáveis (CMV de materiais e películas PPF + comissões da equipe), margem de contribuição (R$ e %) e saldo pendente a receber (inadimplência).
+    - `TecnicosRanking.tsx`: Pódio dos Top 3 e tabela com Streak Real de dias invicto sem retrabalho, apurado a partir de auditorias de QA (`qa_audits`) e fatos operacionais reais, com notas de inspeção e volume produzido.
+    - `NpsDashboard.tsx`: Scorecard oficial do NPS (-100 a +100) consumindo `api.nps.getMetrics` e `api.nps.listSurveys`, com distribuição de Promotores, Neutros e Detratores, alertas de pós-venda e contato direto por WhatsApp.
+    - `ComissoesDashboard.tsx`: Extrato financeiro de comissões por colaborador com regras automáticas (`api.commissions.listEntries`) e liquidação rápida (`api.commissions.payEntry`).
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)** `(Próxima)`
   - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**
 
 ---
