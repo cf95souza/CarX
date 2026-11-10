@@ -1159,7 +1159,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 ---
 
-### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1, 2, 3, 4 e 5 de 10 Concluídas — 50% do Frontend)`
+### [ ] T3.15 — Frontend: Troca da Camada de Dados e Adoção do Design System `(Em Progresso: Telas 1 a 6 de 10 Concluídas — 60% do Frontend)`
 - **Descrição:** Migração das telas existentes do OsSystem no `apps/web`: remoção completa do `@supabase/supabase-js`, adoção do TanStack Query com API tipada e aplicação dos componentes do `packages/ui`. Executado tela por tela.
 - **Onde ler no Documento Único:**
   - [CarX_Documento_Unico.md — Seção 2: Frontend (Linha 99)](file:///d:/Repositorios/CarX/CarX_Documento_Unico.md#L99)
@@ -1218,8 +1218,16 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
     - Sincronização sob demanda com vibração háptica (`navigator.vibrate`) e polling automático de 15s.
     - Compatibilidade retroativa e suave com o `ExecutorView` e navegação de rotas.
     - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
-  - [ ] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial (`apps/web/src/pages/ExecutorView.tsx`)** `(Próxima)`
-  - [ ] **Tela 7: Laudo de Inspeção Digital e QA (`CustomerStatus.tsx` / `QaChecklistModal.tsx`)**
+  - [x] **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial (`apps/web/src/pages/ExecutorView.tsx`)**:
+    - Migrada para TypeScript e `@tanstack/react-query`.
+    - Cronômetro Oficial do Servidor: `api.technician.getTimer(workOrderId)` com persistência ao fechar a página ou desligar o celular, e comandos de `start`, `pause` (com motivo operacional) e `resume`.
+    - Critério fundamental "Nunca bloquear sem saída": botão "Fazer Checklist Rápido" que abre modal dinâmico de entrada (KM, combustível, itens vistoriados e observações), acionando `api.technician.startWithChecklist` para liberar o serviço imediatamente sem depender da recepção.
+    - Barra de progresso interativa individual por item de serviço e cálculo global.
+    - Documentação fotográfica guiada 360° conectada diretamente ao MinIO (`api.storage.upload` com categoria `inspection`).
+    - Diário técnico do operador com observações e números de série de bobinas.
+    - Modal de confirmação de entrega com transição automática para QA (`api.workOrders.updateStatus(workOrderId, 'QA')`).
+    - Compilação e tipagem validadas: `vite build` e `tsc --noEmit` passando com 0 erros.
+  - [ ] **Tela 7: Laudo de Inspeção Digital e QA (`CustomerStatus.tsx` / `QaChecklistModal.tsx`)** `(Próxima)`
   - [ ] **Tela 8: Relatórios (DRE no Servidor, Ranking de Técnicos com Streak Auditado e NPS em `Relatorios.tsx`)**
   - [ ] **Tela 9: Monitor TV da Loja (`MonitorTV.tsx`)**
   - [ ] **Tela 10: Portal do Cliente Seguro ("Meu Veículo" em `ClientPortal.tsx`)**

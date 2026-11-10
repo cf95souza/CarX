@@ -447,6 +447,72 @@ export const api = {
     getNpsMetrics: async () => fetchClient<NpsMetricsDto>('/nps/metrics'),
   },
 
+  // --- LAUDO DE INSPEÇÃO DIGITAL (VCR) & CHECKLIST ---
+  inspections: {
+    getByWorkOrder: async (workOrderId: string) =>
+      fetchClient<{ inspections: any[] }>(`/work-orders/${workOrderId}/inspections`),
+    getById: async (id: string) => fetchClient<any>(`/inspections/${id}`),
+    create: async (data: any) =>
+      fetchClient<any>('/inspections', { method: 'POST', body: JSON.stringify(data) }),
+    update: async (id: string, data: any) =>
+      fetchClient<any>(`/inspections/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    addDamagePoint: async (id: string, data: any) =>
+      fetchClient<any>(`/inspections/${id}/damage-points`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    removeDamagePoint: async (id: string, pointId: string) =>
+      fetchClient<any>(`/inspections/${id}/damage-points/${pointId}`, { method: 'DELETE' }),
+    addPhoto: async (id: string, data: any) =>
+      fetchClient<any>(`/inspections/${id}/photos`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    removePhoto: async (id: string, photoId: string) =>
+      fetchClient<any>(`/inspections/${id}/photos/${photoId}`, { method: 'DELETE' }),
+    sign: async (id: string, data: { customerSignatureName: string; signatureBase64: string }) =>
+      fetchClient<any>(`/inspections/${id}/sign`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    generatePdf: async (id: string) =>
+      fetchClient<any>(`/inspections/${id}/generate-pdf`, { method: 'POST' }),
+  },
+
+  // --- ARMAZENAMENTO DE ARQUIVOS (MinIO / S3) ---
+  storage: {
+    upload: async (file: File, options?: { category?: string; entityId?: string }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (options?.category) formData.append('category', options.category);
+      if (options?.entityId) formData.append('entityId', options.entityId);
+
+      const token = getStoredToken();
+      const tenantId = getStoredTenantId();
+      const tenantSlug = getStoredTenantSlug();
+
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (tenantId) headers['x-tenant-id'] = tenantId;
+      if (tenantSlug) headers['x-tenant-slug'] = tenantSlug;
+
+      const res = await fetch(`${API_BASE_URL}/storage/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new ApiError(errorData.message || 'Erro no upload de arquivo', res.status, errorData);
+      }
+
+      return res.json();
+    },
+    getFileUrl: async (fileId: string) =>
+      fetchClient<{ downloadUrl: string }>(`/storage/files/${fileId}/url`),
+  },
+
   // --- CONTROLE DE QUALIDADE (QA) & GARANTIAS ---
   qa: {
     createAudit: async (data: any) =>

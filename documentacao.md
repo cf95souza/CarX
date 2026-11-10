@@ -1138,6 +1138,15 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
   - Botão de sincronização sob demanda com feedback por vibração háptica (`navigator.vibrate`) e polling automático a cada 15 segundos.
   - Compatibilidade garantida com o fluxo de execução (`onSelectOS`) e transição para `ExecutorView`.
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
+- **Tela 6: Execução, Checklist de Entrada e Cronômetro Oficial (`apps/web/src/pages/ExecutorView.tsx`)**:
+  - Migrada de `ExecutorView.jsx` para TypeScript e `@tanstack/react-query`.
+  - Cronômetro Oficial do Servidor: integração com `api.technician.getTimer(workOrderId)` com persistência ao fechar o navegador ou desligar o dispositivo, eliminando o timer simulado em memória do OsSystem. Comandos de `start`, `pause` (com modal rápido de motivo operacional) e `resume`.
+  - Implementação do critério de negócio "Nunca bloquear sem saída": botão "Fazer Checklist Rápido" que abre modal dinâmico de entrada com hodômetro (KM), nível de combustível, checklist de itens essenciais e notas, acionando `api.technician.startWithChecklist` para liberar o serviço imediatamente sem depender da recepção.
+  - Barra de progresso interativa individual por sub-serviço com botões de conclusão rápida (100%) e cálculo consolidado do progresso global.
+  - Documentação fotográfica guiada 360° conectada diretamente ao MinIO (`api.storage.upload` com categoria `inspection`).
+  - Diário técnico do operador para anotações de serviço e números de lote das bobinas de PPF/Insulfilm.
+  - Modal de confirmação com transição da OS para o status `QA` (`api.workOrders.updateStatus(workOrderId, 'QA')`).
+  - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
 
 
 
