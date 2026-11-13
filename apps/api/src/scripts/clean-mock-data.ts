@@ -13,58 +13,49 @@ async function cleanMockData() {
   try {
     await client.query('BEGIN;');
 
-    // 1. Limpar tabelas dependentes de ordens de serviço e operações
-    console.log('[CLEAN] Limpando ordens de serviço, itens, vistorias e garantias...');
-    await client.query(`
-      TRUNCATE TABLE
-        warranty_revision_history,
-        work_order_warranties,
-        inspection_photos,
-        inspection_checklists,
-        work_order_inspections,
-        work_order_events,
-        work_order_payments,
-        work_order_items,
-        work_orders
-      CASCADE;
-    `);
+    // 1. Limpar tabelas operacionais checando existência dinâmica
+    console.log('[CLEAN] Limpando dados operacionais e mockados...');
+    const tablesToClean = [
+      'crm_retention_dispatches',
+      'crm_retention_rules',
+      'warranty_transfers',
+      'warranties',
+      'nps_reminders',
+      'nps_surveys',
+      'inspection_photos',
+      'inspection_checklists',
+      'work_order_inspections',
+      'work_order_events',
+      'work_order_payments',
+      'work_order_items',
+      'work_orders',
+      'appointments',
+      'stock_movements',
+      'stock_materials',
+      'stock_items',
+      'financial_transactions',
+      'cash_flow_projections',
+      'minisite_leads',
+      'minisite_portfolios',
+      'vehicles',
+      'customers',
+      'corporate_units',
+      'whatsapp_instances',
+      'tenant_customer_coupons',
+      'coupons',
+      'tenant_branding',
+    ];
 
-    // 2. Limpar estoque, agendamentos, avaliações NPS e CRM
-    console.log('[CLEAN] Limpando estoque, agendamentos, NPS e CRM...');
-    await client.query(`
-      TRUNCATE TABLE
-        crm_retention_rules,
-        nps_surveys,
-        appointments,
-        stock_movements,
-        stock_materials,
-        stock_items,
-        financial_transactions,
-        cash_flow_projections
-      CASCADE;
-    `);
-
-    // 3. Limpar veículos, clientes, leads e orçamentos públicos
-    console.log('[CLEAN] Limpando clientes, veículos, leads e propostas...');
-    await client.query(`
-      TRUNCATE TABLE
-        minisite_leads,
-        minisite_portfolios,
-        vehicles,
-        customers
-      CASCADE;
-    `);
-
-    // 4. Limpar colaboradores e tenants mockados/de teste (se houver), preservando superadmin
-    console.log('[CLEAN] Limpando dados operacionais de tenants...');
-    await client.query(`
-      TRUNCATE TABLE
-        tenant_branding,
-        corporate_units,
-        whatsapp_instances,
-        coupons
-      CASCADE;
-    `);
+    for (const table of tablesToClean) {
+      await client.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = '${table}') THEN
+            EXECUTE 'TRUNCATE TABLE ' || quote_ident('${table}') || ' CASCADE';
+          END IF;
+        END $$;
+      `);
+    }
 
     // 5. Verificar e garantir a integridade dos planos cadastrados
     console.log('[CLEAN] Validando planos cadastrados...');
