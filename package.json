@@ -13,12 +13,14 @@
     "db:migrate:status": "pnpm --filter @carx/api migrate:status",
     "db:migrate:reset": "pnpm --filter @carx/api migrate:reset",
     "build": "pnpm -r build",
+    "test:e2e": "playwright test",
     "lint": "eslint apps packages",
     "typecheck": "tsc -b",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\""
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "@typescript-eslint/eslint-plugin": "^7.1.0",
     "@typescript-eslint/parser": "^7.1.0",
     "eslint": "^9.39.5",

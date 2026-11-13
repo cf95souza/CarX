@@ -1,0 +1,116 @@
+[
+  {
+    "stage": "1. Smoke / Warmup",
+    "vus": 1,
+    "durationSeconds": 4,
+    "totalRequests": 97,
+    "successfulRequests": 97,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 24.25,
+    "latenciesMs": {
+      "min": 0.67,
+      "max": 117.43,
+      "avg": 9.43,
+      "p50": 7.63,
+      "p90": 14.98,
+      "p95": 15.82,
+      "p99": 117.43
+    }
+  },
+  {
+    "stage": "2. Degrau Leve",
+    "vus": 5,
+    "durationSeconds": 6,
+    "totalRequests": 762,
+    "successfulRequests": 762,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 127,
+    "latenciesMs": {
+      "min": 0.5,
+      "max": 56.63,
+      "avg": 9.24,
+      "p50": 8.03,
+      "p90": 17.92,
+      "p95": 22.87,
+      "p99": 44.36
+    }
+  },
+  {
+    "stage": "3. Degrau Moderado",
+    "vus": 10,
+    "durationSeconds": 6,
+    "totalRequests": 1441,
+    "successfulRequests": 1441,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 240.16666666666666,
+    "latenciesMs": {
+      "min": 0.35,
+      "max": 60.03,
+      "avg": 12.56,
+      "p50": 11.26,
+      "p90": 23.76,
+      "p95": 26.09,
+      "p99": 37.7
+    }
+  },
+  {
+    "stage": "4. Degrau Médio",
+    "vus": 25,
+    "durationSeconds": 8,
+    "totalRequests": 4924,
+    "successfulRequests": 4924,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 615.5,
+    "latenciesMs": {
+      "min": 0.21,
+      "max": 111.7,
+      "avg": 13.35,
+      "p50": 11.93,
+      "p90": 25.4,
+      "p95": 31.63,
+      "p99": 48.94
+    }
+  },
+  {
+    "stage": "5. Degrau Alto",
+    "vus": 50,
+    "durationSeconds": 8,
+    "totalRequests": 8337,
+    "successfulRequests": 8337,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 1042.125,
+    "latenciesMs": {
+      "min": 0.25,
+      "max": 126.5,
+      "avg": 22.62,
+      "p50": 20.74,
+      "p90": 45.62,
+      "p95": 54.69,
+      "p99": 76.81
+    }
+  },
+  {
+    "stage": "6. Pico T7.3 (100 Conexões Simultâneas)",
+    "vus": 100,
+    "durationSeconds": 10,
+    "totalRequests": 10524,
+    "successfulRequests": 10524,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 1052.4,
+    "latenciesMs": {
+      "min": 0.2,
+      "max": 232.24,
+      "avg": 69.95,
+      "p50": 78.93,
+      "p90": 120.53,
+      "p95": 131.98,
+      "p99": 152.06
+    }
+  }
+]

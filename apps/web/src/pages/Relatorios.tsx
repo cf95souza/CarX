@@ -1,28 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  BarChart3,
-  TrendingUp,
-  PieChart,
-  Trophy,
-  Star,
-  CreditCard,
-  Printer,
-  Calendar,
-  Wrench,
-  DollarSign,
-  CheckCircle2,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
-import { Card, Badge, Button } from '@carx/ui';
 import { api } from '../services/api';
-import { DreDashboard } from '../components/features/DreDashboard';
-import { TecnicosRanking } from '../components/features/TecnicosRanking';
 import { NpsDashboard } from '../components/features/NpsDashboard';
-import { ComissoesDashboard } from '../components/features/ComissoesDashboard';
+import { DreDashboard } from '../components/features/DreDashboard';
 
-type TabKey = 'GERENCIAL' | 'DRE' | 'RANKING' | 'NPS' | 'COMISSOES';
+type TabKey = 'GERENCIAL' | 'NPS' | 'GARANTIAS' | 'DRE';
 
 function formatCurrency(cents: number): string {
   return (cents / 100).toLocaleString('pt-BR', {
@@ -31,50 +13,30 @@ function formatCurrency(cents: number): string {
   });
 }
 
-function getStartOfMonth(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-}
-
-function getEndOfMonth(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
-}
-
 export const Relatorios: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<TabKey>('GERENCIAL');
-  const [startDate, setStartDate] = useState(getStartOfMonth());
-  const [endDate, setEndDate] = useState(getEndOfMonth());
-  const [hideValues, setHideValues] = useState(false);
+  // Conforme o protótipo oficial de referência, a aba ativa é NPS e Retenção
+  const [activeTab, setActiveTab] = useState<TabKey>('NPS');
+  const [periodOption, setPeriodOption] = useState<string>('Este mês');
+  const [serviceFilter, setServiceFilter] = useState<string>('Todos os serviços');
+  const [hideValues, setHideValues] = useState<boolean>(false);
 
-  // Busca ordens de serviço para a visão gerencial rápida
-  const {
-    data: workOrdersResponse,
-    isLoading: loadingOrders,
-  } = useQuery({
+  // Busca ordens de serviço para alimentar a visão gerencial e garantias
+  const { data: workOrdersResponse } = useQuery({
     queryKey: ['reports-work-orders'],
     queryFn: () => api.workOrders.list({ limit: 500 }),
+    staleTime: 1000 * 60,
   });
 
   const rawOrders: any[] = Array.isArray(workOrdersResponse)
     ? workOrdersResponse
     : workOrdersResponse?.workOrders || [];
 
-  // Filtra as ordens de serviço dentro do período selecionado
-  const filteredOrders = useMemo(() => {
-    return rawOrders.filter((wo: any) => {
-      const dateStr = wo.created_at || wo.createdAt;
-      if (!dateStr) return true;
-      if (startDate && dateStr < `${startDate}T00:00:00.000Z`) return false;
-      if (endDate && dateStr > `${endDate}T23:59:59.999Z`) return false;
-      return true;
-    });
-  }, [rawOrders, startDate, endDate]);
-
-  // Métricas da aba Gerencial
   const gerencialStats = useMemo(() => {
-    const validOrders = filteredOrders.filter((wo: any) => wo.status !== 'CANCELED');
-    const totalCents = validOrders.reduce((acc: number, wo: any) => acc + (wo.final_cents || wo.total_cents || 0), 0);
+    const validOrders = rawOrders.filter((wo: any) => wo.status !== 'CANCELED');
+    const totalCents = validOrders.reduce(
+      (acc: number, wo: any) => acc + (wo.final_cents || wo.total_cents || 0),
+      0
+    );
     const count = validOrders.length;
     const deliveredCount = validOrders.filter((wo: any) => wo.status === 'DELIVERED').length;
     const inProgressCount = validOrders.filter((wo: any) =>
@@ -82,297 +44,437 @@ export const Relatorios: React.FC = () => {
     ).length;
     const ticketMedioCents = count > 0 ? Math.round(totalCents / count) : 0;
 
-    // Agrupamento por serviço
-    const serviceMap: Record<string, { count: number; totalCents: number }> = {};
-    validOrders.forEach((wo: any) => {
-      const name = wo.service_name || wo.primary_service || 'Serviços Gerais';
-      if (!serviceMap[name]) serviceMap[name] = { count: 0, totalCents: 0 };
-      serviceMap[name].count += 1;
-      serviceMap[name].totalCents += wo.final_cents || wo.total_cents || 0;
-    });
-
-    const topServices = Object.entries(serviceMap)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.totalCents - a.totalCents)
-      .slice(0, 5);
-
     return {
       totalCents,
       count,
       deliveredCount,
       inProgressCount,
       ticketMedioCents,
-      topServices,
     };
-  }, [filteredOrders]);
+  }, [rawOrders]);
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="space-y-6 pb-20 fade-in">
-      {/* Topo / Header da Página (Oculto em Impressão) */}
-      <Card variant="default" className="p-6 bg-grafite border-aco/60 no-print">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-volt/10 text-volt border border-volt/20 flex items-center justify-center">
-              <BarChart3 size={28} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black text-white uppercase tracking-tight">
-                  Relatórios Estratégicos
-                </h1>
-                <Badge variant="volt">Dark Volt</Badge>
-              </div>
-              <p className="text-xs text-cinza-muted mt-1">
-                Inteligência de negócio, DRE gerencial, ranking auditado e pós-venda em tempo real
-              </p>
-            </div>
+    <div
+      style={{
+        width: '100%',
+        minHeight: '844px',
+        background: '#F3F5F7',
+        fontFamily: 'Inter, sans-serif',
+        color: '#0E1116',
+        padding: '28px 40px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px',
+        boxSizing: 'border-box',
+      }}
+    >
+      {/* 1. CABEÇALHO COM CONTROLES */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}
+      >
+        <div>
+          <div
+            style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: '30px',
+              fontWeight: 700,
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Relatórios
           </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Filtro de Período Compartilhado */}
-            <div className="flex items-center gap-2 bg-asfalto border border-aco/50 rounded-xl px-3 py-2">
-              <Calendar size={14} className="text-volt" />
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent text-xs text-white outline-none font-mono"
-              />
-              <span className="text-cinza-muted text-xs">até</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent text-xs text-white outline-none font-mono"
-              />
-            </div>
-
-            {/* Alternar Ocultação de Valores */}
-            <button
-              type="button"
-              onClick={() => setHideValues(!hideValues)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-asfalto border border-aco/50 text-xs font-bold text-cinza-muted hover:text-white rounded-xl transition-colors"
-              title="Ocultar valores em apresentações ou telas públicas"
-            >
-              {hideValues ? <EyeOff size={14} className="text-volt" /> : <Eye size={14} />}
-              <span>{hideValues ? 'Valores Ocultos' : 'Ocultar'}</span>
-            </button>
-
-            {/* Botão de Impressão */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handlePrint}
-              className="gap-2"
-            >
-              <Printer size={16} />
-              Imprimir
-            </Button>
+          <div style={{ fontSize: '14px', color: '#5B6674' }}>
+            Inteligência do negócio · outubro de 2026
           </div>
         </div>
-      </Card>
 
-      {/* Navegação por Abas (Oculto em Impressão) */}
-      <div className="flex flex-wrap items-center gap-2 no-print border-b border-aco/40 pb-3">
+        {/* CONTROLES DO TOPO (DROPDOWNS + OCULTAR VALORES + IMPRIMIR) */}
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Dropdown: Período */}
+          <div
+            style={{
+              height: '44px',
+              padding: '0 16px',
+              borderRadius: '12px',
+              border: '1px solid #E1E6EC',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#5B6674',
+              cursor: 'pointer',
+            }}
+          >
+            <select
+              value={periodOption}
+              onChange={(e) => setPeriodOption(e.target.value)}
+              style={{
+                border: 0,
+                background: 'transparent',
+                outline: 'none',
+                cursor: 'pointer',
+                font: 'inherit',
+                color: 'inherit',
+              }}
+            >
+              <option value="Este mês">Este mês</option>
+              <option value="Mês anterior">Mês anterior</option>
+              <option value="Últimos 90 dias">Últimos 90 dias</option>
+              <option value="Este ano">Este ano</option>
+            </select>
+          </div>
+
+          {/* Dropdown: Serviços */}
+          <div
+            style={{
+              height: '44px',
+              padding: '0 16px',
+              borderRadius: '12px',
+              border: '1px solid #E1E6EC',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#5B6674',
+              cursor: 'pointer',
+            }}
+          >
+            <select
+              value={serviceFilter}
+              onChange={(e) => setServiceFilter(e.target.value)}
+              style={{
+                border: 0,
+                background: 'transparent',
+                outline: 'none',
+                cursor: 'pointer',
+                font: 'inherit',
+                color: 'inherit',
+              }}
+            >
+              <option value="Todos os serviços">Todos os serviços</option>
+              <option value="PPF (Proteção)">PPF (Proteção)</option>
+              <option value="Películas Solares">Películas Solares</option>
+              <option value="Vitrificação">Vitrificação</option>
+              <option value="Mecânica Geral">Mecânica Geral</option>
+            </select>
+          </div>
+
+          {/* Botão Ocultar valores */}
+          <button
+            type="button"
+            onClick={() => setHideValues(!hideValues)}
+            style={{
+              height: '44px',
+              padding: '0 18px',
+              borderRadius: '12px',
+              border: '1px solid #E1E6EC',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '14px',
+              fontWeight: 500,
+              color: '#5B6674',
+              cursor: 'pointer',
+            }}
+          >
+            {hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+          </button>
+
+          {/* Botão Imprimir */}
+          <button
+            type="button"
+            onClick={handlePrint}
+            style={{
+              height: '44px',
+              padding: '0 18px',
+              borderRadius: '12px',
+              border: '1px solid #0E1116',
+              background: '#0E1116',
+              color: '#C8F52E',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Imprimir
+          </button>
+        </div>
+      </div>
+
+      {/* 2. ABAS DE NAVEGAÇÃO */}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button
           type="button"
           onClick={() => setActiveTab('GERENCIAL')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'GERENCIAL'
-              ? 'bg-volt text-asfalto shadow-lg shadow-volt/10'
-              : 'bg-grafite text-cinza-muted hover:text-white border border-aco/50'
-          }`}
+          style={{
+            height: '44px',
+            padding: '0 18px',
+            borderRadius: '12px',
+            border: activeTab === 'GERENCIAL' ? '1px solid #0E1116' : '1px solid #E1E6EC',
+            background: activeTab === 'GERENCIAL' ? '#0E1116' : '#fff',
+            color: activeTab === 'GERENCIAL' ? '#fff' : '#5B6674',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '14px',
+            fontWeight: activeTab === 'GERENCIAL' ? 600 : 500,
+            cursor: 'pointer',
+          }}
         >
-          <BarChart3 size={15} />
-          Visão Gerencial
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('DRE')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'DRE'
-              ? 'bg-volt text-asfalto shadow-lg shadow-volt/10'
-              : 'bg-grafite text-cinza-muted hover:text-white border border-aco/50'
-          }`}
-        >
-          <PieChart size={15} />
-          DRE no Servidor
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('RANKING')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'RANKING'
-              ? 'bg-volt text-asfalto shadow-lg shadow-volt/10'
-              : 'bg-grafite text-cinza-muted hover:text-white border border-aco/50'
-          }`}
-        >
-          <Trophy size={15} />
-          Ranking de Técnicos (Streak)
+          Visão gerencial
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('NPS')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'NPS'
-              ? 'bg-volt text-asfalto shadow-lg shadow-volt/10'
-              : 'bg-grafite text-cinza-muted hover:text-white border border-aco/50'
-          }`}
+          style={{
+            height: '44px',
+            padding: '0 18px',
+            borderRadius: '12px',
+            border: activeTab === 'NPS' ? '1px solid #0E1116' : '1px solid #E1E6EC',
+            background: activeTab === 'NPS' ? '#0E1116' : '#fff',
+            color: activeTab === 'NPS' ? '#fff' : '#5B6674',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '14px',
+            fontWeight: activeTab === 'NPS' ? 600 : 500,
+            cursor: 'pointer',
+          }}
         >
-          <Star size={15} />
-          NPS & Retenção Ativa
+          NPS e retenção
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab('COMISSOES')}
-          className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-            activeTab === 'COMISSOES'
-              ? 'bg-volt text-asfalto shadow-lg shadow-volt/10'
-              : 'bg-grafite text-cinza-muted hover:text-white border border-aco/50'
-          }`}
+          onClick={() => setActiveTab('GARANTIAS')}
+          style={{
+            height: '44px',
+            padding: '0 18px',
+            borderRadius: '12px',
+            border: activeTab === 'GARANTIAS' ? '1px solid #0E1116' : '1px solid #E1E6EC',
+            background: activeTab === 'GARANTIAS' ? '#0E1116' : '#fff',
+            color: activeTab === 'GARANTIAS' ? '#fff' : '#5B6674',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '14px',
+            fontWeight: activeTab === 'GARANTIAS' ? 600 : 500,
+            cursor: 'pointer',
+          }}
         >
-          <CreditCard size={15} />
-          Comissões & Extrato
+          <span>Garantias e revisões</span>
+          <em
+            style={{
+              fontStyle: 'normal',
+              background: '#FFB020',
+              color: '#0E1116',
+              borderRadius: '99px',
+              padding: '2px 8px',
+              fontSize: '12px',
+              fontWeight: 700,
+            }}
+          >
+            4 vencendo
+          </em>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('DRE')}
+          style={{
+            height: '44px',
+            padding: '0 18px',
+            borderRadius: '12px',
+            border: activeTab === 'DRE' ? '1px solid #0E1116' : '1px solid #E1E6EC',
+            background: activeTab === 'DRE' ? '#0E1116' : '#fff',
+            color: activeTab === 'DRE' ? '#fff' : '#5B6674',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '14px',
+            fontWeight: activeTab === 'DRE' ? 600 : 500,
+            cursor: 'pointer',
+          }}
+        >
+          DRE e fluxo de caixa
         </button>
       </div>
 
-      {/* Conteúdo da Aba Selecionada */}
+      {/* 3. CONTEÚDO DA ABA ATIVA */}
+      {activeTab === 'NPS' && <NpsDashboard />}
+
       {activeTab === 'GERENCIAL' && (
-        <div className="space-y-6">
-          {/* KPIs Executivos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card variant="default" className="p-5 bg-grafite border-aco/50">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-cinza-muted">
-                  Faturamento do Período
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-volt/10 text-volt flex items-center justify-center">
-                  <TrendingUp size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-white font-mono mt-2">
-                {hideValues ? '••••••' : formatCurrency(gerencialStats.totalCents)}
-              </p>
-              <p className="text-[11px] text-cinza-muted mt-1">
-                Volume de {gerencialStats.count} ordens de serviço
-              </p>
-            </Card>
-
-            <Card variant="default" className="p-5 bg-grafite border-aco/50">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-cinza-muted">
-                  Ticket Médio
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                  <DollarSign size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-emerald-400 font-mono mt-2">
-                {hideValues ? '••••••' : formatCurrency(gerencialStats.ticketMedioCents)}
-              </p>
-              <p className="text-[11px] text-cinza-muted mt-1">
-                Por veículo atendido
-              </p>
-            </Card>
-
-            <Card variant="default" className="p-5 bg-grafite border-aco/50">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-cinza-muted">
-                  Veículos Entregues
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-volt/20 text-volt flex items-center justify-center">
-                  <CheckCircle2 size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-volt font-mono mt-2">
-                {gerencialStats.deliveredCount}
-              </p>
-              <p className="text-[11px] text-cinza-muted mt-1">
-                Ciclo operacional completo
-              </p>
-            </Card>
-
-            <Card variant="default" className="p-5 bg-grafite border-aco/50">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-cinza-muted">
-                  Em Andamento no Pátio
-                </span>
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                  <Wrench size={16} />
-                </div>
-              </div>
-              <p className="text-2xl font-black text-amber-400 font-mono mt-2">
-                {gerencialStats.inProgressCount}
-              </p>
-              <p className="text-[11px] text-cinza-muted mt-1">
-                Check-in, execução ou QA
-              </p>
-            </Card>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #E1E6EC',
+              borderRadius: '20px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '14px', color: '#5B6674', fontWeight: 500 }}>Faturamento</span>
+            <b style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '32px', color: '#0E1116' }}>
+              {hideValues ? '••••••' : formatCurrency(gerencialStats.totalCents)}
+            </b>
+            <span style={{ fontSize: '13px', color: '#5B6674' }}>{gerencialStats.count} ordens no período</span>
           </div>
 
-          {/* Top Serviços Mais Rentáveis */}
-          <Card variant="default" className="p-6 bg-grafite border-aco/60">
-            <h3 className="text-sm font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Wrench size={16} className="text-volt" />
-              Serviços Mais Representativos no Faturamento
-            </h3>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #E1E6EC',
+              borderRadius: '20px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '14px', color: '#5B6674', fontWeight: 500 }}>Ticket Médio</span>
+            <b style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '32px', color: '#0E1116' }}>
+              {hideValues ? '••••••' : formatCurrency(gerencialStats.ticketMedioCents)}
+            </b>
+            <span style={{ fontSize: '13px', color: '#5B6674' }}>Por veículo atendido</span>
+          </div>
 
-            <div className="space-y-4">
-              {gerencialStats.topServices.map((service, idx) => {
-                const percent =
-                  gerencialStats.totalCents > 0
-                    ? Math.round((service.totalCents / gerencialStats.totalCents) * 100)
-                    : 0;
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #E1E6EC',
+              borderRadius: '20px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '14px', color: '#5B6674', fontWeight: 500 }}>Entregues</span>
+            <b style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '32px', color: '#0E1116' }}>
+              {gerencialStats.deliveredCount}
+            </b>
+            <span style={{ fontSize: '13px', color: '#5B6674' }}>Ciclo completo</span>
+          </div>
 
-                return (
-                  <div key={idx} className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-white">
-                      <span>{service.name} ({service.count} OS)</span>
-                      <span className="font-mono text-volt">
-                        {hideValues ? '••••••' : formatCurrency(service.totalCents)} ({percent}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-asfalto h-2 rounded-full overflow-hidden border border-aco">
-                      <div
-                        className="bg-volt h-full rounded-full transition-all duration-500"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-
-              {gerencialStats.topServices.length === 0 && (
-                <p className="text-xs text-cinza-muted text-center py-6">
-                  Nenhum serviço registrado no período selecionado.
-                </p>
-              )}
-            </div>
-          </Card>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #E1E6EC',
+              borderRadius: '20px',
+              padding: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <span style={{ fontSize: '14px', color: '#5B6674', fontWeight: 500 }}>No Pátio</span>
+            <b style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '32px', color: '#0E1116' }}>
+              {gerencialStats.inProgressCount}
+            </b>
+            <span style={{ fontSize: '13px', color: '#5B6674' }}>Em execução ou QA</span>
+          </div>
         </div>
       )}
 
-      {activeTab === 'DRE' && (
-        <DreDashboard initialStartDate={startDate} initialEndDate={endDate} />
+      {activeTab === 'GARANTIAS' && (
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #E1E6EC',
+            borderRadius: '20px',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+          }}
+        >
+          <h3 style={{ margin: 0, fontFamily: "'Space Grotesk', sans-serif", fontSize: '18px' }}>
+            Garantias e Retornos Programados
+          </h3>
+          <p style={{ margin: 0, fontSize: '14px', color: '#5B6674' }}>
+            Acompanhe veículos com revisão de 6 meses ou garantia preventiva vencendo nos próximos dias.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 16px',
+                border: '1px solid #E1E6EC',
+                borderRadius: '14px',
+              }}
+            >
+              <div>
+                <b style={{ color: '#0E1116', fontSize: '15px' }}>Porsche 911 Carrera (Placa POR9110)</b>
+                <div style={{ fontSize: '13px', color: '#5B6674' }}>
+                  PPF Full Body · Garantia de 5 anos · Revisão anual 1 de 5
+                </div>
+              </div>
+              <span
+                style={{
+                  background: '#FEF08A',
+                  color: '#854D0E',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                }}
+              >
+                Vence em 4 dias
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 16px',
+                border: '1px solid #E1E6EC',
+                borderRadius: '14px',
+              }}
+            >
+              <div>
+                <b style={{ color: '#0E1116', fontSize: '15px' }}>BMW M3 Competition (Placa BMW0M30)</b>
+                <div style={{ fontSize: '13px', color: '#5B6674' }}>
+                  Vitrificação Cerâmica 9H · Inspeção de brilho e hidrofobia
+                </div>
+              </div>
+              <span
+                style={{
+                  background: '#FEF08A',
+                  color: '#854D0E',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                }}
+              >
+                Vence em 7 dias
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
-      {activeTab === 'RANKING' && (
-        <TecnicosRanking initialStartDate={startDate} initialEndDate={endDate} />
-      )}
-
-      {activeTab === 'NPS' && <NpsDashboard />}
-
-      {activeTab === 'COMISSOES' && (
-        <ComissoesDashboard initialStartDate={startDate} initialEndDate={endDate} />
-      )}
+      {activeTab === 'DRE' && <DreDashboard />}
     </div>
   );
 };

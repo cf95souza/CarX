@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const createApiProxy = (target = 'http://localhost:3000') => ({
+const createApiProxy = (target = process.env.VITE_API_URL || 'http://localhost:3333') => ({
   target,
   changeOrigin: true,
   bypass: (req) => {
@@ -27,6 +27,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/auth': createApiProxy(),

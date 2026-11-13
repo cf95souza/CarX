@@ -1,0 +1,73 @@
+﻿
+Running 27 tests using 1 worker
+
+  ok  1 [api-e2e] › e2e\01-critical-flow.spec.ts:19:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 01. Onboarding e Registro da Oficina com Gestor e Técnico (839ms)
+  ok  2 [api-e2e] › e2e\01-critical-flow.spec.ts:86:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 02. Cadastro de Cliente, Veículo e Box de Atendimento (129ms)
+  ok  3 [api-e2e] › e2e\01-critical-flow.spec.ts:135:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 03. Criação de Orçamento (QUOTE) com Numeração Sequencial Atômica (285ms)
+  ok  4 [api-e2e] › e2e\01-critical-flow.spec.ts:163:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 04. Aprovação do Orçamento (APPROVED) (313ms)
+  ok  5 [api-e2e] › e2e\01-critical-flow.spec.ts:180:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 05. Agendamento com Alocação de Box (SCHEDULED) (220ms)
+  ok  6 [api-e2e] › e2e\01-critical-flow.spec.ts:214:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 06. Checklist de Entrada / VCR (CHECKED_IN) (173ms)
+  ok  7 [api-e2e] › e2e\01-critical-flow.spec.ts:250:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 07. Execução Técnica e Cronômetro Oficial (IN_PROGRESS) (122ms)
+  ok  8 [api-e2e] › e2e\01-critical-flow.spec.ts:273:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 08. Controle de Qualidade (QA -> READY) (161ms)
+  ok  9 [api-e2e] › e2e\01-critical-flow.spec.ts:323:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 09. Pagamento e Liquidação Financeira Atômica (39ms)
+  ok 10 [api-e2e] › e2e\01-critical-flow.spec.ts:341:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 10. Entrega do Veículo (DELIVERED) (81ms)
+  ok 11 [api-e2e] › e2e\01-critical-flow.spec.ts:358:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 11. Passaporte Digital do Veículo e Garantia (256ms)
+  ok 12 [api-e2e] › e2e\01-critical-flow.spec.ts:385:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 12. Pesquisa NPS e Avaliação Pós-Venda (62ms)
+  ok 13 [api-e2e] › e2e\01-critical-flow.spec.ts:414:3 › T3.16 — Fluxo Crítico Operacional de Ponta a Ponta (E2E) › 13. Rastreamento Público da OS (Tracking sem Token JWT) (40ms)
+  ok 14 [api-e2e] › e2e\02-self-booking.spec.ts:81:3 › T3.16 — E2E: Agendamento Online Público e Proteção Anti-Bot › 01. Honeypot Anti-Bot: Deve bloquear requisições com campo armadilha preenchido (13ms)
+BOOKING DATA: {
+  "appointment": {
+    "id": "fb213074-fb19-4342-8e11-af5691642263",
+    "tenantId": "ca19bb61-6e85-4bb7-92ab-fdee3dfa3fc5",
+    "bayId": "e788187b-c24d-4f21-bd1c-902b003b02eb",
+    "bayName": "Box Rápido 1",
+    "technicianId": null,
+    "technicianName": null,
+    "customerId": "434349b2-28d6-46f5-b9d6-eb796d098a56",
+    "vehicleId": "10b9888e-10b4-4c9d-95c7-b074cafc9d12",
+    "workOrderId": "6ab70dd3-3c38-4c68-a8c2-5ca6b4b1477f",
+    "workOrderNumber": 1,
+    "workOrderStatus": "QUOTE",
+    "title": "Agendamento Online - Fernanda Martins (BRA2E19)",
+    "startTime": "2026-11-13T17:00:00.000Z",
+    "endTime": "2026-11-13T19:00:00.000Z",
+    "estimatedMinutes": 120,
+    "status": "scheduled",
+    "origin": "ONLINE",
+    "customerName": "Fernanda Martins",
+    "customerPhone": "+5511988887777",
+    "customerEmail": "fernanda@gmail.com",
+    "vehiclePlate": "BRA2E19",
+    "vehicleModel": "Corolla Altis Hybrid",
+    "vehicleSizeClass": "sedan",
+    "serviceSummary": "Polimento Técnico Premium",
+    "notes": "Cliente solicitou atenção especial aos faróis.",
+    "createdBy": null,
+    "createdAt": "2026-11-10T22:51:37.775Z",
+    "updatedAt": "2026-11-10T22:51:37.775Z"
+  },
+  "workOrder": {
+    "id": "6ab70dd3-3c38-4c68-a8c2-5ca6b4b1477f",
+    "osNumber": 1,
+    "status": "QUOTE",
+    "origin": "ONLINE",
+    "trackingToken": "987b0df8-e152-417b-8f44-be4bc2aaa09c",
+    "trackingUrl": "/work-orders/tracking/987b0df8-e152-417b-8f44-be4bc2aaa09c"
+  },
+  "message": "Agendamento pré-confirmado com sucesso! Ordem de Serviço #1 criada como proposta (QUOTE)."
+}
+  ok 15 [api-e2e] › e2e\02-self-booking.spec.ts:106:3 › T3.16 — E2E: Agendamento Online Público e Proteção Anti-Bot › 02. Agendamento Público Legítimo: Deve criar cliente, veículo, OS no status QUOTE/ONLINE e alocar box (73ms)
+  ok 16 [api-e2e] › e2e\02-self-booking.spec.ts:151:3 › T3.16 — E2E: Agendamento Online Público e Proteção Anti-Bot › 03. Prevenção de Conflito de Horário: Deve rejeitar agendamento sobreposto no mesmo Box (36ms)
+  ok 17 [api-e2e] › e2e\02-self-booking.spec.ts:177:3 › T3.16 — E2E: Agendamento Online Público e Proteção Anti-Bot › 04. Validação de Integridade: Rejeita placa de veículo inválida (15ms)
+  ok 18 [api-e2e] › e2e\02-self-booking.spec.ts:198:3 › T3.16 — E2E: Agendamento Online Público e Proteção Anti-Bot › 05. Validação de Tenant: Rejeita agendamento para oficina inexistente (12ms)
+  ok 19 [api-e2e] › e2e\02-self-booking.spec.ts:216:3 › T3.16 — E2E: Agendamento Online Público e Proteção Anti-Bot › 06. Tracking Público: Consulta pública da OS agendada pelo token sem autenticação (25ms)
+  ok 20 [api-e2e] › e2e\03-tenant-isolation.spec.ts:169:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 01. Listagem de Clientes: Beta enxerga apenas seus clientes, sem vazamento dos dados de Alpha (25ms)
+  ok 21 [api-e2e] › e2e\03-tenant-isolation.spec.ts:184:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 02. Busca Direta Cross-Tenant de Cliente: Beta recebe 404 ao tentar acessar Cliente de Alpha (18ms)
+  ok 22 [api-e2e] › e2e\03-tenant-isolation.spec.ts:191:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 03. Busca Direta Cross-Tenant de Veículo: Beta recebe 404 ao tentar acessar Veículo de Alpha (21ms)
+  ok 23 [api-e2e] › e2e\03-tenant-isolation.spec.ts:198:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 04. Boxes de Atendimento: Beta enxerga apenas seus boxes e recebe 404 ao buscar box de Alpha (36ms)
+  ok 24 [api-e2e] › e2e\03-tenant-isolation.spec.ts:215:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 05. Ordens de Serviço: Beta recebe 404 ao tentar consultar ou alterar OS de Alpha (42ms)
+  ok 25 [api-e2e] › e2e\03-tenant-isolation.spec.ts:232:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 06. Mutação Cruzada de Clientes: Beta recebe 404 ao tentar editar cliente de Alpha (23ms)
+  ok 26 [api-e2e] › e2e\03-tenant-isolation.spec.ts:242:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 07. Simetria de Isolamento: Alpha recebe 404 ao tentar acessar recursos de Beta (54ms)
+  ok 27 [api-e2e] › e2e\03-tenant-isolation.spec.ts:262:3 › T3.16 — E2E: Isolamento Estrito Multi-Tenant e RLS (Oficina Alpha vs Oficina Beta) › 08. Tenant Inexistente: Cabeçalho com slug inválido é rejeitado com 404 (15ms)
+
+  27 passed (12.3s)

@@ -259,10 +259,12 @@ export class ProvisioningService {
     }
 
     // 6. Gravar Auditoria Imutável
+    const isSuperadminUuid = superadminUserId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(superadminUserId);
     await auditService.record({
-      superadminUserId,
+      superadminUserId: isSuperadminUuid ? superadminUserId : null,
+      userId: ownerResult.id,
       tenantId: tenantResult.id,
-      action: 'SUPERADMIN_TENANT_PROVISIONED',
+      action: isSuperadminUuid ? 'SUPERADMIN_TENANT_PROVISIONED' : 'SELF_SERVICE_TENANT_REGISTERED',
       entity: 'tenants',
       entityId: tenantResult.id,
       newValues: {

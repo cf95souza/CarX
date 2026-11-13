@@ -1,6 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply, preHandlerHookHandler } from 'fastify';
 import { authService, AuthError, RegisterUserInput, LoginInput } from '../auth/auth-service.js';
 import { verifyJwt, JwtPayload } from '../auth/jwt.js';
+import { requireTenantContext } from '../plugins/tenant.js';
+import { tenantQuery } from '../database/tenant-query.js';
+import { hashPassword } from '../auth/password.js';
+import { pool, adminPool } from '../database/db.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -216,6 +220,178 @@ export async function authRoutes(fastify: FastifyInstance) {
       user: request.user,
     });
   });
+
+  /**
+   * GET /tenant/members — Lista de colaboradores e técnicos da oficina
+   */
+  fastify.get('/tenant/members', { preHandler: [authenticateBearer, requireTenantContext] }, async (request, reply) => {
+    const tenantId = request.tenantId;
+    if (!tenantId) {
+      return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+    }
+
+    const res = await tenantQuery<{
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      is_active: boolean;
+      created_at: string;
+    }>(
+      tenantId,
+      `
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        m.role,
+        m.is_active,
+        u.created_at
+      FROM users u
+      JOIN memberships m ON m.user_id = u.id
+      WHERE m.tenant_id = $1
+      ORDER BY u.name ASC;
+      `,
+      [tenantId]
+    );
+
+    return reply.code(200).send(res.rows);
+  });
+
+  /**
+   * PATCH /tenant/members/:id — Atualização cadastral/perfil de colaborador
+   */
+  fastify.patch<{ Params: { id: string }; Body: Record<string, any> }>(
+    '/tenant/members/:id',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+      }
+
+      const { id } = request.params;
+      const body = (request.body as Record<string, any>) || {};
+
+      if (body.name || body.nome) {
+        await tenantQuery(
+          tenantId,
+          `UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2;`,
+          [body.name || body.nome, id]
+        );
+      }
+
+      if (body.role || body.cargo) {
+        await tenantQuery(
+          tenantId,
+          `UPDATE memberships SET role = $1, updated_at = NOW() WHERE tenant_id = $2 AND user_id = $3;`,
+          [body.role || body.cargo, tenantId, id]
+        );
+      }
+
+      if (body.is_active !== undefined || body.status !== undefined) {
+        const isActive = body.is_active !== undefined ? Boolean(body.is_active) : body.status === 'ativo';
+        await tenantQuery(
+          tenantId,
+          `UPDATE memberships SET is_active = $1, updated_at = NOW() WHERE tenant_id = $2 AND user_id = $3;`,
+          [isActive, tenantId, id]
+        );
+      }
+
+      return reply.code(200).send({ success: true });
+    }
+  );
+
+  /**
+   * POST /tenant/members — Criação de colaborador e vinculação à oficina
+   */
+  fastify.post<{ Body: { name: string; email: string; password?: string; role?: string } }>(
+    '/tenant/members',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+      }
+
+      const { name, email, password, role } = request.body || {};
+      if (!name || !email) {
+        return reply.code(400).send({ statusCode: 400, message: 'Nome e e-mail são obrigatórios.' });
+      }
+
+      const cleanEmail = email.toLowerCase().trim();
+      const rawPassword = password || 'CarX@' + Math.random().toString(36).slice(-6);
+      const hash = await hashPassword(rawPassword);
+
+      const userRes = await adminPool.query('SELECT id FROM users WHERE email = $1 LIMIT 1;', [cleanEmail]);
+      let userId: string;
+      if (userRes.rows.length > 0) {
+        userId = userRes.rows[0].id;
+      } else {
+        const ins = await adminPool.query(
+          'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id;',
+          [name.trim(), cleanEmail, hash]
+        );
+        userId = ins.rows[0].id;
+      }
+
+      const cleanRole = (role || 'tecnico').toLowerCase().trim();
+      const existingMem = await adminPool.query(
+        'SELECT id FROM memberships WHERE tenant_id = $1 AND user_id = $2 LIMIT 1;',
+        [tenantId, userId]
+      );
+      if (existingMem.rows.length > 0) {
+        await adminPool.query(
+          'UPDATE memberships SET role = $1, is_active = true, updated_at = NOW() WHERE id = $2;',
+          [cleanRole, existingMem.rows[0].id]
+        );
+      } else {
+        await adminPool.query(
+          'INSERT INTO memberships (tenant_id, user_id, role, is_active) VALUES ($1, $2, $3, true);',
+          [tenantId, userId, cleanRole]
+        );
+      }
+
+      return reply.code(201).send({
+        success: true,
+        user: { id: userId, name: name.trim(), email: cleanEmail, role: cleanRole },
+        temporaryPassword: rawPassword,
+      });
+    }
+  );
+
+  /**
+   * POST /tenant/members/:id/reset-password — Redefinição de senha de colaborador da oficina
+   */
+  fastify.post<{ Params: { id: string }; Body: { newPassword: string } }>(
+    '/tenant/members/:id/reset-password',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+      }
+
+      const { id } = request.params;
+      const { newPassword } = request.body || {};
+      if (!newPassword || newPassword.length < 6) {
+        return reply.code(400).send({ statusCode: 400, message: 'A senha deve conter no mínimo 6 caracteres.' });
+      }
+
+      const memRes = await pool.query(
+        'SELECT user_id FROM memberships WHERE tenant_id = $1 AND user_id = $2;',
+        [tenantId, id]
+      );
+      if (memRes.rows.length === 0) {
+        return reply.code(404).send({ statusCode: 404, message: 'Colaborador não encontrado nesta oficina.' });
+      }
+
+      const hash = await hashPassword(newPassword);
+      await pool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2;', [hash, id]);
+
+      return reply.code(200).send({ success: true, message: 'Senha atualizada com sucesso!' });
+    }
+  );
 }
 
 export default authRoutes;

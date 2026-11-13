@@ -15,6 +15,12 @@ import {
   normalizePlate,
   validatePlate,
   VehicleSizeClassType,
+  VEHICLE_SIZE_DURATION_MULTIPLIERS,
+  CalculateDurationInputDto,
+  CalculatedDurationResultDto,
+  SmartAppointmentDto,
+  SmartBayOverviewDto,
+  SmartScheduleOverviewResponseDto,
 } from '@carx/shared';
 
 export class BayConflictError extends Error {
@@ -37,6 +43,31 @@ export class BayConflictError extends Error {
   ) {
     super(message);
     this.name = 'BayConflictError';
+    this.statusCode = 409;
+    this.conflictingAppointment = conflictingAppointment;
+  }
+}
+
+export class TechnicianConflictError extends Error {
+  statusCode: number;
+  conflictingAppointment?: {
+    id: string;
+    title: string;
+    startTime: string;
+    endTime: string;
+  };
+
+  constructor(
+    message: string,
+    conflictingAppointment?: {
+      id: string;
+      title: string;
+      startTime: string;
+      endTime: string;
+    }
+  ) {
+    super(message);
+    this.name = 'TechnicianConflictError';
     this.statusCode = 409;
     this.conflictingAppointment = conflictingAppointment;
   }
@@ -387,6 +418,141 @@ export class AppointmentService {
     }
   }
 
+  /**
+   * Valida se existe conflito temporal para o mesmo técnico/profissional.
+   * Regra matemática: dois intervalos [A_start, A_end] e [B_start, B_end] se sobrepõem se:
+   * (A_start < B_end) AND (A_end > B_start)
+   * Agendamentos cancelados ou no-show são desconsiderados.
+   */
+  async checkTechnicianConflict(
+    tenantId: string,
+    technicianId: string,
+    startTime: Date | string,
+    endTime: Date | string,
+    excludeAppointmentId?: string
+  ): Promise<void> {
+    const startIso = new Date(startTime).toISOString();
+    const endIso = new Date(endTime).toISOString();
+
+    const sql = `
+      SELECT 
+        a.id, 
+        a.title, 
+        a.start_time AS "startTime", 
+        a.end_time AS "endTime",
+        u.name AS "technicianName"
+      FROM appointments a
+      INNER JOIN users u ON u.id = a.technician_id
+      WHERE a.tenant_id = $1
+        AND a.technician_id = $2
+        AND a.status NOT IN ('canceled', 'no_show')
+        AND a.start_time < $4
+        AND a.end_time > $3
+        AND ($5::uuid IS NULL OR a.id != $5)
+      LIMIT 1;
+    `;
+
+    const res = await tenantQuery<{
+      id: string;
+      title: string;
+      startTime: string;
+      endTime: string;
+      technicianName: string;
+    }>(tenantId, sql, [tenantId, technicianId, startIso, endIso, excludeAppointmentId || null]);
+
+    if (res.rows.length > 0) {
+      const conflict = res.rows[0];
+      const techName = conflict.technicianName || 'Profissional';
+      const formattedStart = new Date(conflict.startTime).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const formattedEnd = new Date(conflict.endTime).toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      throw new TechnicianConflictError(
+        `Choque de horário: O profissional "${techName}" já possui o agendamento "${conflict.title}" reservado das ${formattedStart} às ${formattedEnd}.`,
+        {
+          id: conflict.id,
+          title: conflict.title,
+          startTime: conflict.startTime,
+          endTime: conflict.endTime,
+        }
+      );
+    }
+  }
+
+  /**
+   * Cálculo inteligente de duração por porte veicular e serviços
+   * Aplica calibrações de `service_prices_by_class` ou os multiplicadores padrão da tabela automotiva.
+   */
+  async calculateEstimatedDuration(
+    tenantId: string,
+    input: CalculateDurationInputDto
+  ): Promise<CalculatedDurationResultDto> {
+    const sizeClass = input.sizeClass || 'sedan';
+    const multiplier = VEHICLE_SIZE_DURATION_MULTIPLIERS[sizeClass] || 1.0;
+
+    let baseMinutes = input.baseMinutes || 0;
+    const details: Array<{ serviceId: string; serviceName: string; minutes: number }> = [];
+
+    if (input.serviceIds && input.serviceIds.length > 0) {
+      const sql = `
+        SELECT 
+          s.id,
+          s.name,
+          COALESCE(sp.estimated_minutes, s.estimated_minutes, 60) AS "estimatedMinutes"
+        FROM services s
+        LEFT JOIN service_prices_by_class sp 
+          ON sp.service_id = s.id 
+         AND sp.tenant_id = s.tenant_id 
+         AND sp.size_class = $2
+        WHERE s.tenant_id = $1 
+          AND s.id = ANY($3::uuid[]);
+      `;
+
+      const res = await tenantQuery<{
+        id: string;
+        name: string;
+        estimatedMinutes: number;
+      }>(tenantId, sql, [tenantId, sizeClass, input.serviceIds]);
+
+      let servicesMinutes = 0;
+      for (const row of res.rows) {
+        servicesMinutes += row.estimatedMinutes;
+        details.push({
+          serviceId: row.id,
+          serviceName: row.name,
+          minutes: row.estimatedMinutes,
+        });
+      }
+
+      if (servicesMinutes > 0) {
+        baseMinutes = servicesMinutes;
+      }
+    }
+
+    if (baseMinutes <= 0) {
+      baseMinutes = 60;
+    }
+
+    const calculatedMinutes = details.length > 0
+      ? baseMinutes
+      : Math.round((baseMinutes * multiplier) / 15) * 15;
+
+    const finalMinutes = Math.max(15, calculatedMinutes);
+
+    return {
+      estimatedMinutes: finalMinutes,
+      baseMinutes,
+      multiplier,
+      sizeClass,
+      details: details.length > 0 ? details : undefined,
+    };
+  }
+
   // ============================================================================
   // 3. AGENDAMENTOS INTERNOS (GESTOR / ATENDENTE)
   // ============================================================================
@@ -547,6 +713,11 @@ export class AppointmentService {
       await this.checkBayConflict(tenantId, input.bayId, startTime, endTime);
     }
 
+    // Se houver técnico informado, validar ausência de choque de horário do profissional
+    if (input.technicianId) {
+      await this.checkTechnicianConflict(tenantId, input.technicianId, startTime, endTime);
+    }
+
     const sql = `
       INSERT INTO appointments (
         tenant_id,
@@ -651,6 +822,11 @@ export class AppointmentService {
         throw new BayNotFoundError();
       }
       await this.checkBayConflict(tenantId, bayId, startTime, endTime, appointmentId);
+    }
+
+    const technicianId = input.technicianId !== undefined ? input.technicianId : existing.technicianId;
+    if (technicianId) {
+      await this.checkTechnicianConflict(tenantId, technicianId, startTime, endTime, appointmentId);
     }
 
     const updates: string[] = ['updated_at = NOW()'];
@@ -824,6 +1000,169 @@ export class AppointmentService {
     }
 
     return slots;
+  }
+
+  /**
+   * Visão inteligente da agenda com ocupação visual por box e detecção de atrasos (T6.7)
+   */
+  async getSmartScheduleOverview(tenantId: string, dateStr: string): Promise<SmartScheduleOverviewResponseDto> {
+    const bays = await this.listBays(tenantId, { activeOnly: true });
+
+    const finalBays: BayDto[] = bays.length > 0
+      ? bays
+      : [
+          {
+            id: 'bay-default-1',
+            tenantId,
+            name: 'Box 1 · Principal',
+            description: null,
+            color: '#C8F52E',
+            orderIndex: 0,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'bay-default-2',
+            tenantId,
+            name: 'Box 2 · Secundário',
+            description: null,
+            color: '#CDEBFB',
+            orderIndex: 1,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ];
+
+    const dayStart = `${dateStr}T00:00:00.000Z`;
+    const dayEnd = `${dateStr}T23:59:59.999Z`;
+
+    const appointments = await this.listAppointments(tenantId, {
+      startDate: dayStart,
+      endDate: dayEnd,
+    });
+
+    const now = new Date();
+    let totalAppointments = appointments.length;
+    let activeCount = 0;
+    let delayedCount = 0;
+
+    const smartBays: SmartBayOverviewDto[] = [];
+
+    for (const bay of finalBays) {
+      const bayApps = appointments.filter((a) => a.bayId === bay.id);
+
+      const smartBayApps: SmartAppointmentDto[] = bayApps.map((a) => {
+        const start = new Date(a.startTime);
+        const end = new Date(a.endTime);
+        const s = a.status.toLowerCase();
+
+        const titleAndSummary = `${a.title} ${a.serviceSummary || ''}`.toLowerCase();
+        let category: SmartAppointmentDto['category'] = 'outro';
+        let statusColor = '#E8EEF4';
+
+        if (titleAndSummary.includes('ppf')) {
+          category = 'ppf';
+          statusColor = '#CDEBFB';
+        } else if (
+          titleAndSummary.includes('insulfilm') ||
+          titleAndSummary.includes('pelicula') ||
+          titleAndSummary.includes('película') ||
+          titleAndSummary.includes('polimento') ||
+          titleAndSummary.includes('detailing') ||
+          titleAndSummary.includes('vitrific')
+        ) {
+          category = titleAndSummary.includes('ppf') ? 'ppf' : 'insulfilm';
+          statusColor = '#C8F52E';
+        }
+
+        if (s === 'scheduled' || s === 'confirmed') {
+          if (category === 'outro') statusColor = '#FFE2A8';
+        }
+
+        const isPastEnd = now > end;
+        const isNotFinished = s !== 'completed' && s !== 'canceled' && s !== 'no_show';
+        const isDelayed = isPastEnd && isNotFinished;
+        const delayMinutes = isDelayed ? Math.max(1, Math.round((now.getTime() - end.getTime()) / 60000)) : 0;
+
+        if (isDelayed) {
+          statusColor = '#FEE2E2';
+          delayedCount++;
+        }
+
+        if (isNotFinished) {
+          activeCount++;
+        }
+
+        return {
+          ...a,
+          isDelayed,
+          delayMinutes,
+          category,
+          statusColor,
+        };
+      });
+
+      const currentActive = smartBayApps.find((a) => {
+        const start = new Date(a.startTime);
+        const end = new Date(a.endTime);
+        return now >= start && now <= end && a.status !== 'canceled' && a.status !== 'no_show';
+      });
+
+      const delayedActive = smartBayApps.find((a) => a.isDelayed);
+
+      let occupancyStatus: SmartBayOverviewDto['occupancyStatus'] = 'free';
+      if (delayedActive) {
+        occupancyStatus = 'delayed';
+      } else if (currentActive) {
+        occupancyStatus = 'occupied';
+      }
+
+      const freeSlots: SmartBayOverviewDto['freeSlots'] = [];
+      const workHours = [8, 10, 12, 14, 16];
+      for (const h of workHours) {
+        const slotStart = new Date(`${dateStr}T${String(h).padStart(2, '0')}:00:00Z`);
+        const slotEnd = new Date(slotStart.getTime() + 120 * 60000);
+        const hasCollision = smartBayApps.some((a) => {
+          const aStart = new Date(a.startTime);
+          const aEnd = new Date(a.endTime);
+          return a.status !== 'canceled' && a.status !== 'no_show' && aStart < slotEnd && aEnd > slotStart;
+        });
+        if (!hasCollision) {
+          freeSlots.push({
+            startTime: slotStart.toISOString(),
+            endTime: slotEnd.toISOString(),
+            label: `Horário livre · ${h}h`,
+          });
+        }
+      }
+
+      const assignedTech = smartBayApps.find((a) => a.technicianName);
+
+      smartBays.push({
+        id: bay.id,
+        name: bay.name,
+        description: bay.description || null,
+        color: bay.color,
+        orderIndex: bay.orderIndex,
+        isActive: bay.isActive,
+        assignedTechnicianName: assignedTech?.technicianName || null,
+        assignedTechnicianId: assignedTech?.technicianId || null,
+        occupancyStatus,
+        currentAppointment: currentActive || delayedActive || null,
+        appointments: smartBayApps,
+        freeSlots,
+      });
+    }
+
+    return {
+      date: dateStr,
+      bays: smartBays,
+      totalAppointments,
+      activeCount,
+      delayedCount,
+    };
   }
 
   // ============================================================================

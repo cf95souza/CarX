@@ -2063,6 +2063,882 @@ CREATE TRIGGER trg_customer_portal_otps_updated_at
 
 ---
 
+## 🔑 Migração 023: API Pública, Webhooks Reais e Entregas com Retry (`023_api_keys_webhooks.up.sql`)
+
+### 1. Evolução de `api_keys`
+- Adicionados campos `status` (`active`, `revoked`), `revoked_at`, `rate_limit_per_minute` (janela deslizante) e `created_by` referenciando `users(id)`.
+- RLS compulsório e isolamento rigoroso por `tenant_id`.
+
+### 2. Evolução de `webhook_endpoints` e `webhook_deliveries`
+- Gerenciamento de status do webhook (`active`, `inactive`, `failing`) com contador de falhas (`failure_count`).
+- Assinatura HMAC-SHA256 (`signature`), rastreamento de tentativas (`attempts`, `max_attempts`), backoff exponencial (`next_retry_at`) e marcações de tempo (`delivered_at`, `failed_at`).
+
+---
+
+## 🎟️ Migração 024: Cupons Promocionais e Instâncias de WhatsApp por Loja (Arquitetura OperaBeauty)
+
+### 1. Tabela `coupons` (Gestão de Campanhas Promocionais pelo Super Admin)
+Permite a criação e controle de cupons promocionais pelo Super Administrador, atendendo campanhas de gratuidade ("X meses grátis") e ofertas temporárias ("3 meses de XX por Y"):
+
+```sql
+CREATE TABLE IF NOT EXISTS coupons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(50) NOT NULL UNIQUE, -- Código alfanumérico do cupom (ex: '3MESESPRO', 'INAUGURACAO')
+    description TEXT,
+    discount_type VARCHAR(30) NOT NULL, -- 'free_months', 'promotional_price', 'percentage', 'fixed_amount'
+    discount_value INTEGER NOT NULL, -- Valor do desconto (ex: 100 para 100% off, centavos para valor fixo, ou preço promocional em centavos)
+    duration_months INTEGER, -- Duração da oferta (ex: 3 para 3 meses; NULL para perpétuo/uso único)
+    max_uses INTEGER, -- Limite máximo global de utilizações (NULL = ilimitado)
+    current_uses INTEGER NOT NULL DEFAULT 0,
+    valid_from TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    valid_until TIMESTAMPTZ, -- Data limite para ativação
+    applicable_plan_slugs JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array de planos onde o cupom é válido (ex: ["essencial", "profissional"])
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_coupons_code ON coupons(UPPER(code));
+CREATE INDEX IF NOT EXISTS idx_coupons_active ON coupons(is_active, valid_until);
+```
+
+### 2. Tabela `coupon_redemptions` (Resgates de Cupom por Oficina)
+```sql
+CREATE TABLE IF NOT EXISTS coupon_redemptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    coupon_id UUID NOT NULL REFERENCES coupons(id) ON DELETE RESTRICT,
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    redeemed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    duration_months INTEGER,
+    expires_at TIMESTAMPTZ, -- Fim do benefício promocional (ex: 3 meses após resgate)
+    discount_applied_cents INTEGER NOT NULL DEFAULT 0,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_tenant ON coupon_redemptions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_coupon_redemptions_coupon ON coupon_redemptions(coupon_id);
+```
+
+### 3. Tabela `tenant_whatsapp_instances` (Sessões Baileys Isoladas por Oficina — OperaBeauty Pattern)
+Cada oficina gerencia seu próprio número de WhatsApp no seu painel. O número pertence estritamente à oficina contratante e nunca à software house:
+
+```sql
+CREATE TABLE IF NOT EXISTS tenant_whatsapp_instances (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL UNIQUE REFERENCES tenants(id) ON DELETE CASCADE,
+    phone_number VARCHAR(30), -- Número da oficina conectado (padrão internacional E.164)
+    status VARCHAR(30) NOT NULL DEFAULT 'DISCONNECTED', -- 'DISCONNECTED', 'PAIRING', 'QR_CODE', 'CONNECTED'
+    pairing_code VARCHAR(20), -- Código de pareamento numérico de 8 dígitos
+    qr_code_base64 TEXT, -- QR Code ativo em base64 para leitura
+    daily_messages_count INTEGER NOT NULL DEFAULT 0,
+    daily_limit INTEGER NOT NULL DEFAULT 300,
+    connected_at TIMESTAMPTZ,
+    last_activity_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE tenant_whatsapp_instances ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_whatsapp_instances FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON tenant_whatsapp_instances
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_tenant_whatsapp_instances_tenant ON tenant_whatsapp_instances(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_whatsapp_instances_status ON tenant_whatsapp_instances(status);
+```
+
+---
+
 ## 📜 Histórico e Esquema Legado (Arquivo para ETL da Fase 4)
 
 O esquema original do **OsSystem** (Supabase single-tenant com tabelas `clientes`, `veiculos`, `ordens_servico`, `estoque_materiais`, `servicos`, `checklist_avarias`, `os_midia`, `pesquisas_nps`) encontra-se arquivado para servir de fonte para os scripts de extração, transformação e carga (ETL) durante a **Fase 4**. O script completo de recriação do esquema legado está preservado em [`docs/legado-ossystem-schema.sql`](file:///d:/Repositorios/CarX/docs/legado-ossystem-schema.sql).
+
+
+---
+
+### Migration 025 — Cobrança Recorrente Automática SaaS e Mercado Pago (T5.2)
+
+```sql
+-- 1. Campos de Gateway e PIX na tabela de Faturas do SaaS (invoices)
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pix_code TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS pix_qr TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS gateway_provider VARCHAR(50) DEFAULT 'mercadopago';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS gateway_transaction_id VARCHAR(100);
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS gateway_invoice_url TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+
+CREATE INDEX IF NOT EXISTS idx_invoices_gateway_transaction_id ON invoices(gateway_transaction_id);
+
+-- 2. Tabela Global de Configurações de Faturamento da Plataforma (Super Admin)
+CREATE TABLE IF NOT EXISTS platform_billing_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    gateway VARCHAR(50) NOT NULL DEFAULT 'mercadopago',
+    mercadopago_access_token TEXT,
+    mercadopago_public_key TEXT,
+    mercadopago_webhook_secret TEXT,
+    pix_key VARCHAR(100),
+    pix_key_type VARCHAR(50),
+    sandbox_mode BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+---
+
+### Migration 026 — Orçamento Digital com Aceite Online & Sinal Pix (T6.1)
+
+```sql
+-- 1. Campos de Aceite Legal e Sinal Pix na tabela work_orders
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMPTZ;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS accepted_ip VARCHAR(50);
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS accepted_user_agent TEXT;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS accepted_signature_name VARCHAR(150);
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS deposit_required_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS deposit_pix_code TEXT;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS deposit_pix_qr_base64 TEXT;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS deposit_paid_at TIMESTAMPTZ;
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS public_notes TEXT;
+
+-- Índice para busca instantânea e segura por tracking_token público
+CREATE INDEX IF NOT EXISTS idx_work_orders_tracking_token ON work_orders(tracking_token);
+CREATE INDEX IF NOT EXISTS idx_work_orders_accepted_at ON work_orders(tenant_id, accepted_at);
+
+---
+
+### Migration 027 — Cache de Consulta Automática de Placas Automotivas (T6.2)
+
+```sql
+CREATE TABLE IF NOT EXISTS vehicle_plate_cache (
+    plate VARCHAR(10) PRIMARY KEY,
+    brand VARCHAR(100) NOT NULL,
+    model VARCHAR(150) NOT NULL,
+    year INTEGER,
+    model_year INTEGER,
+    color VARCHAR(50),
+    size_class VARCHAR(30) NOT NULL DEFAULT 'sedan',
+    chassis_mask VARCHAR(50),
+    fipe_price_cents INTEGER,
+    raw_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    consulted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '90 days')
+);
+
+CREATE INDEX IF NOT EXISTS idx_vehicle_plate_cache_expires ON vehicle_plate_cache(expires_at);
+```
+
+---
+
+### Migration 028 — Pix Integrado para Ordens de Serviço & Conciliação Atômica (T6.3)
+
+```sql
+-- 1. Índice para busca de pagamentos por referência de transação bancária (txid)
+CREATE INDEX IF NOT EXISTS idx_payments_transaction_reference ON payments(transaction_reference);
+
+-- 2. Coluna para persistir a última cobrança Pix dinâmica associada à Ordem de Serviço
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS pix_last_txid VARCHAR(50);
+CREATE INDEX IF NOT EXISTS idx_work_orders_pix_last_txid ON work_orders(tenant_id, pix_last_txid);
+```
+
+---
+
+### Migration 029 — Passaporte Digital do Veículo & Transferência de Custódia na Revenda (T6.6)
+
+```sql
+-- 1. Campos de Transferibilidade e Histórico na tabela warranties
+ALTER TABLE warranties
+    ADD COLUMN IF NOT EXISTS is_transferable BOOLEAN NOT NULL DEFAULT true,
+    ADD COLUMN IF NOT EXISTS transferred_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS transferred_from_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL;
+
+-- 2. Tabela de Histórico de Transferências de Custódia e Garantia (warranty_transfers)
+CREATE TABLE IF NOT EXISTS warranty_transfers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    warranty_id UUID NOT NULL REFERENCES warranties(id) ON DELETE CASCADE,
+    vehicle_id UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    previous_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    previous_customer_name VARCHAR(255),
+    new_customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+    new_customer_name VARCHAR(255) NOT NULL,
+    new_customer_phone VARCHAR(50) NOT NULL,
+    new_customer_email VARCHAR(255),
+    odometer_km INTEGER,
+    reason TEXT,
+    ip_address VARCHAR(50),
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico para warranty_transfers
+ALTER TABLE warranty_transfers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE warranty_transfers FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON warranty_transfers
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_warranty_transfers_tenant_id ON warranty_transfers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_warranty_transfers_warranty_id ON warranty_transfers(tenant_id, warranty_id);
+CREATE INDEX IF NOT EXISTS idx_warranty_transfers_vehicle_id ON warranty_transfers(tenant_id, vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_warranty_transfers_new_customer ON warranty_transfers(tenant_id, new_customer_id);
+```
+
+---
+
+### Migration 030 — Motor de Reputação no Google Meu Negócio (T6.8)
+
+```sql
+-- 1. URL do Google Meu Negócio / Maps na configuração visual do tenant
+ALTER TABLE tenant_branding
+    ADD COLUMN IF NOT EXISTS google_review_url TEXT;
+
+-- 2. Colunas de rastreamento de convite e conversão na tabela nps_surveys
+ALTER TABLE nps_surveys
+    ADD COLUMN IF NOT EXISTS google_review_sent_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS google_review_sent_via VARCHAR(20) DEFAULT NULL, -- 'automatic' ou 'manual'
+    ADD COLUMN IF NOT EXISTS google_review_clicked_at TIMESTAMPTZ;
+
+-- 3. Índice para consulta rápida de promotores e métricas de reputação
+CREATE INDEX IF NOT EXISTS idx_nps_surveys_promoters_reputation 
+    ON nps_surveys(tenant_id, score, google_review_clicked_at) 
+    WHERE score >= 9;
+```
+
+---
+
+### Migration 031 — Mini-Site Institucional, Portfólio Antes/Depois e Captação de Leads (T6.9)
+
+```sql
+-- 1. Configurações do mini-site no branding da oficina
+ALTER TABLE tenant_branding 
+    ADD COLUMN IF NOT EXISTS minisite_enabled BOOLEAN NOT NULL DEFAULT true,
+    ADD COLUMN IF NOT EXISTS minisite_headline VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS minisite_about TEXT,
+    ADD COLUMN IF NOT EXISTS minisite_address TEXT,
+    ADD COLUMN IF NOT EXISTS minisite_business_hours JSONB DEFAULT '{"weekdays": "08:00 às 18:00", "saturday": "08:00 às 12:00", "sunday": "Fechado"}'::jsonb,
+    ADD COLUMN IF NOT EXISTS minisite_features JSONB DEFAULT '["Garantia Certificada", "Profissionais Treinados", "Produtos Nobres", "Atendimento VIP"]'::jsonb;
+
+-- 2. Tabela de itens de portfólio (Fotos Antes & Depois / Trabalhos Recentes)
+CREATE TABLE IF NOT EXISTS minisite_portfolio_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL DEFAULT 'Geral',
+    before_image_url TEXT,
+    after_image_url TEXT NOT NULL,
+    description TEXT,
+    is_featured BOOLEAN NOT NULL DEFAULT false,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico para minisite_portfolio_items
+ALTER TABLE minisite_portfolio_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE minisite_portfolio_items FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON minisite_portfolio_items
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_minisite_portfolio_tenant_order 
+    ON minisite_portfolio_items (tenant_id, display_order, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_minisite_portfolio_category 
+    ON minisite_portfolio_items (tenant_id, category);
+
+-- 3. Tabela de leads e solicitações de orçamento recebidas pelo mini-site
+CREATE TABLE IF NOT EXISTS minisite_leads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
+    vehicle_model VARCHAR(100),
+    service_interest VARCHAR(255),
+    message TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'new', -- 'new', 'contacted', 'converted', 'discarded'
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico para minisite_leads
+ALTER TABLE minisite_leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE minisite_leads FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON minisite_leads
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_minisite_leads_tenant_status 
+    ON minisite_leads (tenant_id, status, created_at DESC);
+```
+
+---
+
+## 📋 Migração 032: Módulo Fiscal (NFS-e Automática) (`032_fiscal_nfse_module.up.sql`)
+
+### 1. Tabela `tenant_fiscal_settings` (Configurações Fiscais, Certificado A1 e Tributação)
+```sql
+CREATE TABLE IF NOT EXISTS tenant_fiscal_settings (
+    tenant_id UUID PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
+    environment VARCHAR(20) NOT NULL DEFAULT 'sandbox',
+    provider VARCHAR(50) NOT NULL DEFAULT 'focus_nfe',
+    api_token_encrypted TEXT,
+    certificate_pfx_base64_encrypted TEXT,
+    certificate_password_encrypted TEXT,
+    certificate_expires_at TIMESTAMPTZ,
+    company_legal_name VARCHAR(255),
+    company_cnpj VARCHAR(20),
+    municipal_inscription VARCHAR(50),
+    tax_regime VARCHAR(30) NOT NULL DEFAULT 'simples_nacional',
+    special_tax_regime VARCHAR(30),
+    default_service_code VARCHAR(30) NOT NULL DEFAULT '14.01',
+    cnae_code VARCHAR(30) NOT NULL DEFAULT '4520-0/05',
+    default_iss_rate_basis_points INTEGER NOT NULL DEFAULT 200, -- 200 = 2.00%
+    iss_retention_default BOOLEAN NOT NULL DEFAULT false,
+    auto_issue_on_delivery BOOLEAN NOT NULL DEFAULT false,
+    auto_issue_on_payment BOOLEAN NOT NULL DEFAULT false,
+    send_email_to_customer BOOLEAN NOT NULL DEFAULT true,
+    last_rps_number INTEGER NOT NULL DEFAULT 0,
+    rps_series VARCHAR(10) NOT NULL DEFAULT '1',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico para tenant_fiscal_settings
+ALTER TABLE tenant_fiscal_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_fiscal_settings FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON tenant_fiscal_settings
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+```
+
+### 2. Tabela `fiscal_invoices` (Notas Fiscais de Serviço - NFS-e)
+```sql
+CREATE TABLE IF NOT EXISTS fiscal_invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    work_order_id UUID NOT NULL REFERENCES work_orders(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    environment VARCHAR(20) NOT NULL DEFAULT 'sandbox',
+    provider VARCHAR(50) NOT NULL DEFAULT 'focus_nfe',
+    provider_invoice_id VARCHAR(100),
+    rps_number INTEGER NOT NULL,
+    rps_series VARCHAR(10) NOT NULL DEFAULT '1',
+    invoice_number VARCHAR(50),
+    verification_code VARCHAR(50),
+    status VARCHAR(30) NOT NULL DEFAULT 'draft', -- draft, processing, authorized, error, cancelled
+    gross_amount_cents INTEGER NOT NULL,
+    deductions_cents INTEGER NOT NULL DEFAULT 0,
+    net_amount_cents INTEGER NOT NULL,
+    iss_rate_basis_points INTEGER NOT NULL DEFAULT 200,
+    iss_amount_cents INTEGER NOT NULL DEFAULT 0,
+    description TEXT NOT NULL,
+    service_code VARCHAR(30) NOT NULL DEFAULT '14.01',
+    cnae_code VARCHAR(30) NOT NULL DEFAULT '4520-0/05',
+    error_message TEXT,
+    xml_url TEXT,
+    pdf_url TEXT,
+    issued_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    cancel_reason TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico para fiscal_invoices
+ALTER TABLE fiscal_invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fiscal_invoices FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON fiscal_invoices
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+-- Índices de Alta Performance
+CREATE INDEX IF NOT EXISTS idx_fiscal_invoices_tenant_wo 
+ON fiscal_invoices (tenant_id, work_order_id);
+
+CREATE INDEX IF NOT EXISTS idx_fiscal_invoices_status 
+ON fiscal_invoices (tenant_id, status, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_fiscal_invoices_rps 
+ON fiscal_invoices (tenant_id, rps_number, rps_series);
+
+CREATE INDEX IF NOT EXISTS idx_fiscal_invoices_provider_id 
+ON fiscal_invoices (provider, provider_invoice_id);
+
+-- Gating: Habilitação da feature 'nfse' nos planos Profissional e Premium
+UPDATE plans 
+SET features = features || '["nfse"]'::jsonb
+WHERE slug = 'profissional' AND NOT (features @> '["nfse"]'::jsonb);
+```
+
+---
+
+## 📋 Migração 033: DRE Gerencial, Fluxo de Caixa Avançado e Contas a Pagar/Receber (`033_advanced_financial_dre_cashflow.up.sql`)
+
+### 1. Tabela `financial_categories` (Plano de Contas da Oficina)
+```sql
+CREATE TABLE IF NOT EXISTS financial_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(30) NOT NULL, -- 'revenue', 'expense'
+    group_type VARCHAR(50) NOT NULL DEFAULT 'other', -- 'fixed_expense', 'operating_expense', 'cost_of_service', 'service_revenue', 'product_revenue', 'tax_deduction', 'other'
+    is_system BOOLEAN NOT NULL DEFAULT false,
+    display_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- RLS Canônico para financial_categories (suporta categorias globais do sistema quando tenant_id é NULL)
+ALTER TABLE financial_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_categories FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON financial_categories
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        tenant_id IS NULL
+        OR current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_financial_categories_tenant ON financial_categories(tenant_id, group_type);
+```
+
+### 2. Tabela `financial_bills` (Contas a Pagar e a Receber)
+```sql
+CREATE TABLE IF NOT EXISTS financial_bills (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    category_id UUID REFERENCES financial_categories(id) ON DELETE SET NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('payable', 'receivable')),
+    description VARCHAR(255) NOT NULL,
+    supplier_customer_name VARCHAR(255),
+    amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+    due_date DATE NOT NULL,
+    paid_at TIMESTAMPTZ,
+    paid_amount_cents INTEGER,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'canceled', 'overdue')),
+    payment_method VARCHAR(50), -- pix, boleto, credit_card, transfer, cash
+    notes TEXT,
+    work_order_id UUID REFERENCES work_orders(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    receipt_file_id UUID REFERENCES storage_files(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- RLS Canônico para financial_bills
+ALTER TABLE financial_bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_bills FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON financial_bills
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_financial_bills_tenant_due ON financial_bills(tenant_id, due_date, status);
+CREATE INDEX IF NOT EXISTS idx_financial_bills_tenant_type ON financial_bills(tenant_id, type, status);
+CREATE INDEX IF NOT EXISTS idx_financial_bills_wo ON financial_bills(tenant_id, work_order_id);
+```
+
+### 3. Enriquecimento da Tabela `commission_entries`
+```sql
+ALTER TABLE commission_entries ADD COLUMN IF NOT EXISTS spool_cost_cents INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE commission_entries ADD COLUMN IF NOT EXISTS batch_id VARCHAR(100);
+ALTER TABLE commission_entries ADD COLUMN IF NOT EXISTS paid_by UUID REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_commission_entries_batch ON commission_entries(tenant_id, batch_id);
+```
+
+---
+
+## 34. Migration 034: Painel Corporativo de Redes e Franquias (Multiunidade) (`034_corporate_multi_unit_franchise.up.sql`)
+
+### 1. Vinculação de Recursos Operacionais a Unidades / Filiais Físicas
+```sql
+ALTER TABLE work_orders ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_work_orders_tenant_unit ON work_orders(tenant_id, unit_id);
+
+ALTER TABLE bays ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_bays_tenant_unit ON bays(tenant_id, unit_id);
+
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_materials_tenant_unit ON materials(tenant_id, unit_id);
+
+ALTER TABLE material_rolls ADD COLUMN IF NOT EXISTS unit_id UUID REFERENCES units(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_material_rolls_tenant_unit ON material_rolls(tenant_id, unit_id);
+```
+
+### 2. Tabela de Transferências entre Filiais (`unit_transfers`)
+```sql
+CREATE TABLE IF NOT EXISTS unit_transfers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    from_unit_id UUID NOT NULL REFERENCES units(id) ON DELETE RESTRICT,
+    to_unit_id UUID NOT NULL REFERENCES units(id) ON DELETE RESTRICT,
+    transfer_type VARCHAR(20) NOT NULL CHECK (transfer_type IN ('material', 'roll')),
+    material_id UUID REFERENCES materials(id) ON DELETE SET NULL,
+    roll_id UUID REFERENCES material_rolls(id) ON DELETE SET NULL,
+    quantity NUMERIC(10, 3) NOT NULL CHECK (quantity > 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'canceled')),
+    notes TEXT,
+    transferred_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE unit_transfers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE unit_transfers FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON unit_transfers
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_unit_transfers_tenant ON unit_transfers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_unit_transfers_from_unit ON unit_transfers(tenant_id, from_unit_id);
+CREATE INDEX IF NOT EXISTS idx_unit_transfers_to_unit ON unit_transfers(tenant_id, to_unit_id);
+CREATE INDEX IF NOT EXISTS idx_unit_transfers_created_at ON unit_transfers(tenant_id, created_at DESC);
+```
+
+---
+
+## 35. Migration 035: App do Técnico Offline-First & Idempotência (`035_technician_offline_sync.up.sql`)
+
+### 1. Tabela de Logs e Rastreamento Idempotente de Ações Offline (`technician_offline_sync_logs`)
+```sql
+CREATE TABLE IF NOT EXISTS technician_offline_sync_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    action_id UUID NOT NULL,
+    technician_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    work_order_id UUID NOT NULL REFERENCES work_orders(id) ON DELETE CASCADE,
+    action_type VARCHAR(50) NOT NULL,
+    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    status VARCHAR(30) NOT NULL DEFAULT 'applied' CHECK (status IN ('applied', 'failed', 'rejected')),
+    error_message TEXT,
+    client_timestamp TIMESTAMPTZ NOT NULL,
+    synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE technician_offline_sync_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE technician_offline_sync_logs FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON technician_offline_sync_logs
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+-- Índices de Alta Performance
+CREATE INDEX IF NOT EXISTS idx_tech_sync_tenant_wo ON technician_offline_sync_logs(tenant_id, work_order_id);
+CREATE INDEX IF NOT EXISTS idx_tech_sync_tenant_tech ON technician_offline_sync_logs(tenant_id, technician_id);
+CREATE INDEX IF NOT EXISTS idx_tech_sync_synced_at ON technician_offline_sync_logs(tenant_id, synced_at DESC);
+
+-- Permissões para a Role Operacional
+GRANT SELECT, INSERT, UPDATE, DELETE ON technician_offline_sync_logs TO carx_app;
+```
+
+---
+
+## 36. Migration 036: Inteligência Artificial Aplicada a Vistorias & Orçamentos (`036_ai_inspection_analysis.up.sql`)
+
+### 1. Tabela de Análises de IA (`ai_inspection_analyses`)
+```sql
+CREATE TABLE IF NOT EXISTS ai_inspection_analyses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    work_order_id UUID REFERENCES work_orders(id) ON DELETE CASCADE,
+    inspection_id UUID REFERENCES inspections(id) ON DELETE SET NULL,
+    analysis_type VARCHAR(50) NOT NULL CHECK (analysis_type IN ('image_damage_detection', 'voice_checklist_extraction')),
+    input_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    detected_damages JSONB NOT NULL DEFAULT '[]'::jsonb,
+    suggested_services JSONB NOT NULL DEFAULT '[]'::jsonb,
+    extracted_checklist JSONB NOT NULL DEFAULT '{}'::jsonb,
+    provider VARCHAR(50) NOT NULL DEFAULT 'gemini',
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(30) NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'completed', 'failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE ai_inspection_analyses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_inspection_analyses FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON ai_inspection_analyses
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+-- Índices de Alta Eficiência
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_tenant_wo ON ai_inspection_analyses(tenant_id, work_order_id);
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_tenant_insp ON ai_inspection_analyses(tenant_id, inspection_id);
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_tenant_type ON ai_inspection_analyses(tenant_id, analysis_type);
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_created_at ON ai_inspection_analyses(tenant_id, created_at DESC);
+
+-- Permissões para a Role de Aplicação
+GRANT SELECT, INSERT, UPDATE, DELETE ON ai_inspection_analyses TO carx_app;
+```
+
+---
+
+## 37. Migration 037: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa (`037_crm_retention_rules.up.sql`)
+
+### 1. Tabela `crm_retention_rules` (Regras de Retenção Configuráveis por Oficina)
+```sql
+CREATE TABLE IF NOT EXISTS crm_retention_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    name VARCHAR(150) NOT NULL,
+    service_category VARCHAR(100) NOT NULL DEFAULT 'geral', -- 'ppf', 'vitrificacao', 'higienizacao', 'insulfilm', 'polimento', 'geral'
+    trigger_type VARCHAR(50) NOT NULL, -- 'warranty_revision', 'service_interval', 'customer_inactivity'
+    interval_days INTEGER NOT NULL DEFAULT 180 CHECK (interval_days > 0),
+    channel VARCHAR(30) NOT NULL DEFAULT 'whatsapp' CHECK (channel IN ('whatsapp', 'email', 'sms')),
+    message_template TEXT NOT NULL,
+    discount_type VARCHAR(30) DEFAULT 'percentage' CHECK (discount_type IN ('percentage', 'fixed_amount', 'free_service')),
+    discount_value INTEGER DEFAULT 10 CHECK (discount_value >= 0),
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE crm_retention_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crm_retention_rules FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON crm_retention_rules
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_crm_retention_rules_tenant ON crm_retention_rules(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_crm_retention_rules_trigger ON crm_retention_rules(tenant_id, trigger_type, is_active);
+CREATE INDEX IF NOT EXISTS idx_crm_retention_rules_category ON crm_retention_rules(tenant_id, service_category);
+
+DROP TRIGGER IF EXISTS trg_crm_retention_rules_updated_at ON crm_retention_rules;
+CREATE TRIGGER trg_crm_retention_rules_updated_at
+    BEFORE UPDATE ON crm_retention_rules
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+### 2. Tabela `tenant_customer_coupons` (Cupons Dinâmicos de Retenção da Oficina)
+```sql
+CREATE TABLE IF NOT EXISTS tenant_customer_coupons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+    code VARCHAR(50) NOT NULL,
+    description TEXT,
+    discount_type VARCHAR(30) NOT NULL DEFAULT 'percentage' CHECK (discount_type IN ('percentage', 'fixed_amount')),
+    discount_value INTEGER NOT NULL CHECK (discount_value > 0),
+    min_service_value_cents INTEGER NOT NULL DEFAULT 0,
+    valid_until TIMESTAMPTZ NOT NULL,
+    max_uses INTEGER NOT NULL DEFAULT 1,
+    times_used INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'expired', 'cancelled')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT uq_tenant_customer_coupons_code UNIQUE (tenant_id, code)
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE tenant_customer_coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenant_customer_coupons FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON tenant_customer_coupons
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_tenant_coupons_tenant_code ON tenant_customer_coupons(tenant_id, UPPER(code));
+CREATE INDEX IF NOT EXISTS idx_tenant_coupons_customer ON tenant_customer_coupons(tenant_id, customer_id);
+CREATE INDEX IF NOT EXISTS idx_tenant_coupons_status ON tenant_customer_coupons(tenant_id, status, valid_until);
+
+DROP TRIGGER IF EXISTS trg_tenant_customer_coupons_updated_at ON tenant_customer_coupons;
+CREATE TRIGGER trg_tenant_customer_coupons_updated_at
+    BEFORE UPDATE ON tenant_customer_coupons
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+### 3. Tabela `crm_retention_contacts` (Histórico de Disparos e Conversões)
+```sql
+CREATE TABLE IF NOT EXISTS crm_retention_contacts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    rule_id UUID REFERENCES crm_retention_rules(id) ON DELETE SET NULL,
+    customer_id UUID NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    vehicle_id UUID REFERENCES vehicles(id) ON DELETE SET NULL,
+    work_order_id UUID REFERENCES work_orders(id) ON DELETE SET NULL,
+    warranty_id UUID REFERENCES warranties(id) ON DELETE SET NULL,
+    coupon_id UUID REFERENCES tenant_customer_coupons(id) ON DELETE SET NULL,
+    coupon_code VARCHAR(50),
+    channel VARCHAR(30) NOT NULL DEFAULT 'whatsapp' CHECK (channel IN ('whatsapp', 'email', 'sms')),
+    destination VARCHAR(100) NOT NULL,
+    message_content TEXT NOT NULL,
+    whatsapp_url TEXT,
+    status VARCHAR(30) NOT NULL DEFAULT 'sent' CHECK (status IN ('draft', 'sent', 'contacted', 'scheduled', 'converted', 'ignored')),
+    converted_work_order_id UUID REFERENCES work_orders(id) ON DELETE SET NULL,
+    converted_at TIMESTAMPTZ,
+    conversion_revenue_cents INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    sent_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Ativação e Forçamento de RLS Canônico
+ALTER TABLE crm_retention_contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crm_retention_contacts FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation_policy ON crm_retention_contacts
+    AS PERMISSIVE FOR ALL TO public
+    USING (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    )
+    WITH CHECK (
+        current_setting('app.current_tenant_id', true) = tenant_id::text
+        OR current_setting('app.is_superadmin', true) = 'true'
+        OR current_setting('app.bypass_rls', true) = 'true'
+    );
+
+CREATE INDEX IF NOT EXISTS idx_crm_contacts_tenant ON crm_retention_contacts(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_crm_contacts_customer ON crm_retention_contacts(tenant_id, customer_id);
+CREATE INDEX IF NOT EXISTS idx_crm_contacts_status ON crm_retention_contacts(tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_crm_contacts_created_at ON crm_retention_contacts(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_crm_contacts_rule ON crm_retention_contacts(tenant_id, rule_id);
+
+DROP TRIGGER IF EXISTS trg_crm_retention_contacts_updated_at ON crm_retention_contacts;
+CREATE TRIGGER trg_crm_retention_contacts_updated_at
+    BEFORE UPDATE ON crm_retention_contacts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+
+
+
+
+

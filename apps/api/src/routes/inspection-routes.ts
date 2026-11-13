@@ -2,12 +2,14 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { authenticateBearer } from './auth-routes.js';
 import { requireTenantContext } from '../plugins/tenant.js';
 import { requireRole } from '../middlewares/rbac.js';
+import { requireFeature } from '../middlewares/plan-guards.js';
 import {
   CreateInspectionInputSchema,
   UpdateInspectionInputSchema,
   AddDamagePointInputSchema,
   AddInspectionPhotoInputSchema,
   SignInspectionInputSchema,
+  PlanFeatures,
 } from '@carx/shared';
 import {
   inspectionService,
@@ -16,12 +18,17 @@ import {
 } from '../inspections/inspection-service.js';
 
 export async function inspectionRoutes(fastify: FastifyInstance) {
+  const inspectionGuards = [
+    authenticateBearer,
+    requireTenantContext,
+    requireFeature(PlanFeatures.INSPECTION_CHECKLIST),
+  ];
   /**
    * POST /inspections — Cria uma nova inspeção / laudo VCR
    */
   fastify.post(
     '/inspections',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -60,7 +67,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.get(
     '/inspections/:id',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -86,7 +93,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.get(
     '/work-orders/:workOrderId/inspections',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -104,7 +111,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.patch(
     '/inspections/:id',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -143,7 +150,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.post(
     '/inspections/:id/damage-points',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -182,7 +189,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.delete(
     '/inspections/:id/damage-points/:pointId',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -212,7 +219,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.post(
     '/inspections/:id/photos',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -247,7 +254,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.delete(
     '/inspections/:id/photos/:photoId',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -277,7 +284,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.post(
     '/inspections/:id/sign',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -319,7 +326,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.post(
     '/inspections/:id/generate-pdf',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {
@@ -350,7 +357,7 @@ export async function inspectionRoutes(fastify: FastifyInstance) {
    */
   fastify.get(
     '/inspections/:id/pdf',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: inspectionGuards },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {

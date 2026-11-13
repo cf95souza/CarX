@@ -1,0 +1,26 @@
+{
+  "timestamp": "2026-11-13T17:13:45.746Z",
+  "status": "PASSED",
+  "rtoDurationMs": 343,
+  "rpoDataLossRecords": 0,
+  "checksumSha256": "143f5467f096f1f079e8398ed79e4387083e3cd91ec61e1ba2c4e7db165bc858",
+  "countsBefore": {
+    "tenants": 1,
+    "units": 1,
+    "customers": 1,
+    "vehicles": 1,
+    "work_orders": 1,
+    "financial_bills": 1,
+    "crm_retention_rules": 1
+  },
+  "countsAfter": {
+    "tenants": 1,
+    "units": 1,
+    "customers": 1,
+    "vehicles": 1,
+    "work_orders": 1,
+    "financial_bills": 1,
+    "crm_retention_rules": 1
+  },
+  "parityVerified": true
+}

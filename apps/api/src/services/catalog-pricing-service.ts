@@ -149,7 +149,12 @@ export class CatalogPricingService {
     if (!data.name || data.name.trim().length < 2) {
       throw new CatalogPricingError('O nome do serviço deve conter pelo menos 2 caracteres.');
     }
-    if (data.priceCents < 0) {
+    const priceCents = data.priceCents ?? (data as any).price_cents ?? 0;
+    const estimatedMinutes = data.estimatedMinutes ?? (data as any).estimated_minutes ?? 60;
+    const warrantyMonths = data.warrantyMonths ?? (data as any).warranty_months ?? 3;
+    const isActive = data.isActive ?? (data as any).is_active ?? true;
+
+    if (priceCents < 0) {
       throw new CatalogPricingError('O preço não pode ser negativo.');
     }
 
@@ -187,13 +192,13 @@ export class CatalogPricingService {
         tenantId,
         data.name.trim(),
         data.description ?? null,
-        data.priceCents,
-        data.estimatedMinutes ?? 60,
+        priceCents,
+        estimatedMinutes,
         data.category ?? 'geral',
         data.segment ?? 'mecanica',
-        data.warrantyMonths ?? 3,
+        warrantyMonths,
         JSON.stringify(data.materialConsumptionEstimate ?? {}),
-        data.isActive ?? true,
+        isActive,
       ]
     );
 

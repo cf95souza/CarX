@@ -8,6 +8,7 @@ import {
   ChangeWorkOrderStatusDto,
   WorkOrderStatus,
   WorkOrderStatusType,
+  WhatsAppTransactionalEventType,
 } from '@carx/shared';
 import {
   workOrderService,
@@ -17,8 +18,100 @@ import {
 
 export async function workOrderRoutes(fastify: FastifyInstance) {
   // ============================================================================
-  // ENDPOINT PÚBLICO DE TRACKING (SEM AUTENTICAÇÃO)
+  // ENDPOINTS PÚBLICOS DE ORÇAMENTO DIGITAL & TRACKING (SEM AUTENTICAÇÃO)
   // ============================================================================
+
+  /**
+   * GET /public/quotes/:token — Consulta pública de orçamento digital com proteção LGPD
+   */
+  fastify.get<{ Params: { token: string } }>(
+    '/public/quotes/:token',
+    async (request, reply) => {
+      try {
+        const result = await workOrderService.getPublicQuote(request.params.token);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /public/quotes/:token/accept — Aceite legal com assinatura digital e IP
+   */
+  fastify.post<{
+    Params: { token: string };
+    Body: { signatureName?: string; termsAccepted?: boolean; agreedTerms?: boolean };
+  }>(
+    '/public/quotes/:token/accept',
+    async (request, reply) => {
+      const body = (request.body || {}) as any;
+      const signatureName = body.signatureName || '';
+      const termsAccepted = Boolean(body.termsAccepted ?? body.agreedTerms);
+      const ip = (request.headers['x-forwarded-for'] as string) || request.ip;
+      const userAgent = request.headers['user-agent'];
+
+      try {
+        const result = await workOrderService.acceptPublicQuote(
+          request.params.token,
+          {
+            signatureName,
+            termsAccepted,
+          },
+          ip || '127.0.0.1',
+          (userAgent as string) || 'Browser'
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /public/quotes/:token/pix-confirm — Confirmação do pagamento de sinal Pix online
+   */
+  fastify.post<{ Params: { token: string } }>(
+    '/public/quotes/:token/pix-confirm',
+    async (request, reply) => {
+      try {
+        const result = await workOrderService.confirmDepositPix(request.params.token);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /public/quotes/:token/reject — Recusa formal do orçamento pelo cliente
+   */
+  fastify.post<{ Params: { token: string }; Body: { reason?: string } }>(
+    '/public/quotes/:token/reject',
+    async (request, reply) => {
+      try {
+        const result = await workOrderService.rejectPublicQuote(
+          request.params.token,
+          request.body?.reason || 'Sem justificativa informada'
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
 
   /**
    * GET /work-orders/tracking/:token — Consulta pública de acompanhamento do carro
@@ -244,6 +337,172 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
         return reply.code(200).send(updated);
       } catch (err: any) {
         if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // ============================================================================
+  // ROTAS DE COMUNICAÇÃO TRANSACIONAL VIA WHATSAPP (T6.1 & T6.4)
+  // ============================================================================
+
+  /**
+   * POST /work-orders/:id/send-whatsapp — Envio ou geração do link da proposta por WhatsApp
+   */
+  fastify.post<{ Params: { id: string }; Body: { originUrl?: string } }>(
+    '/work-orders/:id/send-whatsapp',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+      }
+
+      try {
+        const originUrl = request.body?.originUrl || request.headers.origin || 'http://localhost:5173';
+        const result = await workOrderService.sendQuoteWhatsApp(tenantId, request.params.id, originUrl);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /work-orders/:id/notify-whatsapp — Notificação transacional sob demanda ou automática
+   */
+  fastify.post<{
+    Params: { id: string };
+    Body: {
+      eventType?: WhatsAppTransactionalEventType;
+      customMessage?: string;
+      originUrl?: string;
+    };
+  }>(
+    '/work-orders/:id/notify-whatsapp',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+      }
+
+      const eventType = request.body?.eventType || 'CUSTOM';
+      const originUrl = request.body?.originUrl || request.headers.origin || 'http://localhost:5173';
+
+      try {
+        const result = await workOrderService.notifyWorkOrderWhatsApp(
+          tenantId,
+          request.params.id,
+          eventType,
+          request.body?.customMessage,
+          originUrl
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // ============================================================================
+  // ROTAS DE PIX INTEGRADO PARA ORDENS DE SERVIÇO & CONCILIAÇÃO (T6.3)
+  // ============================================================================
+
+  /**
+   * POST /work-orders/:id/pix-charge — Gera cobrança Pix dinâmica para a OS no caixa
+   */
+  fastify.post<{ Params: { id: string }; Body: { amountCents?: number } }>(
+    '/work-orders/:id/pix-charge',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId!;
+      const userId = (request.user as any)?.userId || (request.user as any)?.sub;
+
+      try {
+        const result = await workOrderService.createPixCharge(
+          tenantId,
+          request.params.id,
+          request.body?.amountCents,
+          userId
+        );
+        return reply.code(201).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * GET /work-orders/:id/pix-status/:txid — Consulta status da cobrança Pix da OS
+   */
+  fastify.get<{ Params: { id: string; txid: string } }>(
+    '/work-orders/:id/pix-status/:txid',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId!;
+
+      try {
+        const result = await workOrderService.getPixStatus(
+          tenantId,
+          request.params.id,
+          request.params.txid
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /webhooks/pix/confirm — Webhook de conciliação bancária / liquidação instantânea Pix
+   */
+  fastify.post<{
+    Body: {
+      txid: string;
+      amountCents?: number;
+      e2eId?: string;
+      payerName?: string;
+      secretToken?: string;
+    };
+  }>(
+    '/webhooks/pix/confirm',
+    async (request, reply) => {
+      const { txid, amountCents, e2eId, payerName } = request.body || {};
+
+      if (!txid || typeof txid !== 'string') {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'BAD_REQUEST',
+          message: 'O campo "txid" é obrigatório para conciliação Pix.',
+        });
+      }
+
+      try {
+        const result = await workOrderService.confirmPixPayment(
+          txid,
+          amountCents,
+          e2eId,
+          payerName
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderNotFoundError) {
           return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
         }
         throw err;

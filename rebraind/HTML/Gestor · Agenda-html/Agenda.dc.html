@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Agenda</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.col{position:relative;border-left:1px solid #E1E6EC;height:560px;background:repeating-linear-gradient(#fff 0 55px,#E1E6EC 55px 56px)}
+.hd{padding:12px;font-size:14px;font-weight:600;border-left:1px solid #E1E6EC}
+.ev{position:absolute;left:6px;right:6px;border-radius:12px;padding:8px 10px;font-size:13px;line-height:1.3;color:#0E1116;overflow:hidden}
+.ev b{display:block;font-size:14px}
+.hr{height:56px;font-size:12px;color:#5B6674;padding:4px 10px 0 0;text-align:right}
+</style>
+</helmet>
+<div style="width:100%;min-height:844px;background:#F3F5F7;font-family:Inter,sans-serif;color:#0E1116;padding:28px 40px;display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;justify-content:space-between;align-items:center">
+<div style="display:flex;align-items:center;gap:14px"><div style="font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700">Agenda</div><div style="height:44px;padding:0 16px;border:1px solid #E1E6EC;background:#fff;border-radius:12px;display:flex;align-items:center;font-weight:600">Sex, 30 de out</div><div style="height:44px;padding:0 16px;border-radius:12px;background:#0E1116;color:#fff;display:flex;align-items:center;font-weight:600;font-size:14px">Dia</div><div style="height:44px;padding:0 16px;border:1px solid #E1E6EC;background:#fff;border-radius:12px;display:flex;align-items:center;font-size:14px">Semana</div></div>
+<button style="height:48px;padding:0 24px;border:0;border-radius:14px;background:#C8F52E;color:#0E1116;font:700 15px Inter,sans-serif">+ Novo agendamento</button>
+</div>
+<div style="background:#fff;border:1px solid #E1E6EC;border-radius:16px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-size:14px"><span><b>Agendamento online ativo</b> · 3 pedidos novos aguardam sua aprovação</span><span style="font-weight:600;text-decoration:underline">Copiar link da loja</span></div>
+<div style="display:flex;background:#fff;border:1px solid #E1E6EC;border-radius:20px;overflow:hidden">
+<div style="width:64px;flex:none"><div style="height:46px"></div><div class="hr">08h</div><div class="hr">09h</div><div class="hr">10h</div><div class="hr">11h</div><div class="hr">12h</div><div class="hr">13h</div><div class="hr">14h</div><div class="hr">15h</div><div class="hr">16h</div><div class="hr">17h</div></div>
+<div style="flex:1"><div class="hd">Box 1 · Lucas</div><div class="col">
+<div class="ev" style="top:0;height:164px;background:#C8F52E"><b>Chevrolet Montana</b>Insulfilme completo · em execução</div>
+<div class="ev" style="top:228px;height:108px;background:#E8EEF4"><b>Fiat Fiorino</b>Lalamove 3AD · 12:00</div>
+</div></div>
+<div style="flex:1"><div class="hd">Box 2 · Rafa</div><div class="col">
+<div class="ev" style="top:56px;height:220px;background:#CDEBFB"><b>BYD Seal</b>PPF frontal · em execução</div>
+<div class="ev" style="top:340px;height:108px;background:#FFE2A8"><b>VW Tera</b>Aguardando aprovação do cliente</div>
+</div></div>
+<div style="flex:1"><div class="hd">Box 3 · livre</div><div class="col">
+<div class="ev" style="top:168px;height:108px;background:#E8EEF4"><b>Hyundai HR</b>Película · 11:00</div>
+<div style="position:absolute;left:6px;right:6px;top:392px;height:56px;border:2px dashed #C8F52E;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#5B6674">Horário livre · 15h</div>
+</div></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ import { buildServer } from '../server.js';
 import { tenantQuery } from '../database/tenant-query.js';
 import { signJwt } from '../auth/jwt.js';
 import { hashPassword } from '../auth/password.js';
+import { PlanFeatures } from '@carx/shared';
 
 describe('T3.13 — Portal do Cliente Seguro ("Meu Veículo")', () => {
   let app: any;
@@ -43,17 +44,40 @@ describe('T3.13 — Portal do Cliente Seguro ("Meu Veículo")', () => {
 
     const passHash = await hashPassword('SenhaSegura123!');
 
+    // 0. Setup Plano com CUSTOMER_PORTAL e WHATSAPP_GATEWAY
+    const resPlan = await tenantQuery<{ id: string }>(
+      null,
+      `INSERT INTO plans (name, slug, description, price_cents, interval, limits, features, is_active)
+       VALUES ('Plano Portal Test', $1, 'Plano de Teste Portal', 19900, 'monthly',
+               '{"max_units": 1, "max_users": 5, "max_storage_mb": 5120, "max_whatsapp_messages_per_month": 1000}',
+               $2, true)
+       RETURNING id;`,
+      [`plan-portal-${timestamp}`, JSON.stringify([PlanFeatures.CUSTOMER_PORTAL, PlanFeatures.WHATSAPP_GATEWAY])],
+      { bypassRls: true }
+    );
+    const planPortalId = resPlan.rows[0].id;
+
     // 1. Setup Tenant Alpha
     tenantAlphaSlug = `alpha-portal-${timestamp}`;
     const resAlpha = await tenantQuery<{ id: string }>(
       null,
-      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment)
-       VALUES ('CarX Detailing Alpha', 'Alpha Detailing LTDA', $1, $2, '11.888.777/0001-99', 'active', 'estetica')
+      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment, plan_id)
+       VALUES ('CarX Detailing Alpha', 'Alpha Detailing LTDA', $1, $2, '11.888.777/0001-99', 'active', 'estetica', $3)
        RETURNING id;`,
-      [`contato@${tenantAlphaSlug}.local`, tenantAlphaSlug],
+      [`contato@${tenantAlphaSlug}.local`, tenantAlphaSlug, planPortalId],
       { bypassRls: true }
     );
     tenantAlphaId = resAlpha.rows[0].id;
+
+    // Conectar WhatsApp de Alpha
+    await tenantQuery(
+      null,
+      `INSERT INTO tenant_whatsapp_instances (tenant_id, status, phone_number, daily_limit)
+       VALUES ($1, 'CONNECTED', '5511999998888', 500)
+       ON CONFLICT (tenant_id) DO UPDATE SET status = 'CONNECTED', phone_number = '5511999998888'`,
+      [tenantAlphaId],
+      { bypassRls: true }
+    );
 
     // Owner de Alpha
     const resOwnerAlpha = await tenantQuery<{ id: string }>(
@@ -82,13 +106,23 @@ describe('T3.13 — Portal do Cliente Seguro ("Meu Veículo")', () => {
     tenantBetaSlug = `beta-portal-${timestamp}`;
     const resBeta = await tenantQuery<{ id: string }>(
       null,
-      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment)
-       VALUES ('CarX Detailing Beta', 'Beta Detailing LTDA', $1, $2, '22.888.777/0001-99', 'active', 'estetica')
+      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment, plan_id)
+       VALUES ('CarX Detailing Beta', 'Beta Detailing LTDA', $1, $2, '22.888.777/0001-99', 'active', 'estetica', $3)
        RETURNING id;`,
-      [`contato@${tenantBetaSlug}.local`, tenantBetaSlug],
+      [`contato@${tenantBetaSlug}.local`, tenantBetaSlug, planPortalId],
       { bypassRls: true }
     );
     tenantBetaId = resBeta.rows[0].id;
+
+    // Conectar WhatsApp de Beta
+    await tenantQuery(
+      null,
+      `INSERT INTO tenant_whatsapp_instances (tenant_id, status, phone_number, daily_limit)
+       VALUES ($1, 'CONNECTED', '5511988887777', 500)
+       ON CONFLICT (tenant_id) DO UPDATE SET status = 'CONNECTED', phone_number = '5511988887777'`,
+      [tenantBetaId],
+      { bypassRls: true }
+    );
 
     // 3. Cadastrar Cliente 1 em Alpha
     const resCust1 = await tenantQuery<{ id: string }>(
@@ -219,6 +253,40 @@ describe('T3.13 — Portal do Cliente Seguro ("Meu Veículo")', () => {
   // ============================================================================
   // 1. FLUXO DE OTP E BLINDAGEM ANTI-ENUMERAÇÃO
   // ============================================================================
+
+  test('Gating Arquitetural: Solicitar OTP em oficina com WhatsApp desconectado deve retornar HTTP 403', async () => {
+    // Desconecta temporariamente o WhatsApp de Beta
+    await tenantQuery(
+      null,
+      `UPDATE tenant_whatsapp_instances SET status = 'DISCONNECTED' WHERE tenant_id = $1`,
+      [tenantBetaId],
+      { bypassRls: true }
+    );
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/portal/auth/request-otp',
+      headers: {
+        'x-tenant-id': tenantBetaId,
+      },
+      payload: {
+        identifier: phoneBeta,
+      },
+    });
+
+    assert.equal(res.statusCode, 403);
+    const body = JSON.parse(res.payload);
+    assert.equal(body.code, 'WHATSAPP_NOT_CONNECTED');
+    assert.match(body.message, /WhatsApp desta oficina ainda não foi configurado/i);
+
+    // Reconecta o WhatsApp de Beta
+    await tenantQuery(
+      null,
+      `UPDATE tenant_whatsapp_instances SET status = 'CONNECTED' WHERE tenant_id = $1`,
+      [tenantBetaId],
+      { bypassRls: true }
+    );
+  });
 
   test('Anti-Enumeração: Solicitar OTP para telefone inexistente responde com HTTP 200 e mensagem neutra', async () => {
     const res = await app.inject({

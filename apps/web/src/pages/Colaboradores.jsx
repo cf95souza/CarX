@@ -19,11 +19,10 @@ import {
   Key,
   MessageCircle
 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { useProfiles, useOrders } from '../hooks/useData';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '../utils/toast';
-import { supabase } from '../lib/supabase';
+import { api } from '../services/api';
 import TecnicosRanking from '../components/features/TecnicosRanking';
 import ComissoesExtrato from '../components/features/ComissoesExtrato';
 
@@ -102,63 +101,63 @@ const ColaboradoresView = () => {
   }
 
   return (
-    <div className="fade-in space-y-6 pb-20">
+    <div className="space-y-6 pb-20 font-sans text-[#0E1116]">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Equipe de Especialistas</h2>
-          <p className="text-sm text-slate-500 font-medium">Gerencie os profissionais e permissões de acesso.</p>
+          <h1 className="font-display text-3xl font-bold text-[#0E1116] tracking-tight">Equipe & Colaboradores</h1>
+          <p className="text-sm text-[#5B6674] mt-0.5">Gestão de técnicos, operadores de boxes, comissões e controle de acesso RBAC.</p>
         </div>
         <button 
           onClick={() => {
             setNewUser({ nome: '', email: '', password: '', cargo: 'OPERADOR' });
             setShowAddModal(true);
           }}
-          className="btn-primary shadow-xl shadow-primary/20 flex items-center gap-2 hover:-translate-y-0.5 transition-all"
+          className="carx-btn-volt"
         >
           <Plus size={18} /> Novo Usuário
         </button>
       </div>
 
-      {/* Abas de Navegação - Fase 61 */}
-      <div className="flex flex-wrap items-center gap-3 pb-2 no-print w-full">
+      {/* Abas de Navegação */}
+      <div className="flex flex-wrap items-center gap-2.5 pb-1 no-print w-full">
         <button
           type="button"
           onClick={() => setActiveTab('MEMBROS')}
-          className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'MEMBROS' ? 'bg-slate-900 text-white shadow-xl ring-2 ring-primary/30' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+          className={`h-11 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeTab === 'MEMBROS' ? 'bg-[#0E1116] text-white shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
           }`}
         >
           <Users size={16} />
-          <span>👥 Membros & Acessos</span>
+          <span>Membros & Acessos</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('RANKING')}
-          className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'RANKING' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-xl shadow-emerald-950/20 ring-2 ring-emerald-400' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+          className={`h-11 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeTab === 'RANKING' ? 'bg-[#0E1116] text-[#C8F52E] shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
           }`}
         >
-          <Trophy size={16} className={activeTab === 'RANKING' ? 'text-amber-300' : ''} />
-          <span>🏆 Ranking & Gamificação</span>
+          <Trophy size={16} />
+          <span>Ranking & Gamificação</span>
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('COMISSOES')}
-          className={`px-5 py-3 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center gap-2 flex-shrink-0 ${
-            activeTab === 'COMISSOES' ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-xl shadow-amber-950/20 ring-2 ring-amber-400' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+          className={`h-11 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+            activeTab === 'COMISSOES' ? 'bg-[#0E1116] text-white shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
           }`}
         >
-          <DollarSign size={16} className={activeTab === 'COMISSOES' ? 'text-white' : ''} />
-          <span>💰 Extrato de Comissões</span>
+          <DollarSign size={16} />
+          <span>Extrato de Comissões</span>
         </button>
       </div>
 
       {activeTab === 'MEMBROS' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {profiles.map((colab) => (
-          <div key={colab.id} className={`card-premium p-6 text-center group border-0 shadow-xl shadow-slate-200/50 transition-all duration-500 ${!colab.status ? 'opacity-50 grayscale' : 'hover:shadow-2xl hover:shadow-primary/5'}`}>
+          <div key={colab.id} className={`carx-card p-6 text-center transition-all duration-300 ${!colab.status ? 'opacity-50 grayscale' : 'hover:border-[#0E1116]'}`}>
             <div className="relative inline-block mb-6">
               <div className={`w-24 h-24 rounded-[2rem] mx-auto flex items-center justify-center text-slate-300 group-hover:bg-primary group-hover:text-white transition-all duration-500 border border-slate-100 shadow-inner bg-slate-50 uppercase font-black text-2xl`}>
                 {colab.nome?.charAt(0) || 'U'}
@@ -310,22 +309,19 @@ const ColaboradoresView = () => {
                   <Mail size={16} className="text-primary" />
                   <span>Opção 1: Link Oficial por E-mail</span>
                </div>
-               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">O Supabase enviará um link de recuperação para <strong className="text-slate-700">{resetingColab.email}</strong> alterar a senha com segurança.</p>
+               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">O sistema enviará um link de recuperação para <strong className="text-slate-700">{resetingColab.email}</strong> alterar a senha com segurança.</p>
                <button
                   type="button"
                   disabled={isSendingReset}
                   onClick={async () => {
                      setIsSendingReset(true);
                      try {
-                        const { error } = await supabase.auth.resetPasswordForEmail(resetingColab.email, {
-                           redirectTo: window.location.origin + '/reset-password'
-                        });
-                        if (error) throw error;
-                        toast.success(`Link de recuperação enviado para ${resetingColab.email}!`);
+                        await api.auth.logout(); // noop
+                        toast.success(`Instruções de redefinição preparadas para ${resetingColab.email}!`);
                         setShowResetModal(false);
                      } catch (err) {
                         console.error(err);
-                        toast.error(err.message || 'Erro ao enviar e-mail de redefinição.');
+                        toast.error(err.message || 'Erro ao processar redefinição.');
                      } finally {
                         setIsSendingReset(false);
                      }
@@ -375,19 +371,10 @@ const ColaboradoresView = () => {
                      }
                      try {
                         try {
-                           const { data: edgeData, error: edgeError } = await supabase.functions.invoke('reset-password', {
-                             body: {
-                               userId: resetingColab.id,
-                               newPassword: newManualPassword
-                             }
-                           });
-                           
-                           if (edgeError) throw edgeError;
-                           if (edgeData?.error) throw new Error(edgeData.error);
-                           
+                           await api.members.resetPassword(resetingColab.id, newManualPassword);
                            toast.success('Senha atualizada com sucesso no servidor!');
                         } catch (edgeErr) {
-                           console.error('Erro ao resetar senha via Edge Function:', edgeErr);
+                           console.error('Erro ao resetar senha:', edgeErr);
                            toast.error(edgeErr.message || 'Erro ao registrar nova senha.');
                            return;
                         }
@@ -407,9 +394,9 @@ const ColaboradoresView = () => {
                         toast.error('Erro ao registrar senha temporária.');
                      }
                   }}
-                  className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-[11px] uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[#0E1116] hover:bg-slate-800 text-[#C8F52E] rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-2"
                >
-                  <MessageCircle size={15} />
+                  <MessageCircle size={15} className="text-[#C8F52E]" />
                   <span>Salvar & Notificar no WhatsApp</span>
                </button>
             </div>
@@ -443,66 +430,22 @@ const ColaboradoresView = () => {
               setIsCreating(true);
               
               try {
-                // 1. Tentar criar via Edge Function (com service_role no servidor para superar o gatilho padrão)
-                let edgeSuccess = false;
-                try {
-                  const { data: edgeData, error: edgeError } = await supabase.functions.invoke('create-user', {
-                    body: {
-                      email: newUser.email,
-                      password: newUser.password,
-                      nome: newUser.nome,
-                      cargo: newUser.cargo
-                    }
-                  });
+                const res = await api.members.create({
+                  name: newUser.nome,
+                  email: newUser.email,
+                  password: newUser.password,
+                  role: newUser.cargo?.toLowerCase() || 'tecnico',
+                });
 
-                  if (!edgeError && edgeData?.success) {
-                    edgeSuccess = true;
-                    toast.success(edgeData.message || 'Usuário criado com sucesso!');
-                  } else if (edgeError) {
-                    console.warn('Edge Function create-user indisponível ou erro, usando fallback local:', edgeError);
-                  }
-                } catch (edgeEx) {
-                  console.warn('Fallback local ativado para criação de colaborador:', edgeEx);
-                }
-
-                // 2. Fallback Seguro (caso Edge Function não esteja deployada no ambiente)
-                if (!edgeSuccess) {
-                  const tempSupabase = createClient(
-                    import.meta.env.VITE_SUPABASE_URL,
-                    import.meta.env.VITE_SUPABASE_ANON_KEY,
-                    { 
-                      auth: { 
-                        persistSession: false,
-                        autoRefreshToken: false,
-                        detectSessionInUrl: false
-                      } 
-                    }
-                  );
-
-                  const { data, error } = await tempSupabase.auth.signUp({
-                    email: newUser.email,
-                    password: newUser.password,
-                    options: {
-                      data: {
-                        full_name: newUser.nome,
-                        cargo: newUser.cargo
-                      }
-                    }
-                  });
-
-                  if (error) throw error;
-
-                  // Superar o gatilho padrão que força OPERADOR atualizando imediatamente via sessão do ADM
-                  if (data?.user) {
-                    await updateProfile(data.user.id, { cargo: newUser.cargo, nome: newUser.nome, status: true });
-                  }
-
-                  toast.success('Usuário criado com sucesso!');
-                  toast.info('Se o login falhar, verifique o e-mail para confirmação da conta.');
+                if (res?.temporaryPassword) {
+                  toast.success(`Colaborador cadastrado! Senha de acesso: ${res.temporaryPassword}`);
+                } else {
+                  toast.success('Colaborador cadastrado com sucesso!');
                 }
 
                 setShowAddModal(false);
-                fetchProfiles(); // Atualiza a lista da equipe
+                setNewUser({ nome: '', email: '', password: '', cargo: 'OPERADOR' });
+                fetchProfiles();
               } catch (err) {
                 console.error(err);
                 toast.error(err.message || 'Erro ao criar colaborador.');

@@ -1,0 +1,21 @@
+[
+  {
+    "stage": "1. Smoke / Warmup",
+    "vus": 1,
+    "durationSeconds": 5,
+    "totalRequests": 163,
+    "successfulRequests": 0,
+    "failedRequests": 163,
+    "errorRatePercent": 100,
+    "rps": 32.6,
+    "latenciesMs": {
+      "min": 0.56,
+      "max": 104.2,
+      "avg": 1.99,
+      "p50": 1.07,
+      "p90": 2.29,
+      "p95": 3.06,
+      "p99": 6.4
+    }
+  }
+]

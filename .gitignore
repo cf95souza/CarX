@@ -28,6 +28,11 @@ debug_*.cjs
 tmp_*.js
 tmp_*.cjs
 
+# Test outputs
+playwright-report/
+test-results/
+.nyc_output
+
 # Environment variables
 .env
 .env.local

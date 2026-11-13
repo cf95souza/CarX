@@ -156,6 +156,7 @@ export interface AdminCreateTenantDto {
   owner_email: string;
   owner_password?: string;
   plan_slug: string;
+  coupon_code?: string;
   is_trial?: boolean;
   trial_days?: number;
 }
@@ -235,4 +236,19 @@ export interface ConvertLeadDto {
   owner_password?: string;
   is_trial?: boolean;
 }
+
+export interface ResetOwnerPasswordInputDto {
+  new_password?: string;
+}
+
+export interface ResetOwnerPasswordResponseDto {
+  success: boolean;
+  message: string;
+  temporary_password?: string;
+  owner_email: string;
+  owner_name: string;
+  user_id: string;
+  tenant_id: string;
+}
+
 

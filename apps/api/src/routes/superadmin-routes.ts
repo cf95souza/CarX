@@ -1,6 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { superadminService, SuperadminError } from '../superadmin/superadmin-service.js';
 import { dunningService, PayInvoiceInput, CreateInvoiceInput } from '../billing/dunning-service.js';
+import { planService } from '../plans/plan-service.js';
+import { couponService, CouponError } from '../coupons/coupon-service.js';
+import { whatsappService } from '../whatsapp/whatsapp-service.js';
 import { requireSuperadminAuth } from '../middlewares/superadmin-guards.js';
 import {
   SuperadminLoginInput,
@@ -8,6 +11,11 @@ import {
   AdminUpdateTenantStatusDto,
   ImpersonateTenantDto,
   ConvertLeadDto,
+  CreatePlanDto,
+  UpdatePlanDto,
+  CreateCouponDto,
+  ValidateCouponInputDto,
+  ResetOwnerPasswordInputDto,
 } from '@carx/shared';
 
 export async function superadminRoutes(fastify: FastifyInstance) {
@@ -198,6 +206,34 @@ export async function superadminRoutes(fastify: FastifyInstance) {
         const result = await superadminService.updateTenantStatus(
           request.params.id,
           { status: 'cancelled', reason: request.body?.reason || 'Cancelamento solicitado' },
+          superadminId,
+          ip,
+          userAgent
+        );
+        return reply.code(200).send(result);
+      } catch (err) {
+        if (err instanceof SuperadminError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /admin/tenants/:id/reset-owner-password — Redefinição de Senha do Gestor/Dono da Oficina
+   */
+  fastify.post<{ Params: { id: string }; Body: ResetOwnerPasswordInputDto }>(
+    '/admin/tenants/:id/reset-owner-password',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const ip = request.ip || '127.0.0.1';
+        const userAgent = request.headers['user-agent'] || 'unknown';
+        const superadminId = request.superadmin!.id;
+        const result = await superadminService.resetOwnerPassword(
+          request.params.id,
+          request.body || {},
           superadminId,
           ip,
           userAgent
@@ -420,6 +456,69 @@ export async function superadminRoutes(fastify: FastifyInstance) {
   );
 
   /**
+   * POST /public/leads — Cadastro Público de Lead da Landing Page (com Honeypot Anti-Bot)
+   */
+  fastify.post<{
+    Body: {
+      name: string;
+      email: string;
+      phone?: string;
+      company_name?: string;
+      segment?: string;
+      employees_count?: string;
+      notes?: string;
+      website?: string;
+      website_hp?: string;
+    };
+  }>(
+    '/public/leads',
+    async (request, reply) => {
+      try {
+        const body = request.body || ({} as any);
+        // Proteção anti-bot honeypot: se campo invisível estiver preenchido, descarta com 200 sintético
+        if (body.website || body.website_hp) {
+          request.log.warn({ ip: request.ip }, 'Bot detectado no formulário público de leads (honeypot acionado)');
+          return reply.code(200).send({ success: true, message: 'Solicitação recebida com sucesso!' });
+        }
+
+        if (!body.name || !body.email) {
+          return reply.code(400).send({
+            statusCode: 400,
+            message: 'Nome e e-mail são obrigatórios para registrar o interesse.',
+          });
+        }
+
+        let combinedNotes = body.notes || '';
+        if (body.segment) {
+          combinedNotes = `Segmento: ${body.segment}` + (combinedNotes ? ` | ${combinedNotes}` : '');
+        }
+        if (body.employees_count) {
+          combinedNotes = (combinedNotes ? `${combinedNotes} | ` : '') + `Equipe: ${body.employees_count}`;
+        }
+
+        const lead = await superadminService.createLead({
+          name: body.name,
+          email: body.email,
+          phone: body.phone,
+          company_name: body.company_name,
+          notes: combinedNotes || undefined,
+        });
+
+        return reply.code(201).send({
+          success: true,
+          lead,
+          message: 'Solicitação recebida com sucesso! Em breve você receberá os dados de acesso.',
+        });
+      } catch (err: any) {
+        if (err instanceof SuperadminError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
    * POST /admin/leads/:id/convert — Conversão de Lead em Oficina
    */
   fastify.post<{ Params: { id: string }; Body: ConvertLeadDto }>(
@@ -521,6 +620,189 @@ export async function superadminRoutes(fastify: FastifyInstance) {
           return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
         }
         throw err;
+      }
+    }
+  );
+
+  /**
+   * GET /admin/plans — Lista todos os planos comerciais com contadores de assinantes
+   */
+  fastify.get(
+    '/admin/plans',
+    { preHandler: [requireSuperadminAuth] },
+    async (_request, reply) => {
+      try {
+        const plans = await planService.listAllPlansAdmin();
+        return reply.code(200).send(plans);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao listar planos';
+        return reply.code(500).send({ statusCode: 500, message: msg });
+      }
+    }
+  );
+
+  /**
+   * GET /admin/plans/:id — Obtém detalhes de um plano específico
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/admin/plans/:id',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const plan = await planService.getPlanById(request.params.id);
+        if (!plan) {
+          return reply.code(404).send({ statusCode: 404, message: 'Plano não encontrado.' });
+        }
+        return reply.code(200).send(plan);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao buscar plano';
+        return reply.code(500).send({ statusCode: 500, message: msg });
+      }
+    }
+  );
+
+  /**
+   * POST /admin/plans — Cria um novo plano comercial na plataforma
+   */
+  fastify.post<{ Body: CreatePlanDto }>(
+    '/admin/plans',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const adminId = (request.user as any)?.sub || (request.user as any)?.id;
+        const created = await planService.createPlan(request.body, adminId);
+        return reply.code(201).send(created);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao criar plano';
+        return reply.code(400).send({ statusCode: 400, message: msg });
+      }
+    }
+  );
+
+  /**
+   * PUT /admin/plans/:id — Atualiza dados, cotas e matriz de features do plano
+   */
+  fastify.put<{ Params: { id: string }; Body: UpdatePlanDto }>(
+    '/admin/plans/:id',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const adminId = (request.user as any)?.sub || (request.user as any)?.id;
+        const updated = await planService.updatePlan(request.params.id, request.body, adminId);
+        return reply.code(200).send(updated);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao atualizar plano';
+        return reply.code(400).send({ statusCode: 400, message: msg });
+      }
+    }
+  );
+
+  /**
+   * PATCH /admin/plans/:id/features — Alternância rápida de uma feature flag no plano
+   */
+  fastify.patch<{ Params: { id: string }; Body: { feature: string; enabled: boolean } }>(
+    '/admin/plans/:id/features',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const { feature, enabled } = request.body || {};
+        if (!feature || typeof enabled !== 'boolean') {
+          return reply.code(400).send({ statusCode: 400, message: 'feature (string) e enabled (boolean) são obrigatórios.' });
+        }
+        const adminId = (request.user as any)?.sub || (request.user as any)?.id;
+        const updated = await planService.togglePlanFeature(request.params.id, feature, enabled, adminId);
+        return reply.code(200).send(updated);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao alternar funcionalidade do plano';
+        return reply.code(400).send({ statusCode: 400, message: msg });
+      }
+    }
+  );
+
+  /**
+   * GET /admin/coupons — Lista todos os cupons comerciais cadastrados
+   */
+  fastify.get(
+    '/admin/coupons',
+    { preHandler: [requireSuperadminAuth] },
+    async (_request, reply) => {
+      try {
+        const coupons = await couponService.listCouponsAdmin();
+        return reply.code(200).send(coupons);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao listar cupons';
+        return reply.code(500).send({ statusCode: 500, message: msg });
+      }
+    }
+  );
+
+  /**
+   * POST /admin/coupons — Cria um novo cupom promocional
+   */
+  fastify.post<{ Body: CreateCouponDto }>(
+    '/admin/coupons',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const adminId = (request.user as any)?.sub || (request.user as any)?.id;
+        const created = await couponService.createCoupon(request.body, adminId);
+        return reply.code(201).send(created);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao criar cupom';
+        const statusCode = err instanceof CouponError ? err.statusCode : 400;
+        return reply.code(statusCode).send({ statusCode, message: msg });
+      }
+    }
+  );
+
+  /**
+   * DELETE /admin/coupons/:id — Desativa / revoga um cupom promocional
+   */
+  fastify.delete<{ Params: { id: string } }>(
+    '/admin/coupons/:id',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const adminId = (request.user as any)?.sub || (request.user as any)?.id;
+        const deactivated = await couponService.deactivateCoupon(request.params.id, adminId);
+        return reply.code(200).send(deactivated);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao desativar cupom';
+        const statusCode = err instanceof CouponError ? err.statusCode : 400;
+        return reply.code(statusCode).send({ statusCode, message: msg });
+      }
+    }
+  );
+
+  /**
+   * POST /admin/coupons/validate — Validação de código de cupom para planos/checkout
+   */
+  fastify.post<{ Body: ValidateCouponInputDto }>(
+    '/admin/coupons/validate',
+    async (request, reply) => {
+      try {
+        const result = await couponService.validateCoupon(request.body || {});
+        return reply.code(200).send(result);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao validar cupom';
+        return reply.code(400).send({ statusCode: 400, message: msg });
+      }
+    }
+  );
+
+  /**
+   * GET /admin/whatsapp/telemetry — Telemetria Real de WhatsApp dos Tenants (Sem Mocks)
+   */
+  fastify.get(
+    '/admin/whatsapp/telemetry',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      try {
+        const telemetry = await whatsappService.getTelemetryAdmin();
+        return reply.code(200).send(telemetry);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Erro ao carregar telemetria de WhatsApp';
+        return reply.code(500).send({ statusCode: 500, message: msg });
       }
     }
   );

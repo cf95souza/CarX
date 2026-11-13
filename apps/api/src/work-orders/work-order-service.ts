@@ -2,6 +2,11 @@ import { tenantQuery, tenantTransaction } from '../database/tenant-query.js';
 import { auditService } from '../audit/audit-service.js';
 import { stockService } from '../stock/stock-service.js';
 import { realtimeHub } from '../realtime/realtime-hub.js';
+import { planService } from '../plans/plan-service.js';
+import { whatsappService } from '../whatsapp/whatsapp-service.js';
+import { fiscalService } from '../fiscal/fiscal-service.js';
+import { generatePixPayload } from '../payments/pix-generator.js';
+import { randomBytes } from 'node:crypto';
 import {
   WorkOrderDto,
   CreateWorkOrderDto,
@@ -10,8 +15,16 @@ import {
   WorkOrderItemDto,
   WorkOrderEventDto,
   PublicTrackingDto,
+  PublicQuoteDto,
+  AcceptQuoteInputDto,
+  AcceptQuoteResponseDto,
+  WorkOrderPixChargeResultDto,
+  WorkOrderPixStatusResultDto,
+  WhatsAppTransactionalEventType,
+  SendTransactionalWhatsAppResultDto,
   WorkOrderStatus,
   WorkOrderStatusType,
+  PlanFeatures,
   isValidWorkOrderTransition,
 } from '@carx/shared';
 
@@ -135,6 +148,7 @@ export class WorkOrderService {
       }
 
       const discountCents = Math.max(0, data.discountCents || 0);
+      const depositRequiredCents = Math.max(0, data.depositRequiredCents || 0);
       const finalCents = Math.max(0, totalCents - discountCents);
       const progress = this.getProgressByStatus(initialStatus, 0);
 
@@ -154,11 +168,13 @@ export class WorkOrderService {
           discount_cents,
           final_cents,
           paid_cents,
+          deposit_required_cents,
           estimated_minutes,
           scheduled_at,
           notes,
-          customer_notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, $12, $13, $14, $15)
+          customer_notes,
+          public_notes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 0, $12, $13, $14, $15, $16, $17)
         RETURNING 
           id,
           tenant_id AS "tenantId",
@@ -174,6 +190,14 @@ export class WorkOrderService {
           discount_cents AS "discountCents",
           final_cents AS "finalCents",
           paid_cents AS "paidCents",
+          deposit_required_cents AS "depositRequiredCents",
+          deposit_pix_code AS "depositPixCode",
+          deposit_pix_qr_base64 AS "depositPixQrBase64",
+          deposit_paid_at AS "depositPaidAt",
+          accepted_at AS "acceptedAt",
+          accepted_ip AS "acceptedIp",
+          accepted_signature_name AS "acceptedSignatureName",
+          public_notes AS "publicNotes",
           total_cents / 100.0 AS "totalValue",
           discount_cents / 100.0 AS "discountValue",
           paid_cents / 100.0 AS "paidValue",
@@ -203,10 +227,12 @@ export class WorkOrderService {
           totalCents,
           discountCents,
           finalCents,
+          depositRequiredCents,
           estimatedMinutes,
           data.scheduledAt || null,
           data.notes || null,
           data.customerNotes || null,
+          data.publicNotes || null,
         ]
       );
       createdOrder = orderInsertRes.rows[0];
@@ -394,6 +420,15 @@ export class WorkOrderService {
         wo.cancel_reason AS "cancelReason",
         wo.notes,
         wo.customer_notes AS "customerNotes",
+        wo.public_notes AS "publicNotes",
+        wo.deposit_required_cents AS "depositRequiredCents",
+        wo.deposit_pix_code AS "depositPixCode",
+        wo.deposit_pix_qr_base64 AS "depositPixQrBase64",
+        wo.deposit_paid_at AS "depositPaidAt",
+        wo.accepted_at AS "acceptedAt",
+        wo.accepted_ip AS "acceptedIp",
+        wo.accepted_user_agent AS "acceptedUserAgent",
+        wo.accepted_signature_name AS "acceptedSignatureName",
         wo.tracking_token AS "trackingToken",
         wo.created_at AS "createdAt",
         wo.updated_at AS "updatedAt",
@@ -467,6 +502,15 @@ export class WorkOrderService {
         wo.cancel_reason AS "cancelReason",
         wo.notes,
         wo.customer_notes AS "customerNotes",
+        wo.public_notes AS "publicNotes",
+        wo.deposit_required_cents AS "depositRequiredCents",
+        wo.deposit_pix_code AS "depositPixCode",
+        wo.deposit_pix_qr_base64 AS "depositPixQrBase64",
+        wo.deposit_paid_at AS "depositPaidAt",
+        wo.accepted_at AS "acceptedAt",
+        wo.accepted_ip AS "acceptedIp",
+        wo.accepted_user_agent AS "acceptedUserAgent",
+        wo.accepted_signature_name AS "acceptedSignatureName",
         wo.tracking_token AS "trackingToken",
         wo.created_at AS "createdAt",
         wo.updated_at AS "updatedAt",
@@ -654,6 +698,7 @@ export class WorkOrderService {
     // Baixa idempotente automática de insumos e bobinas ao entregar a Ordem de Serviço
     if (targetStatus === WorkOrderStatus.DELIVERED) {
       await stockService.deductWorkOrderMaterials(tenantId, id, actorUserId);
+      fiscalService.autoIssueIfConfigured(tenantId, id, 'delivery').catch(() => {});
     }
 
     const updated = await this.getById(tenantId, id);
@@ -691,6 +736,17 @@ export class WorkOrderService {
       });
     }
 
+    // T6.4: Disparo transacional de WhatsApp (respeita plano da oficina e é não bloqueante)
+    if (['CHECKED_IN', 'READY', 'DELIVERED'].includes(targetStatus)) {
+      this.notifyWorkOrderWhatsApp(
+        tenantId,
+        id,
+        targetStatus as WhatsAppTransactionalEventType
+      ).catch(() => {
+        // Falha silenciosa para garantir que a transição de estado nunca seja bloqueada
+      });
+    }
+
     return updated;
   }
 
@@ -715,6 +771,8 @@ export class WorkOrderService {
     const technicianId = data.technicianId !== undefined ? data.technicianId : existing.technicianId;
     const notes = data.notes !== undefined ? data.notes : existing.notes;
     const customerNotes = data.customerNotes !== undefined ? data.customerNotes : existing.customerNotes;
+    const publicNotes = data.publicNotes !== undefined ? data.publicNotes : (existing as any).publicNotes;
+    const depositRequiredCents = data.depositRequiredCents !== undefined ? Math.max(0, data.depositRequiredCents) : ((existing as any).depositRequiredCents || 0);
     const scheduledAt = data.scheduledAt !== undefined ? data.scheduledAt : existing.scheduledAt;
 
     let discountCents = existing.discountCents;
@@ -736,10 +794,12 @@ export class WorkOrderService {
         scheduled_at = $6,
         notes = $7,
         customer_notes = $8,
+        public_notes = $9,
+        deposit_required_cents = $10,
         updated_at = NOW()
       WHERE tenant_id = $1 AND id = $2;
       `,
-      [tenantId, id, technicianId, discountCents, finalCents, scheduledAt, notes, customerNotes]
+      [tenantId, id, technicianId, discountCents, finalCents, scheduledAt, notes, customerNotes, publicNotes, depositRequiredCents]
     );
 
     const updated = await this.getById(tenantId, id);
@@ -827,6 +887,953 @@ export class WorkOrderService {
         createdAt: e.created_at,
         notes: e.notes,
       })),
+    };
+  }
+
+  /**
+   * Consulta pública de Orçamento Digital por Token UUID (Seguro, sem autenticação)
+   */
+  async getPublicQuote(trackingToken: string): Promise<PublicQuoteDto> {
+    const res = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        wo.id AS "workOrderId",
+        wo.tenant_id AS "tenantId",
+        wo.os_number AS "osNumber",
+        wo.status,
+        wo.total_cents AS "totalCents",
+        wo.discount_cents AS "discountCents",
+        wo.final_cents AS "finalCents",
+        wo.paid_cents AS "paidCents",
+        wo.deposit_required_cents AS "depositRequiredCents",
+        wo.deposit_pix_code AS "depositPixCode",
+        wo.deposit_pix_qr_base64 AS "depositPixQrBase64",
+        wo.deposit_paid_at AS "depositPaidAt",
+        wo.accepted_at AS "acceptedAt",
+        wo.accepted_signature_name AS "acceptedSignatureName",
+        wo.public_notes AS "publicNotes",
+        wo.created_at AS "createdAt",
+        t.trade_name AS "tenantName",
+        t.trade_name AS "tenantTradeName",
+        t.legal_name AS "tenantLegalName",
+        t.cnpj AS "tenantDocument",
+        t.phone AS "tenantPhone",
+        t.email AS "tenantEmail",
+        t.slug AS "tenantSlug",
+        t.settings->>'pix_key' AS "tenantPixKey",
+        tb.logo_url AS "tenantLogoUrl",
+        tb.whatsapp_phone AS "tenantWhatsappNumber",
+        c.name AS "customerName",
+        c.phone AS "customerPhone",
+        v.brand AS "vehicleBrand",
+        v.model AS "vehicleModel",
+        v.plate AS "vehiclePlate",
+        v.year AS "vehicleYear",
+        v.color AS "vehicleColor",
+        v.size_class AS "vehicleSizeClass"
+      FROM work_orders wo
+      JOIN tenants t ON t.id = wo.tenant_id
+      LEFT JOIN tenant_branding tb ON tb.tenant_id = wo.tenant_id
+      JOIN customers c ON c.id = wo.customer_id
+      JOIN vehicles v ON v.id = wo.vehicle_id
+      WHERE wo.tracking_token = $1;
+      `,
+      [trackingToken],
+      { bypassRls: true }
+    );
+
+    if (res.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Orçamento não encontrado ou link expirado.', 404);
+    }
+
+    const row = res.rows[0];
+
+    // Buscar itens da OS
+    const itemsRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        name,
+        category,
+        quantity,
+        unit_price_cents AS "unitPriceCents",
+        discount_cents AS "discountCents",
+        total_cents AS "finalCents",
+        estimated_minutes AS "estimatedMinutes",
+        warranty_months AS "warrantyMonths"
+      FROM work_order_items 
+      WHERE work_order_id = $1 
+      ORDER BY custom_order ASC, created_at ASC;
+      `,
+      [row.workOrderId],
+      { bypassRls: true }
+    );
+
+    // Buscar fotos de inspeção/vistoria prévia se houver
+    const photosRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        CONCAT('/storage/files/', sf.file_key) AS "url",
+        ip.phase AS "phase",
+        ip.caption AS "notes"
+      FROM inspection_photos ip
+      JOIN storage_files sf ON sf.id = ip.photo_file_id
+      JOIN inspections i ON i.id = ip.inspection_id
+      WHERE i.work_order_id = $1
+      ORDER BY ip.created_at ASC
+      LIMIT 6;
+      `,
+      [row.workOrderId],
+      { bypassRls: true }
+    );
+
+    // Mascarar telefone do cliente para conformidade com a LGPD
+    const rawPhone = String(row.customerPhone || '');
+    const cleanPhone = rawPhone.replace(/\D/g, '');
+    const maskedPhone = cleanPhone.length >= 8 
+      ? `(${cleanPhone.slice(0, 2)}) *****-${cleanPhone.slice(-4)}`
+      : 'Não informado';
+
+    return {
+      trackingToken,
+      osNumber: row.osNumber,
+      status: row.status,
+      tenant: {
+        id: row.tenantId,
+        name: row.tenantTradeName || row.tenantName,
+        tradeName: row.tenantTradeName,
+        document: row.tenantDocument,
+        phone: row.tenantPhone,
+        email: row.tenantEmail,
+        logoUrl: row.tenantLogoUrl,
+        whatsappNumber: row.tenantWhatsappNumber || row.tenantPhone,
+      },
+      customer: {
+        name: row.customerName,
+        phoneMasked: maskedPhone,
+      },
+      vehicle: {
+        brand: row.vehicleBrand,
+        model: row.vehicleModel,
+        plate: row.vehiclePlate,
+        year: row.vehicleYear,
+        color: row.vehicleColor,
+        sizeCategory: row.vehicleSizeClass,
+      },
+      items: itemsRes.rows,
+      totalCents: row.totalCents,
+      discountCents: row.discountCents,
+      finalCents: row.finalCents,
+      depositRequiredCents: row.depositRequiredCents || 0,
+      depositPaidCents: Math.min(row.paidCents, row.depositRequiredCents || 0),
+      depositPixCode: row.depositPixCode,
+      depositPixQrBase64: row.depositPixQrBase64,
+      depositPaidAt: row.depositPaidAt,
+      acceptedAt: row.acceptedAt,
+      acceptedSignatureName: row.acceptedSignatureName,
+      publicNotes: row.publicNotes,
+      photos: photosRes.rows,
+      createdAt: row.createdAt,
+    };
+  }
+
+  /**
+   * Aceite formal online do orçamento pelo cliente final
+   */
+  async acceptPublicQuote(
+    trackingToken: string,
+    input: AcceptQuoteInputDto,
+    clientIp: string,
+    userAgent: string
+  ): Promise<AcceptQuoteResponseDto> {
+    if (!input.signatureName || input.signatureName.trim().length < 3) {
+      throw new WorkOrderStateError('O nome completo é obrigatório para assinar o aceite formal.', 400);
+    }
+    if (!input.termsAccepted) {
+      throw new WorkOrderStateError('É necessário concordar com os termos da proposta para aprovar.', 400);
+    }
+
+    // Buscar orçamento
+    const woRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        wo.id,
+        wo.tenant_id AS "tenantId",
+        wo.os_number AS "osNumber",
+        wo.status,
+        wo.final_cents AS "finalCents",
+        wo.deposit_required_cents AS "depositRequiredCents",
+        wo.deposit_pix_code AS "depositPixCode",
+        wo.deposit_pix_qr_base64 AS "depositPixQrBase64",
+        wo.accepted_at AS "acceptedAt",
+        t.trade_name AS "tenantName",
+        t.settings->>'pix_key' AS "tenantPixKey"
+      FROM work_orders wo
+      JOIN tenants t ON t.id = wo.tenant_id
+      WHERE wo.tracking_token = $1;
+      `,
+      [trackingToken],
+      { bypassRls: true }
+    );
+
+    if (woRes.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Orçamento não encontrado.', 404);
+    }
+
+    const order = woRes.rows[0];
+
+    if (order.status === WorkOrderStatus.CANCELED) {
+      throw new WorkOrderStateError('Este orçamento foi cancelado e não pode ser aprovado.', 422);
+    }
+
+    const depositCents = Math.max(0, order.depositRequiredCents || 0);
+    let pixCode = order.depositPixCode;
+    let pixQr = order.depositPixQrBase64;
+
+    // Se exige sinal e ainda não gerou Pix
+    if (depositCents > 0 && !pixCode) {
+      const pixKey = order.tenantPixKey || 'financeiro@carx.com.br';
+      const pixData = await generatePixPayload({
+        pixKey,
+        merchantName: order.tenantName || 'CARX OFICINA',
+        merchantCity: 'SAO PAULO',
+        amountCents: depositCents,
+        txid: `OS${order.osNumber}`,
+        description: `Sinal OS #${order.osNumber}`,
+      });
+      pixCode = pixData.pixCode;
+      pixQr = pixData.qrCodeBase64 || pixData.qrCodeUrl;
+    }
+
+    // Transição de status: se não exige sinal avança direto para APPROVED
+    const targetStatus = depositCents > 0 ? WorkOrderStatus.QUOTE : WorkOrderStatus.APPROVED;
+
+    await tenantQuery(
+      order.tenantId,
+      `
+      UPDATE work_orders
+      SET 
+        status = $3,
+        accepted_at = NOW(),
+        accepted_ip = $4,
+        accepted_user_agent = $5,
+        accepted_signature_name = $6,
+        deposit_pix_code = $7,
+        deposit_pix_qr_base64 = $8,
+        updated_at = NOW()
+      WHERE id = $1 AND tenant_id = $2;
+      `,
+      [order.id, order.tenantId, targetStatus, clientIp, userAgent, input.signatureName.trim(), pixCode, pixQr],
+      { bypassRls: true }
+    );
+
+    // Gravar evento no histórico da OS
+    await tenantQuery(
+      order.tenantId,
+      `
+      INSERT INTO work_order_events (
+        tenant_id,
+        work_order_id,
+        from_status,
+        to_status,
+        notes
+      ) VALUES ($1, $2, $3, $4, $5);
+      `,
+      [
+        order.tenantId,
+        order.id,
+        order.status,
+        targetStatus,
+        `Proposta aprovada online por ${input.signatureName.trim()} (IP: ${clientIp})`,
+      ],
+      { bypassRls: true }
+    );
+
+    // Notificar painel do gestor em tempo real via SSE
+    realtimeHub.publish(order.tenantId, 'work_order.updated', {
+      type: 'quote.accepted',
+      workOrderId: order.id,
+      osNumber: order.osNumber,
+      signatureName: input.signatureName.trim(),
+      depositRequiredCents: depositCents,
+    });
+
+    return {
+      success: true,
+      message: depositCents > 0 
+        ? 'Orçamento aprovado! Efetue o pagamento do sinal Pix para agendamento do veículo.' 
+        : 'Orçamento aprovado com sucesso! A oficina já foi notificada para início dos trabalhos.',
+      status: targetStatus,
+      acceptedAt: new Date().toISOString(),
+      depositRequiredCents: depositCents,
+      depositPixCode: pixCode,
+      depositPixQrBase64: pixQr,
+    };
+  }
+
+  /**
+   * Confirmação / Liquidação do Sinal Pix do Orçamento
+   */
+  async confirmDepositPix(
+    trackingToken: string
+  ): Promise<{ success: boolean; message: string; paidCents: number; depositPaidAt: string }> {
+    const woRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        id,
+        tenant_id AS "tenantId",
+        customer_id AS "customerId",
+        os_number AS "osNumber",
+        status,
+        deposit_required_cents AS "depositRequiredCents",
+        paid_cents AS "paidCents",
+        deposit_paid_at AS "depositPaidAt"
+      FROM work_orders
+      WHERE tracking_token = $1;
+      `,
+      [trackingToken],
+      { bypassRls: true }
+    );
+
+    if (woRes.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Orçamento não encontrado.', 404);
+    }
+
+    const order = woRes.rows[0];
+    const depositCents = Math.max(0, order.depositRequiredCents || 0);
+
+    if (depositCents === 0) {
+      return {
+        success: true,
+        message: 'Este orçamento não requer sinal financeiro.',
+        paidCents: order.paidCents,
+        depositPaidAt: order.depositPaidAt || new Date().toISOString(),
+      };
+    }
+
+    if (order.depositPaidAt) {
+      return {
+        success: true,
+        message: 'O sinal Pix já havia sido confirmado anteriormente.',
+        paidCents: order.paidCents,
+        depositPaidAt: order.depositPaidAt,
+      };
+    }
+
+    const newPaidCents = (order.paidCents || 0) + depositCents;
+    const nowIso = new Date().toISOString();
+
+    await tenantTransaction(order.tenantId, async (client) => {
+      // 1. Atualizar work_orders
+      await client.query(
+        `
+        UPDATE work_orders
+        SET 
+          paid_cents = $3,
+          deposit_paid_at = NOW(),
+          status = CASE WHEN status = 'QUOTE' THEN 'APPROVED' ELSE status END,
+          updated_at = NOW()
+        WHERE id = $1 AND tenant_id = $2;
+        `,
+        [order.id, order.tenantId, newPaidCents]
+      );
+
+      // 2. Registrar pagamento
+      await client.query(
+        `
+        INSERT INTO payments (
+          tenant_id,
+          work_order_id,
+          amount_cents,
+          method,
+          status,
+          notes
+        ) VALUES ($1, $2, $3, 'pix', 'approved', 'Sinal Pix confirmado online');
+        `,
+        [order.tenantId, order.id, depositCents]
+      );
+
+      // 3. Registrar depósito
+      await client.query(
+        `
+        INSERT INTO deposits (
+          tenant_id,
+          customer_id,
+          work_order_id,
+          amount_cents,
+          method,
+          status,
+          applied_to_work_order_id,
+          applied_at,
+          notes
+        ) VALUES ($1, $2, $3, $4, 'pix', 'applied', $3, NOW(), 'Sinal de orçamento aprovado online');
+        `,
+        [order.tenantId, order.customerId, order.id, depositCents]
+      );
+
+      // 4. Registrar evento
+      await client.query(
+        `
+        INSERT INTO work_order_events (
+          tenant_id,
+          work_order_id,
+          from_status,
+          to_status,
+          notes
+        ) VALUES ($1, $2, $3, 'APPROVED', $4);
+        `,
+        [
+          order.tenantId,
+          order.id,
+          order.status,
+          `Sinal Pix de R$ ${(depositCents / 100).toFixed(2)} recebido com sucesso online.`,
+        ]
+      );
+    });
+
+    realtimeHub.publish(order.tenantId, 'work_order.updated', {
+      type: 'quote.deposit_paid',
+      workOrderId: order.id,
+      osNumber: order.osNumber,
+      amountCents: depositCents,
+    });
+
+    return {
+      success: true,
+      message: 'Sinal Pix liquidado com sucesso! Orçamento validado para execução.',
+      paidCents: newPaidCents,
+      depositPaidAt: nowIso,
+    };
+  }
+
+  /**
+   * Recusa do orçamento pelo cliente
+   */
+  async rejectPublicQuote(
+    trackingToken: string,
+    reason: string
+  ): Promise<{ success: boolean; message: string }> {
+    const woRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT id, tenant_id AS "tenantId", os_number AS "osNumber", status
+      FROM work_orders
+      WHERE tracking_token = $1;
+      `,
+      [trackingToken],
+      { bypassRls: true }
+    );
+
+    if (woRes.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Orçamento não encontrado.', 404);
+    }
+
+    const order = woRes.rows[0];
+
+    await tenantQuery(
+      order.tenantId,
+      `
+      UPDATE work_orders
+      SET 
+        status = 'CANCELED',
+        cancel_reason = $3,
+        canceled_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $1 AND tenant_id = $2;
+      `,
+      [order.id, order.tenantId, `Recusado pelo cliente: ${reason || 'Sem justificativa informada'}`],
+      { bypassRls: true }
+    );
+
+    await tenantQuery(
+      order.tenantId,
+      `
+      INSERT INTO work_order_events (
+        tenant_id,
+        work_order_id,
+        from_status,
+        to_status,
+        notes
+      ) VALUES ($1, $2, $3, 'CANCELED', $4);
+      `,
+      [
+        order.tenantId,
+        order.id,
+        order.status,
+        `Orçamento recusado pelo cliente: ${reason || 'Sem justificativa'}`,
+      ],
+      { bypassRls: true }
+    );
+
+    realtimeHub.publish(order.tenantId, 'work_order.updated', {
+      type: 'quote.rejected',
+      workOrderId: order.id,
+      osNumber: order.osNumber,
+      reason,
+    });
+
+    return {
+      success: true,
+      message: 'Orçamento cancelado conforme sua solicitação.',
+    };
+  }
+
+  /**
+   * Compartilhamento de Proposta / Orçamento via WhatsApp
+   * - Se o plano tiver WHATSAPP_GATEWAY ativo e a loja estiver conectada: envia direto pelo socket da loja
+   * - Se for plano básico ou desconectado: gera o link manual wa.me (custo zero de servidor)
+   */
+  async sendQuoteWhatsApp(
+    tenantId: string,
+    workOrderId: string,
+    originUrl = 'http://localhost:5173'
+  ): Promise<{ success: boolean; mode: 'gateway' | 'manual'; whatsappUrl?: string; message: string }> {
+    const order = await this.getById(tenantId, workOrderId);
+    const trackingToken = order.trackingToken;
+    const publicUrl = `${originUrl}/proposta/${trackingToken}`;
+
+    const customerPhone = (order.customer as any)?.phone?.replace(/\D/g, '') || '';
+    const customerName = (order.customer as any)?.name || 'Cliente';
+    const vehicleDesc = `${(order.vehicle as any)?.brand || ''} ${(order.vehicle as any)?.model || ''} (${(order.vehicle as any)?.plate || ''})`.trim();
+
+    const textMessage = `Olá, ${customerName}! 🚗\n\nSegue a proposta detalhada para o seu veículo ${vehicleDesc}:\n👉 ${publicUrl}\n\nVocê pode revisar os serviços e aprovar diretamente pelo link. Qualquer dúvida, estamos à disposição!`;
+
+    // Checar se o plano do tenant possui WHATSAPP_GATEWAY
+    const hasGatewayFeature = await planService.hasFeature(tenantId, PlanFeatures.WHATSAPP_GATEWAY);
+
+    if (hasGatewayFeature && customerPhone) {
+      try {
+        const instance = await whatsappService.getInstance(tenantId);
+        if (instance.status === 'CONNECTED') {
+          await whatsappService.sendMessage(tenantId, {
+            to: customerPhone,
+            message: textMessage,
+          });
+
+          return {
+            success: true,
+            mode: 'gateway',
+            message: 'Orçamento enviado com sucesso pelo WhatsApp oficial da oficina!',
+          };
+        }
+      } catch (err: any) {
+        // Fallback silencioso para wa.me manual se o gateway falhar
+      }
+    }
+
+    // Modo Manual (WhatsApp Web) — compatível com Plano Essencial / Sem custos
+    const encodedText = encodeURIComponent(textMessage);
+    const phoneParam = customerPhone ? `55${customerPhone}` : '';
+    const manualUrl = phoneParam 
+      ? `https://wa.me/${phoneParam}?text=${encodedText}`
+      : `https://wa.me/?text=${encodedText}`;
+
+    return {
+      success: true,
+      mode: 'manual',
+      whatsappUrl: manualUrl,
+      message: 'Link manual do WhatsApp preparado para envio.',
+    };
+  }
+
+  /**
+   * T6.4 — Notificação Transacional por WhatsApp sobre o Evento da OS
+   * - Respeita o plano da oficina: se não possui WHATSAPP_GATEWAY, retorna link manual wa.me
+   * - Se possui plano com gateway e está conectada: envia diretamente pelo número da loja
+   * - Registra evento na linha do tempo da OS se enviado pelo gateway
+   */
+  async notifyWorkOrderWhatsApp(
+    tenantId: string,
+    workOrderId: string,
+    eventType: WhatsAppTransactionalEventType,
+    customMessage?: string,
+    originUrl = 'http://localhost:5173'
+  ): Promise<SendTransactionalWhatsAppResultDto> {
+    const order = await this.getById(tenantId, workOrderId);
+    const customerPhone = (order.customer as any)?.phone || '';
+    const customerName = (order.customer as any)?.name || 'Cliente';
+    const vehicleText = `${(order.vehicle as any)?.brand || ''} ${(order.vehicle as any)?.model || ''} (${(order.vehicle as any)?.plate || ''})`.trim();
+    const trackingUrl = order.trackingToken ? `${originUrl}/proposta/${order.trackingToken}` : undefined;
+    const balanceCents = Math.max(0, (order.finalCents || order.totalCents || 0) - (order.paidCents || 0));
+
+    const result = await whatsappService.dispatchTransactionalNotification(tenantId, {
+      toPhone: customerPhone,
+      customerName,
+      eventType,
+      vehicleText,
+      osNumber: order.osNumber,
+      trackingUrl,
+      balanceCents,
+      customMessage,
+    });
+
+    if (result.success && result.mode === 'gateway') {
+      await tenantQuery(
+        tenantId,
+        `
+        INSERT INTO work_order_events (
+          tenant_id,
+          work_order_id,
+          from_status,
+          to_status,
+          event_type,
+          notes,
+          metadata
+        ) VALUES ($1, $2, $3, $4, 'WHATSAPP_NOTIFICATION', $5, $6);
+        `,
+        [
+          tenantId,
+          order.id,
+          order.status,
+          order.status,
+          `Notificação automática de WhatsApp (${eventType}) enviada para o cliente.`,
+          JSON.stringify({ to: customerPhone, eventType, mode: 'gateway' }),
+        ]
+      );
+    }
+
+    return result;
+  }
+
+  // ============================================================================
+  // T6.3 — PIX INTEGRADO PARA ORDENS DE SERVIÇO & CONCILIAÇÃO ATÔMICA
+  // ============================================================================
+
+  /**
+   * Cria uma cobrança Pix dinâmico para liquidação/pagamento de OS no caixa
+   */
+  async createPixCharge(
+    tenantId: string,
+    workOrderId: string,
+    requestedAmountCents?: number,
+    userId?: string
+  ): Promise<WorkOrderPixChargeResultDto> {
+    const orderRes = await tenantQuery<any>(
+      tenantId,
+      `
+      SELECT 
+        wo.id,
+        wo.os_number,
+        wo.status,
+        wo.final_cents,
+        wo.paid_cents,
+        t.legal_name,
+        t.trade_name,
+        t.cnpj,
+        t.email,
+        t.settings
+      FROM work_orders wo
+      JOIN tenants t ON t.id = wo.tenant_id
+      WHERE wo.id = $1 AND wo.tenant_id = $2;
+      `,
+      [workOrderId, tenantId]
+    );
+
+    if (orderRes.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Ordem de serviço não encontrada.');
+    }
+
+    const order = orderRes.rows[0];
+    if (order.status === 'CANCELED') {
+      throw new WorkOrderStateError('Não é possível gerar cobrança para uma ordem de serviço cancelada.');
+    }
+
+    const finalCents = order.final_cents || 0;
+    const currentPaidCents = order.paid_cents || 0;
+    const remainingBalanceCents = Math.max(0, finalCents - currentPaidCents);
+
+    if (remainingBalanceCents <= 0) {
+      throw new WorkOrderStateError('Esta ordem de serviço já se encontra totalmente quitada.');
+    }
+
+    const chargeAmountCents = requestedAmountCents
+      ? Math.min(requestedAmountCents, remainingBalanceCents)
+      : remainingBalanceCents;
+
+    if (chargeAmountCents <= 0) {
+      throw new WorkOrderStateError('O valor da cobrança Pix deve ser maior que zero.');
+    }
+
+    // Configurações de Pix do Tenant
+    const settings = order.settings || {};
+    const pixKey = settings.pix_key || order.email || 'pix@carx.com.br';
+    const pixKeyType = (settings.pix_key_type as any) || (pixKey.includes('@') ? 'email' : 'random');
+    const merchantName = (order.trade_name || order.legal_name || 'CarX Oficina').slice(0, 25);
+    const merchantCity = (settings.city || 'Sao Paulo').slice(0, 15);
+
+    // Identificador único de transação padrão Bacen (txid)
+    const txid = `CX${Date.now().toString(36).toUpperCase()}${randomBytes(4).toString('hex').toUpperCase()}`;
+
+    // Gera o payload Bacen EMV oficial e QR Code Base64
+    const pix = await generatePixPayload({
+      pixKey,
+      pixKeyType,
+      merchantName,
+      merchantCity,
+      amountCents: chargeAmountCents,
+      txid,
+    });
+
+    // Registra cobrança pendente na tabela payments e atualiza last_txid na OS
+    const validUserId = (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId))
+      ? userId
+      : null;
+
+    await tenantQuery(
+      tenantId,
+      `
+      INSERT INTO payments (
+        tenant_id,
+        work_order_id,
+        amount_cents,
+        method,
+        status,
+        transaction_reference,
+        notes,
+        received_by
+      ) VALUES ($1, $2, $3, 'pix', 'pending', $4, $5, $6);
+      `,
+      [
+        tenantId,
+        workOrderId,
+        chargeAmountCents,
+        txid,
+        `Cobrança Pix gerada para OS #${order.os_number}`,
+        validUserId,
+      ]
+    );
+
+    await tenantQuery(
+      tenantId,
+      `UPDATE work_orders SET pix_last_txid = $1, updated_at = NOW() WHERE id = $2;`,
+      [txid, workOrderId]
+    );
+
+    const expiresAt = new Date(Date.now() + 3600 * 1000).toISOString();
+
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      type: 'pix.charge_created',
+      workOrderId,
+      osNumber: order.os_number,
+      amountCents: chargeAmountCents,
+      txid,
+      remainingBalanceCents,
+    });
+
+    return {
+      workOrderId: order.id,
+      osNumber: order.os_number,
+      amountCents: chargeAmountCents,
+      pixCode: pix.pixCode,
+      pixQrBase64: pix.qrCodeBase64,
+      txid,
+      remainingBalanceCents,
+      expiresAt,
+    };
+  }
+
+  /**
+   * Confirma e liquida instantaneamente um pagamento Pix via Webhook / Conciliação
+   */
+  async confirmPixPayment(
+    txid: string,
+    amountCentsOverride?: number,
+    e2eId?: string,
+    payerName?: string
+  ): Promise<WorkOrderPixStatusResultDto> {
+    const paymentRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        p.id AS "paymentId",
+        p.tenant_id AS "tenantId",
+        p.work_order_id AS "workOrderId",
+        p.amount_cents AS "amountCents",
+        p.status AS "paymentStatus",
+        wo.os_number AS "osNumber",
+        wo.final_cents AS "finalCents",
+        wo.paid_cents AS "paidCents",
+        wo.status AS "orderStatus"
+      FROM payments p
+      JOIN work_orders wo ON wo.id = p.work_order_id AND wo.tenant_id = p.tenant_id
+      WHERE p.transaction_reference = $1
+      LIMIT 1;
+      `,
+      [txid],
+      { bypassRls: true }
+    );
+
+    if (paymentRes.rows.length === 0) {
+      throw new WorkOrderNotFoundError(`Cobrança Pix com txid "${txid}" não encontrada.`);
+    }
+
+    const pay = paymentRes.rows[0];
+    const tenantId = pay.tenantId;
+    const workOrderId = pay.workOrderId;
+    const finalCents = pay.finalCents || 0;
+    const currentPaidCents = pay.paidCents || 0;
+
+    // Idempotência estrita: se já aprovado, retorna o status sem duplicar pagamento
+    if (pay.paymentStatus === 'approved') {
+      const isFullyPaid = currentPaidCents >= finalCents;
+      return {
+        workOrderId,
+        osNumber: pay.osNumber,
+        txid,
+        status: 'approved',
+        paidCents: currentPaidCents,
+        finalCents,
+        isFullyPaid,
+      };
+    }
+
+    const settledAmountCents = amountCentsOverride || pay.amountCents;
+    const newPaidCents = currentPaidCents + settledAmountCents;
+    const isFullyPaid = newPaidCents >= finalCents;
+
+    // Se o carro estava pronto no pátio (READY) e foi 100% quitado, avança para DELIVERED
+    let newOrderStatus = pay.orderStatus;
+    if (isFullyPaid && pay.orderStatus === 'READY') {
+      newOrderStatus = 'DELIVERED';
+    }
+
+    await tenantTransaction(tenantId, async (client) => {
+      // 1. Atualiza pagamento para aprovado
+      const noteSuffix = payerName ? ` | Pagador: ${payerName}` : '';
+      const refSuffix = e2eId ? ` | E2E: ${e2eId}` : '';
+      await client.query(
+        `
+        UPDATE payments
+        SET 
+          status = 'approved',
+          notes = COALESCE(notes, '') || $2,
+          updated_at = NOW()
+        WHERE id = $1;
+        `,
+        [pay.paymentId, ` | Pix recebido instantaneamente${noteSuffix}${refSuffix}`]
+      );
+
+      // 2. Atualiza saldo pago e status da OS
+      await client.query(
+        `
+        UPDATE work_orders
+        SET 
+          paid_cents = $2,
+          status = $3::varchar,
+          delivered_at = CASE WHEN $3::varchar = 'DELIVERED' AND delivered_at IS NULL THEN NOW() ELSE delivered_at END,
+          updated_at = NOW()
+        WHERE id = $1;
+        `,
+        [workOrderId, newPaidCents, newOrderStatus]
+      );
+
+      // 3. Registra evento histórico na OS
+      await client.query(
+        `
+        INSERT INTO work_order_events (
+          tenant_id,
+          work_order_id,
+          from_status,
+          to_status,
+          event_type,
+          notes,
+          metadata
+        ) VALUES ($1, $2, $3, $4, 'PAYMENT_RECEIVED', $5, $6);
+        `,
+        [
+          tenantId,
+          workOrderId,
+          pay.orderStatus,
+          newOrderStatus,
+          `Pagamento Pix de R$ ${(settledAmountCents / 100).toFixed(2)} liquidado instantaneamente.`,
+          JSON.stringify({ txid, e2eId, payerName, amountCents: settledAmountCents }),
+        ]
+      );
+    });
+
+    // 4. Emite eventos em tempo real no canal do Tenant
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      type: 'pix.payment_confirmed',
+      workOrderId,
+      osNumber: pay.osNumber,
+      amountCents: settledAmountCents,
+      paidCents: newPaidCents,
+      finalCents,
+      isFullyPaid,
+      txid,
+    });
+
+    realtimeHub.publish(tenantId, 'payment.received', {
+      workOrderId,
+      osNumber: pay.osNumber,
+      amountCents: settledAmountCents,
+      method: 'pix',
+      txid,
+      payerName: payerName || null,
+    });
+
+    if (isFullyPaid) {
+      fiscalService.autoIssueIfConfigured(tenantId, workOrderId, 'payment').catch(() => {});
+    }
+
+    return {
+      workOrderId,
+      osNumber: pay.osNumber,
+      txid,
+      status: 'approved',
+      paidCents: newPaidCents,
+      finalCents,
+      isFullyPaid,
+      paidAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Consulta status de uma cobrança Pix específica
+   */
+  async getPixStatus(
+    tenantId: string,
+    workOrderId: string,
+    txid: string
+  ): Promise<WorkOrderPixStatusResultDto> {
+    const res = await tenantQuery<any>(
+      tenantId,
+      `
+      SELECT 
+        p.status AS "paymentStatus",
+        p.updated_at AS "updatedAt",
+        wo.os_number AS "osNumber",
+        wo.final_cents AS "finalCents",
+        wo.paid_cents AS "paidCents"
+      FROM payments p
+      JOIN work_orders wo ON wo.id = p.work_order_id AND wo.tenant_id = p.tenant_id
+      WHERE p.tenant_id = $1 AND p.work_order_id = $2 AND p.transaction_reference = $3
+      LIMIT 1;
+      `,
+      [tenantId, workOrderId, txid]
+    );
+
+    if (res.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Cobrança Pix não encontrada para esta ordem de serviço.');
+    }
+
+    const row = res.rows[0];
+    const finalCents = row.finalCents || 0;
+    const paidCents = row.paidCents || 0;
+
+    return {
+      workOrderId,
+      osNumber: row.osNumber,
+      txid,
+      status: row.paymentStatus,
+      paidCents,
+      finalCents,
+      isFullyPaid: paidCents >= finalCents,
+      paidAt: row.paymentStatus === 'approved' ? row.updatedAt : null,
     };
   }
 }

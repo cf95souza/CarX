@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { adminApi } from '../services/api';
-import { AdminCreateTenantDto, AutomotiveSegment } from '@carx/shared';
+import { AdminCreateTenantDto, AutomotiveSegment, ValidateCouponResponseDto, AdminPlanDto } from '@carx/shared';
 import {
   Building2,
   User,
@@ -17,6 +17,7 @@ import {
   Mail,
   Layers,
   FileCheck2,
+  Ticket,
 } from 'lucide-react';
 
 export function TenantWizardPage() {
@@ -24,6 +25,15 @@ export function TenantWizardPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Dynamic Plans State from Real Database
+  const [plans, setPlans] = useState<AdminPlanDto[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+
+  // Coupon State
+  const [couponValidation, setCouponValidation] = useState<ValidateCouponResponseDto | null>(null);
+  const [couponValidating, setCouponValidating] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   // Form State
   const [formData, setFormData] = useState<AdminCreateTenantDto>({
@@ -37,10 +47,58 @@ export function TenantWizardPage() {
     owner_name: '',
     owner_email: '',
     owner_password: '',
-    plan_slug: 'pro',
+    plan_slug: 'profissional',
+    coupon_code: '',
     is_trial: true,
     trial_days: 14,
   });
+
+  useEffect(() => {
+    adminApi.listPlans()
+      .then((data) => {
+        const activePlans = data.filter((p) => p.is_active);
+        const list = activePlans.length > 0 ? activePlans : data;
+        setPlans(list);
+        if (list.length > 0) {
+          const hasSlug = list.some((p) => p.slug === formData.plan_slug);
+          if (!hasSlug) {
+            setFormData((prev) => ({ ...prev, plan_slug: list[0].slug }));
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Falha ao carregar planos do banco:', err);
+      })
+      .finally(() => setPlansLoading(false));
+  }, []);
+
+  const handleValidateCoupon = async () => {
+    if (!formData.coupon_code || !formData.coupon_code.trim()) {
+      setCouponError('Digite um código de cupom.');
+      setCouponValidation(null);
+      return;
+    }
+    setCouponValidating(true);
+    setCouponError(null);
+    try {
+      const res = await adminApi.validateCoupon({
+        code: formData.coupon_code.trim(),
+        plan_slug: formData.plan_slug,
+      });
+      if (res.valid) {
+        setCouponValidation(res);
+        setCouponError(null);
+      } else {
+        setCouponValidation(null);
+        setCouponError(res.message || 'Cupom inválido.');
+      }
+    } catch (err: any) {
+      setCouponValidation(null);
+      setCouponError(err?.response?.data?.message || err?.message || 'Erro ao validar cupom.');
+    } finally {
+      setCouponValidating(false);
+    }
+  };
 
   const handleInputChange = (field: keyof AdminCreateTenantDto, value: unknown) => {
     setFormData((prev) => {
@@ -141,35 +199,8 @@ export function TenantWizardPage() {
     },
   ];
 
-  const plans = [
-    {
-      slug: 'start',
-      name: 'Start',
-      price: 'R$ 69,90/mês',
-      desc: 'Ideal para oficinas compactas e estéticas em fase inicial.',
-    },
-    {
-      slug: 'pro',
-      name: 'Pro',
-      price: 'R$ 149,90/mês',
-      popular: true,
-      desc: 'Para centros automotivos com equipe ativa e alto volume de OS.',
-    },
-    {
-      slug: 'prime',
-      name: 'Prime',
-      price: 'R$ 299,90/mês',
-      desc: 'Multi-filiais, relatórios avançados de DRE e alta volumetria.',
-    },
-    {
-      slug: 'enterprise',
-      name: 'Enterprise',
-      price: 'R$ 599,90/mês',
-      desc: 'Redes de concessionárias e franquias com SLA corporativo.',
-    },
-  ];
-
   const selectedSegmentObj = segments.find((s) => s.id === formData.segment) || segments[3];
+  const selectedPlanObj = plans.find((p) => p.slug === formData.plan_slug);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -451,29 +482,48 @@ export function TenantWizardPage() {
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {plans.map((plan) => {
-                const isSelected = formData.plan_slug === plan.slug;
-                return (
-                  <div
-                    key={plan.slug}
-                    onClick={() => handleInputChange('plan_slug', plan.slug)}
-                    className={`p-4 rounded-card border cursor-pointer transition-all relative ${
-                      isSelected
-                        ? 'bg-asfalto border-volt shadow-sm shadow-volt/20'
-                        : 'bg-asfalto/50 border-aco/40 hover:border-aco'
-                    }`}
-                  >
-                    {plan.popular && (
-                      <span className="absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-volt text-asfalto">
-                        Popular
-                      </span>
-                    )}
-                    <h4 className="font-display font-bold text-sm text-white">{plan.name}</h4>
-                    <div className="text-volt font-bold text-sm mt-0.5">{plan.price}</div>
-                    <p className="text-[11px] text-muted mt-2">{plan.desc}</p>
-                  </div>
-                );
-              })}
+              {plansLoading ? (
+                <div className="col-span-2 py-8 text-center text-muted text-xs">
+                  <div className="w-6 h-6 border-2 border-volt/20 border-t-volt rounded-full animate-spin mx-auto mb-2" />
+                  Carregando planos comerciais disponíveis...
+                </div>
+              ) : plans.length === 0 ? (
+                <div className="col-span-2 p-4 rounded-card bg-asfalto/50 border border-aco text-center text-xs text-muted">
+                  Nenhum plano comercial ativo no sistema.
+                </div>
+              ) : (
+                plans.map((plan) => {
+                  const isSelected = formData.plan_slug === plan.slug;
+                  const priceFormatted =
+                    (plan.price_cents / 100).toLocaleString('pt-BR', {
+                      style: 'currency',
+                      currency: 'BRL',
+                    }) + (plan.interval === 'yearly' ? '/ano' : '/mês');
+
+                  return (
+                    <div
+                      key={plan.id || plan.slug}
+                      onClick={() => handleInputChange('plan_slug', plan.slug)}
+                      className={`p-4 rounded-card border cursor-pointer transition-all relative ${
+                        isSelected
+                          ? 'bg-asfalto border-volt shadow-sm shadow-volt/20'
+                          : 'bg-asfalto/50 border-aco/40 hover:border-aco'
+                      }`}
+                    >
+                      {plan.slug === 'profissional' && (
+                        <span className="absolute top-3 right-3 text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-volt text-asfalto">
+                          Popular
+                        </span>
+                      )}
+                      <h4 className="font-display font-bold text-sm text-white">{plan.name}</h4>
+                      <div className="text-volt font-bold text-sm mt-0.5">{priceFormatted}</div>
+                      <p className="text-[11px] text-muted mt-2">
+                        {plan.description || 'Recursos avançados para gestão automotiva.'}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
 
             <div className="pt-3 border-t border-aco/30 flex items-center justify-between p-3 rounded-btn bg-asfalto/60 border border-aco/30">
@@ -487,6 +537,72 @@ export function TenantWizardPage() {
                 onChange={(e) => handleInputChange('is_trial', e.target.checked)}
                 className="w-4 h-4 accent-volt rounded cursor-pointer"
               />
+            </div>
+
+            {/* Campo de Cupom Promocional */}
+            <div className="pt-3 border-t border-aco/30">
+              <label className="block text-xs font-semibold text-muted mb-1.5 uppercase tracking-wider flex items-center gap-1.5">
+                <Ticket size={14} className="text-volt" /> Cupom de Desconto / Promoção (Opcional)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.coupon_code || ''}
+                  onChange={(e) => {
+                    handleInputChange('coupon_code', e.target.value.toUpperCase().replace(/\s+/g, ''));
+                    if (couponValidation) setCouponValidation(null);
+                    if (couponError) setCouponError(null);
+                  }}
+                  placeholder="Ex: 3MESESPRO, PROMO50, GRATIS3M"
+                  className="flex-1 p-2.5 bg-asfalto border border-aco rounded-input text-xs font-mono font-bold tracking-wider text-volt placeholder:text-muted/50 focus:outline-none focus:border-volt uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={handleValidateCoupon}
+                  disabled={couponValidating || !formData.coupon_code?.trim()}
+                  className="px-4 py-2.5 bg-aco/80 hover:bg-aco text-white rounded-btn text-xs font-semibold transition-colors disabled:opacity-50"
+                >
+                  {couponValidating ? 'Validando...' : 'Aplicar'}
+                </button>
+              </div>
+
+              {couponError && (
+                <div className="mt-2 text-xs text-red-400 flex items-center gap-1.5">
+                  <AlertCircle size={13} />
+                  <span>{couponError}</span>
+                </div>
+              )}
+
+              {couponValidation && couponValidation.valid && (
+                <div className="mt-2 p-3 rounded-btn bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center justify-between">
+                  <div>
+                    <span className="font-bold flex items-center gap-1">
+                      <CheckCircle2 size={14} /> Cupom "{couponValidation.coupon?.code}" aplicado com sucesso!
+                    </span>
+                    <span className="text-[11px] text-muted block mt-0.5">
+                      {couponValidation.coupon?.discount_type === 'free_months' &&
+                        `Concede ${couponValidation.coupon.duration_months} meses 100% gratuitos.`}
+                      {couponValidation.coupon?.discount_type === 'promotional_price' &&
+                        `Mensalidade reduzida para R$ ${(couponValidation.coupon.discount_value / 100).toFixed(2)} por ${couponValidation.coupon.duration_months} meses.`}
+                      {couponValidation.coupon?.discount_type === 'percentage' &&
+                        `Desconto de ${couponValidation.coupon.discount_value}% na mensalidade.`}
+                      {couponValidation.coupon?.discount_type === 'fixed_amount' &&
+                        `Desconto de R$ ${(couponValidation.coupon.discount_value / 100).toFixed(2)} na mensalidade.`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleInputChange('coupon_code', '');
+                      setCouponValidation(null);
+                      setCouponError(null);
+                    }}
+                    className="text-xs text-muted hover:text-white underline ml-3"
+                  >
+                    Remover
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -535,12 +651,20 @@ export function TenantWizardPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <span className="text-muted block text-[10px] uppercase font-semibold">Plano</span>
-                  <span className="font-semibold text-volt uppercase">{formData.plan_slug}</span>
+                  <span className="font-semibold text-volt">{selectedPlanObj?.name || formData.plan_slug}</span>
                 </div>
                 <div>
                   <span className="text-muted block text-[10px] uppercase font-semibold">Modalidade</span>
                   <span className="text-texto">{formData.is_trial ? 'Trial (14 dias)' : 'Faturamento Imediato'}</span>
                 </div>
+                {formData.coupon_code && (
+                  <div className="col-span-2 pt-2 border-t border-aco/30">
+                    <span className="text-muted block text-[10px] uppercase font-semibold">Cupom Promocional</span>
+                    <span className="font-mono font-bold text-emerald-400">
+                      {formData.coupon_code} {couponValidation?.valid ? '✓ (Validado)' : '(Será validado ao salvar)'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

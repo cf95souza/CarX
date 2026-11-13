@@ -9,13 +9,15 @@ import { TenantsPage } from './pages/TenantsPage';
 import { TenantWizardPage } from './pages/TenantWizardPage';
 import { ContractsPage } from './pages/ContractsPage';
 import { InvoicesPage } from './pages/InvoicesPage';
+import { PlansPage } from './pages/PlansPage';
+import { CouponsPage } from './pages/CouponsPage';
 import { WhatsAppManagerPage } from './pages/WhatsAppManagerPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 
 export function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <Routes>
           {/* Rota Pública de Autenticação */}
@@ -35,6 +37,8 @@ export function App() {
             <Route path="tenants/new" element={<TenantWizardPage />} />
             <Route path="contracts" element={<ContractsPage />} />
             <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="plans" element={<PlansPage />} />
+            <Route path="coupons" element={<CouponsPage />} />
             <Route path="whatsapp" element={<WhatsAppManagerPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="audit" element={<AuditLogsPage />} />

@@ -18,10 +18,14 @@ import {
   Sparkles,
   ClipboardCheck,
   FileCheck2,
+  WifiOff,
+  UploadCloud,
 } from 'lucide-react';
 
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import { offlineStorage } from '../services/offlineStorage';
 import { toast } from '../utils/toast';
 import PhotoGuideGallery from '../components/features/PhotoGuideGallery';
 import { Button } from '@carx/ui';
@@ -98,102 +102,226 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
     { id: '5', label: 'Pintura/lataria inspecionada contra avarias prévias', checked: true },
   ]);
 
-  // 1. Cronômetro Oficial do Servidor via React Query
+  // Hook Offline-First (T6.13)
+  const { isOnline, enqueueOfflineAction } = useOfflineSync();
+
+  // 1. Cronômetro Oficial do Servidor via React Query com suporte Offline
   const { data: timerData, refetch: refetchTimer } = useQuery({
     queryKey: ['technician-timer', workOrderId],
     queryFn: () => api.technician.getTimer(workOrderId),
-    refetchInterval: 10000, // Revalida a cada 10s para manter integridade com o backend
+    refetchInterval: isOnline ? 10000 : false,
+    retry: false,
   });
 
-  const isTimerRunning = Boolean(timerData?.isTimerRunning ?? os.isTimerRunning);
-  const totalElapsedSeconds = Number(timerData?.totalElapsedSeconds ?? os.totalElapsedSeconds ?? 0);
+  const [localTimerOverride, setLocalTimerOverride] = useState<{
+    isRunning: boolean;
+    startedAt?: string;
+    accumulatedSeconds?: number;
+  } | null>(null);
+
+  // Lê o estado local do IndexedDB na montagem (caso a OS estivesse rodando offline)
+  useEffect(() => {
+    offlineStorage.getLocalTimer(workOrderId).then((stored) => {
+      if (stored) {
+        if (stored.status === 'running') {
+          const now = Date.now();
+          const diffSeconds = Math.max(0, Math.floor((now - stored.lastTickTimestamp) / 1000));
+          const total = (stored.accumulatedSeconds || 0) + diffSeconds;
+          setDisplaySeconds(total);
+          setLocalTimerOverride({ isRunning: true, accumulatedSeconds: total });
+        } else if (stored.status === 'paused') {
+          setDisplaySeconds(stored.accumulatedSeconds || 0);
+          setLocalTimerOverride({ isRunning: false, accumulatedSeconds: stored.accumulatedSeconds });
+        }
+      }
+    }).catch(() => {});
+  }, [workOrderId]);
+
+  const isTimerRunning = localTimerOverride !== null
+    ? localTimerOverride.isRunning
+    : Boolean(timerData?.isTimerRunning ?? os.isTimerRunning);
+
+  const totalElapsedSeconds = localTimerOverride?.accumulatedSeconds ?? Number(timerData?.totalElapsedSeconds ?? os.totalElapsedSeconds ?? 0);
 
   // Efeito local para incremento suave do cronômetro enquanto estiver ativo
   const [displaySeconds, setDisplaySeconds] = useState(totalElapsedSeconds);
 
   useEffect(() => {
-    setDisplaySeconds(totalElapsedSeconds);
-  }, [totalElapsedSeconds]);
+    if (localTimerOverride === null) {
+      setDisplaySeconds(totalElapsedSeconds);
+    }
+  }, [totalElapsedSeconds, localTimerOverride]);
 
   useEffect(() => {
     let interval: any = null;
     if (isTimerRunning) {
       interval = setInterval(() => {
-        setDisplaySeconds((prev) => prev + 1);
+        setDisplaySeconds((prev) => {
+          const next = prev + 1;
+          // Se estiver offline ou com timer local ativo, salva no IndexedDB
+          if (!isOnline || localTimerOverride?.isRunning) {
+            offlineStorage.saveLocalTimer({
+              workOrderId,
+              status: 'running',
+              startedAt: new Date().toISOString(),
+              accumulatedSeconds: next,
+              lastTickTimestamp: Date.now(),
+            }).catch(() => {});
+          }
+          return next;
+        });
       }, 1000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isTimerRunning]);
+  }, [isTimerRunning, isOnline, localTimerOverride?.isRunning, workOrderId]);
 
-  // Mutations para o cronômetro oficial do servidor
+  // Mutations para o cronômetro oficial do servidor com fallback offline
   const startTimerMutation = useMutation({
-    mutationFn: () => api.technician.start(workOrderId),
+    mutationFn: async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('OFFLINE_MODE');
+      }
+      return api.technician.start(workOrderId);
+    },
     onSuccess: () => {
       toast.success('Cronômetro oficial iniciado no servidor!');
+      setLocalTimerOverride(null);
       queryClient.invalidateQueries({ queryKey: ['technician-timer', workOrderId] });
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
       refetchTimer();
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([30]);
     },
-    onError: (err: any) => {
-      toast.error('Erro ao iniciar cronômetro: ' + (err.message || 'Falha de comunicação'));
+    onError: async (err: any) => {
+      // Salva no IndexedDB para sincronização posterior
+      await enqueueOfflineAction(workOrderId, 'START_TIMER');
+      await offlineStorage.saveLocalTimer({
+        workOrderId,
+        status: 'running',
+        startedAt: new Date().toISOString(),
+        accumulatedSeconds: displaySeconds,
+        lastTickTimestamp: Date.now(),
+      });
+      setLocalTimerOverride({ isRunning: true, accumulatedSeconds: displaySeconds });
+      toast.warning('Modo offline: Início gravado no IndexedDB. Sincronizará ao reconectar!');
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([30]);
     },
   });
 
   const pauseTimerMutation = useMutation({
-    mutationFn: (reason?: string) => api.technician.pause(workOrderId, reason),
+    mutationFn: async (reason?: string) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('OFFLINE_MODE');
+      }
+      return api.technician.pause(workOrderId, reason);
+    },
     onSuccess: () => {
       toast.warning('Cronômetro oficial pausado.');
       setShowPauseModal(false);
+      setLocalTimerOverride(null);
       queryClient.invalidateQueries({ queryKey: ['technician-timer', workOrderId] });
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
       refetchTimer();
     },
-    onError: (err: any) => {
-      toast.error('Erro ao pausar: ' + (err.message || 'Falha de comunicação'));
+    onError: async (err: any, reason?: string) => {
+      await enqueueOfflineAction(workOrderId, 'PAUSE_TIMER', {
+        reason: reason || pauseReason,
+        accumulatedSeconds: displaySeconds,
+      });
+      await offlineStorage.saveLocalTimer({
+        workOrderId,
+        status: 'paused',
+        startedAt: new Date().toISOString(),
+        accumulatedSeconds: displaySeconds,
+        lastTickTimestamp: Date.now(),
+      });
+      setLocalTimerOverride({ isRunning: false, accumulatedSeconds: displaySeconds });
+      setShowPauseModal(false);
+      toast.warning('Modo offline: Pausa gravada no IndexedDB.');
     },
   });
 
   const resumeTimerMutation = useMutation({
-    mutationFn: () => api.technician.resume(workOrderId),
+    mutationFn: async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('OFFLINE_MODE');
+      }
+      return api.technician.resume(workOrderId);
+    },
     onSuccess: () => {
       toast.success('Atividade retomada com sucesso!');
+      setLocalTimerOverride(null);
       queryClient.invalidateQueries({ queryKey: ['technician-timer', workOrderId] });
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
       refetchTimer();
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([30]);
     },
-    onError: (err: any) => {
-      toast.error('Erro ao retomar: ' + (err.message || 'Falha de comunicação'));
+    onError: async (err: any) => {
+      await enqueueOfflineAction(workOrderId, 'RESUME_TIMER');
+      await offlineStorage.saveLocalTimer({
+        workOrderId,
+        status: 'running',
+        startedAt: new Date().toISOString(),
+        accumulatedSeconds: displaySeconds,
+        lastTickTimestamp: Date.now(),
+      });
+      setLocalTimerOverride({ isRunning: true, accumulatedSeconds: displaySeconds });
+      toast.warning('Modo offline: Retomada gravada no IndexedDB.');
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([30]);
     },
   });
 
   // Checklist de entrada instantâneo ("Nunca bloquear sem saída")
   const startWithChecklistMutation = useMutation({
-    mutationFn: (data: any) => api.technician.startWithChecklist(workOrderId, data),
+    mutationFn: async (data: any) => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('OFFLINE_MODE');
+      }
+      return api.technician.startWithChecklist(workOrderId, data);
+    },
     onSuccess: () => {
       toast.success('Checklist registrado e cronômetro iniciado com sucesso!');
       setShowChecklistModal(false);
       os.has_checklist = true;
       os.checklist_concluido = true;
+      setLocalTimerOverride(null);
       queryClient.invalidateQueries({ queryKey: ['technician-timer', workOrderId] });
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
       refetchTimer();
     },
-    onError: (err: any) => {
-      toast.error('Erro no checklist: ' + (err.message || 'Falha de validação'));
+    onError: async (err: any, data: any) => {
+      // Salva ação de início de cronômetro e marcação offline
+      await enqueueOfflineAction(workOrderId, 'START_TIMER', {
+        checklist: data,
+      });
+      await offlineStorage.saveLocalTimer({
+        workOrderId,
+        status: 'running',
+        startedAt: new Date().toISOString(),
+        accumulatedSeconds: 0,
+        lastTickTimestamp: Date.now(),
+      });
+      setShowChecklistModal(false);
+      os.has_checklist = true;
+      os.checklist_concluido = true;
+      setLocalTimerOverride({ isRunning: true, accumulatedSeconds: 0 });
+      setDisplaySeconds(0);
+      toast.warning('Modo offline: Checklist e cronômetro salvos no IndexedDB!');
     },
   });
 
-  // Finalização da Ordem de Serviço para QA
+  // Finalização da Ordem de Serviço para QA com fallback offline
   const finishWorkOrderMutation = useMutation({
     mutationFn: async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        throw new Error('OFFLINE_MODE');
+      }
       // 1. Para o cronômetro oficial
       await api.technician.stop(workOrderId).catch(() => {});
       // 2. Transiciona status da OS para QA (Inspeção de Qualidade)
       await api.workOrders.updateStatus(workOrderId, 'QA', notes);
+      await offlineStorage.clearLocalTimer(workOrderId).catch(() => {});
     },
     onSuccess: () => {
       toast.success('Serviço concluído com sucesso! Encaminhado para Inspeção QA.');
@@ -201,8 +329,17 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
       onComplete();
     },
-    onError: (err: any) => {
-      toast.error('Erro ao finalizar serviço: ' + (err.message || 'Erro de comunicação'));
+    onError: async (err: any) => {
+      // Salva ações offline para sincronização
+      await enqueueOfflineAction(workOrderId, 'STOP_TIMER', { totalSeconds: displaySeconds });
+      await enqueueOfflineAction(workOrderId, 'UPDATE_PROGRESS', { progress: 100 });
+      if (notes) {
+        await enqueueOfflineAction(workOrderId, 'ADD_NOTE', { note: notes });
+      }
+      await offlineStorage.clearLocalTimer(workOrderId).catch(() => {});
+      toast.warning('Modo offline: Conclusão gravada no IndexedDB! Será sincronizada quando houver rede.');
+      setShowConfirmFinish(false);
+      onComplete();
     },
   });
 
@@ -316,6 +453,11 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
               >
                 {isTimerRunning ? 'Em Andamento' : 'Pausado'}
               </Badge>
+              {(!isOnline || localTimerOverride !== null) && (
+                <Badge variant="alert" className="text-[9px] uppercase font-bold">
+                  Offline (Local)
+                </Badge>
+              )}
             </div>
           </div>
         </div>

@@ -1,7 +1,9 @@
 import crypto from 'crypto';
 import { tenantQuery } from '../database/tenant-query.js';
 import { signJwt } from '../auth/jwt.js';
-import { normalizePhone } from '@carx/shared';
+import { normalizePhone, PlanFeatures } from '@carx/shared';
+import { planService } from '../plans/plan-service.js';
+import { whatsappService } from '../whatsapp/whatsapp-service.js';
 import type {
   PortalCustomerDto,
   PortalVehicleDto,
@@ -44,12 +46,35 @@ export class CustomerPortalService {
 
   /**
    * Solicita um código OTP de 6 dígitos numéricos.
-   * Aplica estrita proteção anti-enumeração de clientes (retorna a mesma mensagem neutra caso não exista).
+   * Aplica estrita proteção anti-enumeração de clientes e validação arquitetural
+   * de dependência do WhatsApp Gateway e sessão ativa da oficina.
    */
   async requestOtp(
     tenantId: string,
     rawIdentifier: string
   ): Promise<{ success: boolean; message: string; devOtpCode?: string }> {
+    // 1. Validar Feature Gating do Plano: Customer Portal e WhatsApp Gateway
+    const hasPortal = await planService.hasFeature(tenantId, PlanFeatures.CUSTOMER_PORTAL);
+    const hasWaGateway = await planService.hasFeature(tenantId, PlanFeatures.WHATSAPP_GATEWAY);
+
+    if (!hasPortal || !hasWaGateway) {
+      throw new CustomerPortalError(
+        403,
+        'PORTAL_UNAVAILABLE',
+        'O portal do cliente desta oficina não está disponível para envio de código de segurança no momento. Entre em contato diretamente com a oficina.'
+      );
+    }
+
+    // 2. Validar se a oficina possui instância de WhatsApp ativa e conectada
+    const waInstance = await whatsappService.getInstance(tenantId);
+    if (waInstance.status !== 'CONNECTED') {
+      throw new CustomerPortalError(
+        403,
+        'WHATSAPP_NOT_CONNECTED',
+        'O canal de envio por WhatsApp desta oficina ainda não foi configurado. Por favor, entre em contato diretamente com a oficina para consultar seu veículo.'
+      );
+    }
+
     const { normalized, isEmail } = this.normalizeIdentifier(rawIdentifier);
 
     // Consulta do cliente sob isolamento RLS do tenant
@@ -94,6 +119,23 @@ export class CustomerPortalService {
        ) VALUES ($1, $2, $3, $4, 0, 5, NOW() + INTERVAL '10 minutes')`,
       [tenantId, customer.id, normalized, otpHash]
     );
+
+    // Dispara o OTP via WhatsApp oficial da própria oficina
+    const tenantMeta = await tenantQuery<{ trade_name: string }>(
+      tenantId,
+      'SELECT trade_name FROM tenants WHERE id = $1 LIMIT 1',
+      [tenantId]
+    );
+    const tradeName = tenantMeta.rows[0]?.trade_name || 'sua oficina';
+
+    try {
+      await whatsappService.sendMessage(tenantId, {
+        to: customer.phone || normalized,
+        message: `🔐 *${tradeName}*: Seu código de acesso ao portal *Meu Veículo* é: *${code}*.\n\nVálido por 10 minutos. Nunca compartilhe este código com ninguém.`,
+      });
+    } catch (sendErr: any) {
+      console.warn(`[Portal OTP] Falha no disparo de WhatsApp para ${customer.phone}:`, sendErr?.message);
+    }
 
     // Disponibiliza devOtpCode fora de produção (dev e testes)
     const isDevOrTest = process.env.NODE_ENV !== 'production';

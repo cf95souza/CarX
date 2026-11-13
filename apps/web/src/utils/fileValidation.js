@@ -1,6 +1,6 @@
 /**
- * Módulo de Validação Rigorosa de Mídias (Hardening de Segurança - Fase 56)
- * Previne injeção de arquivos perigosos, arquivos corrompidos e exaustão de storage/banda no Supabase.
+ * Módulo de Validação Rigorosa de Mídias (Hardening de Segurança)
+ * Previne injeção de arquivos perigosos, arquivos corrompidos e exaustão de storage/banda no CarX Storage (MinIO/S3).
  */
 
 export const validateMediaUpload = (file) => {

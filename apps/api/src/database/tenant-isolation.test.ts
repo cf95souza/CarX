@@ -1,7 +1,13 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { adminPool, pool } from './db.js';
 import { tenantQuery, tenantTransaction, TenantIsolationError } from './tenant-query.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 describe('T2.2 — Contexto de Tenant e RLS (Row Level Security em Profundidade)', () => {
   let tenantA: { id: string; slug: string };
@@ -283,13 +289,110 @@ describe('T2.2 — Contexto de Tenant e RLS (Row Level Security em Profundidade)
       );
 
       const hasIsolationPolicy = policies.rows.some(
-        (p) => p.polname === 'tenant_isolation_policy'
+        (p) =>
+          p.polname === 'tenant_isolation_policy' ||
+          p.polname === `${tableName}_isolation`
       );
       assert.equal(
         hasIsolationPolicy,
         true,
-        `Tabela "${tableName}" deve ter a política canônica "tenant_isolation_policy"`
+        `Tabela "${tableName}" deve ter a política canônica "tenant_isolation_policy" ou "${tableName}_isolation"`
       );
+    }
+  });
+
+  it('T7.2 — deve validar que todas as tabelas das Ondas 1, 2 e 3 da Fase 6 estão protegidas no catálogo RLS e isolam dados entre Oficina A e B', async () => {
+    const waveTables = [
+      'warranty_transfers',
+      'minisite_portfolio_items',
+      'minisite_leads',
+      'tenant_fiscal_settings',
+      'fiscal_invoices',
+      'financial_categories',
+      'financial_bills',
+      'unit_transfers',
+      'technician_offline_sync_logs',
+      'ai_inspection_analyses',
+      'crm_retention_rules',
+      'tenant_customer_coupons',
+      'crm_retention_contacts',
+    ];
+
+    for (const expectedTable of waveTables) {
+      assert.ok(
+        tenantIsolatedTables.includes(expectedTable),
+        `A tabela da Fase 6 "${expectedTable}" deve constar no catálogo de tabelas isoladas por tenant_id`
+      );
+    }
+
+    // Inserir dados sensíveis na Oficina B (Fiscal, Financeiro, CRM e Mini-Site)
+    await tenantQuery(
+      tenantB.id,
+      `INSERT INTO crm_retention_rules (tenant_id, name, service_category, trigger_type, interval_days, channel, message_template)
+       VALUES ($1, 'Regra Secreta Beta', 'ppf', 'warranty_revision', 180, 'whatsapp', 'Olá {cliente}')`,
+      [tenantB.id]
+    );
+
+    await tenantQuery(
+      tenantB.id,
+      `INSERT INTO financial_bills (tenant_id, type, description, amount_cents, due_date, status)
+       VALUES ($1, 'payable', 'Aluguel Secreto Beta', 500000, CURRENT_DATE, 'pending')`,
+      [tenantB.id]
+    );
+
+    await tenantQuery(
+      tenantB.id,
+      `INSERT INTO minisite_leads (tenant_id, name, phone, vehicle_model, service_interest)
+       VALUES ($1, 'Lead VIP Beta', '11988887777', 'Porsche 911', 'PPF Full')`,
+      [tenantB.id]
+    );
+
+    // Oficina A consulta todas as 3 tabelas e deve receber 0 registros da Oficina B
+    const rulesA = await tenantQuery(tenantA.id, 'SELECT * FROM crm_retention_rules');
+    const billsA = await tenantQuery(tenantA.id, 'SELECT * FROM financial_bills');
+    const leadsA = await tenantQuery(tenantA.id, 'SELECT * FROM minisite_leads');
+
+    assert.equal(rulesA.rows.length, 0, 'Oficina A não pode ver regras de CRM da Oficina B');
+    assert.equal(billsA.rows.length, 0, 'Oficina A não pode ver contas financeiras da Oficina B');
+    assert.equal(leadsA.rows.length, 0, 'Oficina A não pode ver leads do mini-site da Oficina B');
+  });
+
+  it('T7.2 — deve auditar estaticamente os serviços de domínio da loja garantindo ausência de uso direto de adminPool', async () => {
+    const tenantDomainDirs = [
+      'ai',
+      'appointments',
+      'corporate',
+      'crm',
+      'financial',
+      'fiscal',
+      'inspections',
+      'minisite',
+      'nps',
+      'payments',
+      'qa',
+      'services',
+      'stock',
+      'technician',
+      'work-orders',
+    ];
+
+    const srcRoot = path.resolve(__dirname, '..');
+
+    for (const dir of tenantDomainDirs) {
+      const fullDir = path.join(srcRoot, dir);
+      const entries = await fs.readdir(fullDir);
+      const serviceFiles = entries.filter(
+        (f) => f.endsWith('-service.ts') && !f.endsWith('.test.ts')
+      );
+
+      for (const file of serviceFiles) {
+        const content = await fs.readFile(path.join(fullDir, file), 'utf8');
+        assert.equal(
+          content.includes('adminPool.query'),
+          false,
+          `O arquivo de domínio "${dir}/${file}" NÃO pode utilizar adminPool.query diretamente (deve usar tenantQuery/tenantTransaction)!`
+        );
+      }
     }
   });
 });

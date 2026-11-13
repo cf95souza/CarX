@@ -13,26 +13,38 @@ export const formatWhatsAppLink = (phone, message) => {
   return `https://wa.me/${finalPhone}?text=${encodedMessage}`;
 };
 
-export const getBudgetMsg = (cliente, veiculo, valor, servicosDetalhados = [], servicoFallback = '') => {
+/**
+ * @param {string} cliente
+ * @param {string} veiculo
+ * @param {number} valor
+ * @param {any[]} [servicosDetalhados]
+ * @param {string} [servicoFallback]
+ * @param {string | null} [trackingToken]
+ */
+export const getBudgetMsg = (cliente, veiculo, valor, servicosDetalhados = [], servicoFallback = '', trackingToken = null) => {
   let listaServicos = '';
 
   if (servicosDetalhados && Array.isArray(servicosDetalhados) && servicosDetalhados.length > 0) {
     servicosDetalhados.forEach(s => {
-      listaServicos += `${s.nome} - R$ ${Number(s.preco_base).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+      const preco = s.preco_base || (s.unitPriceCents ? s.unitPriceCents / 100 : (s.unit_price_cents ? s.unit_price_cents / 100 : 0));
+      listaServicos += `• ${s.nome || s.name} - R$ ${Number(preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
     });
   } else {
-    // Para orçamentos legados
-    listaServicos = `${servicoFallback} (Verifique valores individualmente no PDF)\n`;
+    listaServicos = `• ${servicoFallback || 'Serviços especializados'}\n`;
   }
 
-  return `Olá ${cliente}! 
-Concluímos o orçamento para seu veículo *${veiculo}*.
+  const linkProposta = trackingToken 
+    ? `\n👉 *Acesse os detalhes e aprove com 1 clique:*\n${window.location.origin}/proposta/${trackingToken}\n` 
+    : '';
+
+  return `Olá ${cliente}! 🚗
+Concluímos o orçamento detalhado para seu veículo *${veiculo}*.
 
 *SERVIÇOS SELECIONADOS:*
 ${listaServicos}
-*Total dos serviços R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*
-
-Podemos agendar a execução do serviço?`;
+*Total dos serviços: R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*
+${linkProposta}
+Podemos confirmar a execução? Qualquer dúvida estamos à disposição!`;
 };
 
 export const getFinishedMsg = (cliente, veiculo) => {
@@ -99,3 +111,43 @@ export const sendWhatsApp = (phone, message) => {
   const link = formatWhatsAppLink(phone, message);
   window.open(link, '_blank');
 };
+
+/**
+ * Dispara envio da proposta respeitando o plano da oficina:
+ * - Se tiver gateway de WhatsApp pareado, envia automático pelo socket
+ * - Se for plano básico ou manual, abre wa.me sem custos de servidor
+ */
+export const dispatchQuoteNotification = async (workOrderId, fallbackPhone = '', fallbackMsg = '') => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/work-orders/${workOrderId}/send-whatsapp`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ originUrl: window.location.origin }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.mode === 'gateway') {
+        toast.success(data.message || 'Orçamento enviado pelo WhatsApp oficial da oficina!');
+        return;
+      }
+      if (data.mode === 'manual' && data.whatsappUrl) {
+        window.open(data.whatsappUrl, '_blank');
+        return;
+      }
+    }
+  } catch (err) {
+    // Fallback silencioso para wa.me manual
+  }
+
+  if (fallbackPhone) {
+    sendWhatsApp(fallbackPhone, fallbackMsg);
+  } else {
+    toast.warning('Telefone do cliente não disponível para envio.');
+  }
+};
+

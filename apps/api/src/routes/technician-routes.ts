@@ -6,6 +6,7 @@ import {
   StartTimerInputSchema,
   PauseTimerInputSchema,
   StartWithChecklistInputSchema,
+  BatchSyncActionsSchema,
 } from '@carx/shared';
 import { technicianService, TechnicianError } from '../technician/technician-service.js';
 
@@ -241,6 +242,46 @@ export async function technicianRoutes(fastify: FastifyInstance) {
       try {
         const success = await technicianService.setRework(tenantId, id, reason);
         return reply.code(200).send({ success, message: 'Retrabalho registrado com prioridade máxima.' });
+      } catch (err: any) {
+        if (err instanceof TechnicianError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /technician/sync — Sincronização em lote de ações offline do técnico (T6.13)
+   */
+  fastify.post(
+    '/technician/sync',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina não identificado.' });
+      }
+
+      const userId = (request.user as any)?.userId || (request.user as any)?.sub || (request.user as any)?.id;
+      const parseResult = BatchSyncActionsSchema.safeParse(request.body);
+
+      if (!parseResult.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'Payload de sincronização inválido.',
+          errors: parseResult.error.flatten().fieldErrors,
+        });
+      }
+
+      try {
+        const result = await technicianService.syncOfflineActions(
+          tenantId,
+          userId,
+          parseResult.data.actions
+        );
+        return reply.code(200).send(result);
       } catch (err: any) {
         if (err instanceof TechnicianError) {
           return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });

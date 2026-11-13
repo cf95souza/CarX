@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../services/api';
-import { AdminTenantSummaryDto, ImpersonateTenantResponse } from '@carx/shared';
+import { AdminTenantSummaryDto, ImpersonateTenantResponse, ResetOwnerPasswordResponseDto } from '@carx/shared';
 import { Pagination } from '../components/Pagination';
 import {
   Building2,
@@ -20,6 +20,9 @@ import {
   Clock,
   Layers,
   HardDrive,
+  Key,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 export function TenantsPage() {
@@ -50,6 +53,60 @@ export function TenantsPage() {
   const [detailsServices, setDetailsServices] = useState<any[]>([]);
   const [detailsChecklists, setDetailsChecklists] = useState<any[]>([]);
   const [detailsLoading, setDetailsLoading] = useState(false);
+
+  // Redefinição de Senha do Gestor
+  const [resetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
+  const [resetPasswordMode, setResetPasswordMode] = useState<'generate' | 'manual'>('generate');
+  const [resetPasswordManual, setResetPasswordManual] = useState('');
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetPasswordResult, setResetPasswordResult] = useState<ResetOwnerPasswordResponseDto | null>(null);
+  const [resetPasswordCopied, setResetPasswordCopied] = useState(false);
+  const [resetPasswordMsgCopied, setResetPasswordMsgCopied] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+
+  const handleOpenResetPassword = (tenant: AdminTenantSummaryDto) => {
+    setSelectedTenant(tenant);
+    setResetPasswordMode('generate');
+    setResetPasswordManual('');
+    setResetPasswordResult(null);
+    setResetPasswordError(null);
+    setResetPasswordCopied(false);
+    setResetPasswordMsgCopied(false);
+    setResetPasswordModalOpen(true);
+  };
+
+  const handleSubmitResetPassword = async () => {
+    if (!selectedTenant) return;
+    if (resetPasswordMode === 'manual' && resetPasswordManual.trim().length < 8) {
+      setResetPasswordError('A senha manual deve conter no mínimo 8 caracteres.');
+      return;
+    }
+    setResetPasswordLoading(true);
+    setResetPasswordError(null);
+    try {
+      const res = await adminApi.resetOwnerPassword(selectedTenant.id, {
+        new_password: resetPasswordMode === 'manual' ? resetPasswordManual.trim() : undefined,
+      });
+      setResetPasswordResult(res);
+    } catch (err: any) {
+      setResetPasswordError(err?.message || 'Falha ao redefinir senha do gestor.');
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
+  const handleCopyPassword = (pwd: string) => {
+    navigator.clipboard.writeText(pwd);
+    setResetPasswordCopied(true);
+    setTimeout(() => setResetPasswordCopied(false), 2000);
+  };
+
+  const handleCopyWhatsAppMessage = (tenant: AdminTenantSummaryDto, result: ResetOwnerPasswordResponseDto) => {
+    const text = `Olá ${result.owner_name}! Suas credenciais de acesso ao CarX da sua oficina (${tenant.trade_name}) foram atualizadas com sucesso:\n\n🔗 Acesso: https://${tenant.slug}.carx.com.br\n📧 Login: ${result.owner_email}\n🔑 Senha: ${result.temporary_password}\n\nRecomendamos alterar a sua senha no primeiro acesso através das configurações do seu perfil.`;
+    navigator.clipboard.writeText(text);
+    setResetPasswordMsgCopied(true);
+    setTimeout(() => setResetPasswordMsgCopied(false), 2000);
+  };
 
   const handleOpenDetails = async (tenant: AdminTenantSummaryDto) => {
     setSelectedTenant(tenant);
@@ -359,6 +416,15 @@ export function TenantsPage() {
                         >
                           <UserCheck size={13} />
                           <span>Acessar</span>
+                        </button>
+
+                        {/* Botão Redefinir Senha do Gestor */}
+                        <button
+                          onClick={() => handleOpenResetPassword(tenant)}
+                          title="Redefinir Senha do Gestor"
+                          className="p-1.5 rounded-btn bg-aco/50 hover:bg-aco text-muted hover:text-volt transition-colors"
+                        >
+                          <Key size={14} />
                         </button>
 
                         {/* Botão Ver Detalhes */}
@@ -721,7 +787,18 @@ export function TenantsPage() {
               )}
             </div>
 
-            <div className="mt-5 pt-3 border-t border-aco/30 flex justify-end">
+            <div className="mt-5 pt-3 border-t border-aco/30 flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setDetailsModalOpen(false);
+                  if (selectedTenant) handleOpenResetPassword(selectedTenant);
+                }}
+                className="px-3.5 py-1.5 bg-volt/10 hover:bg-volt/20 text-volt border border-volt/30 rounded-btn text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <Key size={13} />
+                <span>Redefinir Senha do Gestor</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setDetailsModalOpen(false)}
@@ -730,6 +807,174 @@ export function TenantsPage() {
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Redefinição de Senha do Gestor */}
+      {resetPasswordModalOpen && selectedTenant && (
+        <div className="fixed inset-0 z-50 bg-asfalto/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-grafite border border-aco/60 rounded-card max-w-md w-full p-6 shadow-2xl relative">
+            <button
+              onClick={() => setResetPasswordModalOpen(false)}
+              className="absolute top-4 right-4 text-muted hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-volt/10 border border-volt/20 flex items-center justify-center text-volt">
+                <Key size={18} />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-base text-white">Redefinir Senha do Gestor</h3>
+                <p className="text-xs text-muted">
+                  Oficina: <strong className="text-white">{selectedTenant.trade_name}</strong>
+                </p>
+              </div>
+            </div>
+
+            {resetPasswordResult ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-btn bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs space-y-2">
+                  <div className="font-bold flex items-center gap-1.5 text-sm">
+                    <CheckCircle2 size={16} /> Senha Atualizada com Sucesso!
+                  </div>
+                  <p className="text-texto text-xs">
+                    As credenciais do gestor <strong className="text-white">{resetPasswordResult.owner_name}</strong> foram redefinidas imediatamente.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-card bg-asfalto/70 border border-aco/40 space-y-2.5 text-xs">
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-semibold">E-mail de Login</span>
+                    <span className="font-mono text-white select-all">{resetPasswordResult.owner_email}</span>
+                  </div>
+
+                  <div>
+                    <span className="text-muted block text-[10px] uppercase font-semibold">Nova Senha Provisória</span>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <span className="font-mono font-bold text-volt text-sm bg-asfalto px-2.5 py-1 rounded border border-aco select-all">
+                        {resetPasswordResult.temporary_password}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPassword(resetPasswordResult.temporary_password || '')}
+                        className="px-2.5 py-1 bg-aco/50 hover:bg-aco text-texto rounded-btn text-xs font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        {resetPasswordCopied ? <Check size={12} className="text-volt" /> : <Copy size={12} />}
+                        <span>{resetPasswordCopied ? 'Copiado!' : 'Copiar'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyWhatsAppMessage(selectedTenant, resetPasswordResult)}
+                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-btn text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-md shadow-emerald-900/30"
+                  >
+                    {resetPasswordMsgCopied ? <Check size={14} /> : <Copy size={14} />}
+                    <span>{resetPasswordMsgCopied ? 'Mensagem Copiada!' : 'Copiar Mensagem Pronta para WhatsApp'}</span>
+                  </button>
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setResetPasswordModalOpen(false)}
+                    className="px-4 py-2 bg-aco/60 hover:bg-aco text-white rounded-btn text-xs font-semibold transition-colors"
+                  >
+                    Concluir
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-muted">
+                  Esta ação substitui imediatamente a senha do usuário proprietário da oficina no banco de dados e encerra sessões ativas.
+                </p>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider">
+                    Modo de Definição
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setResetPasswordMode('generate')}
+                      className={`p-2.5 rounded-btn border text-xs font-semibold transition-all ${
+                        resetPasswordMode === 'generate'
+                          ? 'bg-volt/10 border-volt text-volt'
+                          : 'bg-asfalto/50 border-aco/40 text-muted hover:text-texto'
+                      }`}
+                    >
+                      Gerar Senha Forte
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setResetPasswordMode('manual')}
+                      className={`p-2.5 rounded-btn border text-xs font-semibold transition-all ${
+                        resetPasswordMode === 'manual'
+                          ? 'bg-volt/10 border-volt text-volt'
+                          : 'bg-asfalto/50 border-aco/40 text-muted hover:text-texto'
+                      }`}
+                    >
+                      Digitar Manualmente
+                    </button>
+                  </div>
+                </div>
+
+                {resetPasswordMode === 'manual' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-muted mb-1 uppercase tracking-wider">
+                      Nova Senha do Gestor (Mínimo 8 caracteres) *
+                    </label>
+                    <input
+                      type="text"
+                      value={resetPasswordManual}
+                      onChange={(e) => setResetPasswordManual(e.target.value)}
+                      placeholder="Ex: NovaSenhaForte@2026"
+                      className="w-full p-2.5 bg-asfalto border border-aco rounded-input text-xs font-mono text-texto placeholder:text-muted/50 focus:outline-none focus:border-volt"
+                    />
+                  </div>
+                )}
+
+                {resetPasswordError && (
+                  <div className="p-3 rounded-btn bg-semantic-error/10 border border-semantic-error/30 text-semantic-error text-xs flex items-center gap-1.5">
+                    <AlertTriangle size={14} />
+                    <span>{resetPasswordError}</span>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-aco/40 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setResetPasswordModalOpen(false)}
+                    disabled={resetPasswordLoading}
+                    className="px-4 py-2 bg-aco/50 hover:bg-aco text-muted hover:text-texto rounded-btn text-xs font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmitResetPassword}
+                    disabled={resetPasswordLoading || (resetPasswordMode === 'manual' && resetPasswordManual.trim().length < 8)}
+                    className="px-4 py-2 bg-volt hover:bg-volt-hover active:bg-volt-active text-asfalto font-semibold rounded-btn text-xs flex items-center gap-1.5 transition-all shadow-sm shadow-volt/20 disabled:opacity-50"
+                  >
+                    {resetPasswordLoading ? (
+                      <div className="w-3.5 h-3.5 border-2 border-asfalto/30 border-t-asfalto rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Key size={14} />
+                        <span>Confirmar Redefinição</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

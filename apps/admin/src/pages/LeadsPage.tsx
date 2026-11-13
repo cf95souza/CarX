@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminApi } from '../services/api';
-import { LeadDto, ConvertLeadDto } from '@carx/shared';
+import { LeadDto, ConvertLeadDto, AdminPlanDto } from '@carx/shared';
 import { Pagination } from '../components/Pagination';
 import {
   Users2,
@@ -31,10 +31,11 @@ export function LeadsPage() {
   const [convertModalOpen, setConvertModalOpen] = useState(false);
   const [convertLoading, setConvertLoading] = useState(false);
   const [convertError, setConvertError] = useState<string | null>(null);
+  const [availablePlans, setAvailablePlans] = useState<AdminPlanDto[]>([]);
   const [convertData, setConvertData] = useState<ConvertLeadDto>({
     trade_name: '',
     slug: '',
-    plan_slug: 'pro',
+    plan_slug: 'profissional',
     is_trial: true,
   });
 
@@ -42,8 +43,13 @@ export function LeadsPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await adminApi.listLeads();
-      setLeads(data);
+      const [leadsData, plansData] = await Promise.all([
+        adminApi.listLeads(),
+        adminApi.listPlans().catch(() => []),
+      ]);
+      setLeads(leadsData);
+      const activePlans = plansData.filter((p) => p.is_active);
+      setAvailablePlans(activePlans.length > 0 ? activePlans : plansData);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Falha ao carregar leads');
     } finally {
@@ -66,10 +72,12 @@ export function LeadsPage() {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
 
+    const defaultPlan = availablePlans.length > 0 ? availablePlans[0].slug : 'profissional';
+
     setConvertData({
       trade_name: suggestedTradeName,
       slug: suggestedSlug,
-      plan_slug: 'pro',
+      plan_slug: defaultPlan,
       is_trial: true,
     });
     setConvertError(null);
@@ -361,17 +369,22 @@ export function LeadsPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-muted mb-1 uppercase tracking-wider">
-                  Plano Escolhido
+                  Plano Comercial
                 </label>
                 <select
                   value={convertData.plan_slug}
                   onChange={(e) => setConvertData({ ...convertData, plan_slug: e.target.value })}
                   className="w-full p-2.5 bg-asfalto border border-aco rounded-input text-xs text-texto focus:outline-none focus:border-volt"
                 >
-                  <option value="start">Start (R$ 69,90/mês)</option>
-                  <option value="pro">Pro (R$ 149,90/mês)</option>
-                  <option value="prime">Prime (R$ 299,90/mês)</option>
-                  <option value="enterprise">Enterprise (R$ 599,90/mês)</option>
+                  {availablePlans.length === 0 ? (
+                    <option value="profissional">Carregando planos...</option>
+                  ) : (
+                    availablePlans.map((p) => (
+                      <option key={p.id || p.slug} value={p.slug}>
+                        {p.name} ({(p.price_cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}{p.interval === 'yearly' ? '/ano' : '/mês'})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

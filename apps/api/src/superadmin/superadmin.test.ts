@@ -420,6 +420,53 @@ describe('T2.9 — Super Admin: Backend e Módulo /admin', () => {
     assert.equal(updatedLeadRes.rows[0].converted_tenant_id, convData.tenant.id);
   });
 
+  it('T5.1 — LANDING PAGE: POST /public/leads registra lead público com honeypot e notas enriquecidas', async () => {
+    // 1. Rejeição de requisição sem campos obrigatórios
+    const badRes = await app.inject({
+      method: 'POST',
+      url: '/public/leads',
+      payload: { name: 'Sem Email' },
+    });
+    assert.equal(badRes.statusCode, 400);
+
+    // 2. Proteção Honeypot Anti-Bot: Campo website preenchido retorna 200 sintético sem poluir a base
+    const botEmail = `bot-${Date.now()}@spam.com`;
+    const botRes = await app.inject({
+      method: 'POST',
+      url: '/public/leads',
+      payload: {
+        name: 'Spam Bot',
+        email: botEmail,
+        website: 'http://malicious-spam.com',
+      },
+    });
+    assert.equal(botRes.statusCode, 200);
+    const botCheck = await query('SELECT id FROM leads WHERE email = $1', [botEmail]);
+    assert.equal(botCheck.rows.length, 0); // Não gravou nada no banco!
+
+    // 3. Submissão legítima da Landing Page
+    const validEmail = `lead-landing-${Date.now()}@autocenter.com`;
+    const validRes = await app.inject({
+      method: 'POST',
+      url: '/public/leads',
+      payload: {
+        name: 'Roberto PPF & Estética',
+        email: validEmail,
+        phone: '11988887777',
+        company_name: 'Studio Roberto PPF',
+        segment: 'PPF & Películas',
+        employees_count: '6 a 15 colaboradores',
+        notes: 'Gostaria de ver o módulo de corte de bobinas.',
+      },
+    });
+    assert.equal(validRes.statusCode, 201);
+    const body = JSON.parse(validRes.body);
+    assert.equal(body.success, true);
+    assert.equal(body.lead.email, validEmail);
+    assert.ok(body.lead.notes.includes('Segmento: PPF & Películas'));
+    assert.ok(body.lead.notes.includes('Equipe: 6 a 15 colaboradores'));
+  });
+
   it('AUDITORIA ADMINISTRATIVA: /admin/audit-logs retorna histórico imutável das ações do Super Admin', async () => {
     const res = await app.inject({
       method: 'GET',

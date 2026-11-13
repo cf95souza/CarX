@@ -212,6 +212,199 @@ export interface UpdateVehicleDto extends Partial<Omit<CreateVehicleDto, 'custom
   isActive?: boolean;
 }
 
+export interface PlateLookupResultDto {
+  plate: string;
+  isMercosul: boolean;
+  brand: string;
+  model: string;
+  year?: number | null;
+  modelYear?: number | null;
+  color?: string | null;
+  sizeClass: VehicleSizeClassType;
+  chassisMask?: string | null;
+  fipePriceCents?: number | null;
+  source: 'local_tenant' | 'cache' | 'national_registry' | 'provider';
+  cachedAt?: string | null;
+  existingCustomer?: {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string | null;
+  } | null;
+}
+
+/**
+ * Inferência de porte veicular padrão automotivo (CarX Automotive Engine)
+ */
+export function inferVehicleSizeClass(brand = '', model = ''): VehicleSizeClassType {
+  const text = `${brand} ${model}`.toLowerCase();
+
+  // 1. Motos (Checar antes de carros, evitando colisões com siglas de versão de carros como XRE da Toyota)
+  if (
+    text.includes('cg 160') ||
+    text.includes('honda biz') ||
+    text.includes('fazer') ||
+    text.includes('yamaha mt') ||
+    text.includes('honda xre') ||
+    text.includes('xre 300') ||
+    text.includes('xre 190') ||
+    text.includes('pcx') ||
+    text.includes('nmax') ||
+    text.includes('bmw r') ||
+    text.includes('s1000rr') ||
+    text.includes('s1000r') ||
+    text.includes('cbr') ||
+    text.includes('hayabusa') ||
+    text.includes('ninja') ||
+    text.includes('tiger') ||
+    text.includes('moto') ||
+    text.includes('bros')
+  ) {
+    return 'moto';
+  }
+
+  // 2. Pickups / Camionetes
+  if (
+    text.includes('toro') ||
+    text.includes('strada') ||
+    text.includes('hilux') ||
+    text.includes('ranger') ||
+    (/\bs10\b/.test(text) && !text.includes('s1000')) ||
+    text.includes('amarok') ||
+    text.includes('montana') ||
+    text.includes('saveiro') ||
+    text.includes('maverick') ||
+    text.includes('rampage') ||
+    text.includes('ram 1500') ||
+    text.includes('ram 2500') ||
+    text.includes('frontier') ||
+    text.includes('titano') ||
+    text.includes('l200') ||
+    text.includes('pickup') ||
+    text.includes('picape')
+  ) {
+    return 'pickup';
+  }
+
+  // 3. Vans / Furgões / Utilitários
+  if (
+    text.includes('fiorino') ||
+    text.includes('kangoo') ||
+    text.includes('partner') ||
+    text.includes('sprinter') ||
+    text.includes('master') ||
+    text.includes('transit') ||
+    text.includes('ducato') ||
+    text.includes('boxer') ||
+    text.includes('expert') ||
+    text.includes('jumpy') ||
+    text.includes('combo') ||
+    text.includes('van') ||
+    text.includes('furg')
+  ) {
+    return 'van';
+  }
+
+  // 4. Esportivos
+  if (
+    text.includes('mustang') ||
+    text.includes('camaro') ||
+    text.includes('porsche') ||
+    text.includes('911') ||
+    text.includes('corvette') ||
+    text.includes('ferrari') ||
+    text.includes('audi tt') ||
+    text.includes('audi r8') ||
+    text.includes('bmw m3') ||
+    text.includes('bmw m4') ||
+    text.includes('bmw z4') ||
+    text.includes('amg gt')
+  ) {
+    return 'esportivo';
+  }
+
+  // 5. SUVs (Compactos e Médios/Grandes)
+  if (
+    text.includes('tera') ||
+    text.includes('tracker') ||
+    text.includes('t-cross') ||
+    text.includes('tcross') ||
+    text.includes('nivus') ||
+    text.includes('pulse') ||
+    text.includes('fastback') ||
+    text.includes('renegade') ||
+    text.includes('compass') ||
+    text.includes('commander') ||
+    text.includes('creta') ||
+    text.includes('kicks') ||
+    text.includes('duster') ||
+    text.includes('hr-v') ||
+    text.includes('hrv') ||
+    text.includes('wr-v') ||
+    text.includes('corolla cross') ||
+    text.includes('sw4') ||
+    text.includes('taos') ||
+    text.includes('tiguan') ||
+    text.includes('tiggo') ||
+    text.includes('haval') ||
+    text.includes('song plus') ||
+    text.includes('yuan') ||
+    text.includes('xc40') ||
+    text.includes('xc60') ||
+    text.includes('q3') ||
+    text.includes('q5') ||
+    text.includes('x1') ||
+    text.includes('x3') ||
+    text.includes('suv') ||
+    text.includes('cross')
+  ) {
+    return 'suv';
+  }
+
+  // 6. Hatches
+  if (
+    text.includes('onix') && !text.includes('plus') ||
+    text.includes('hb20') && !text.includes('s') ||
+    text.includes('gol') ||
+    text.includes('polo') ||
+    text.includes('argo') ||
+    text.includes('mobi') ||
+    text.includes('kwid') ||
+    text.includes('c3') ||
+    text.includes('208') ||
+    text.includes('sandero') ||
+    text.includes('dolphin') ||
+    text.includes('up!') ||
+    text.includes('fox') ||
+    text.includes('hatch')
+  ) {
+    return 'hatch';
+  }
+
+  // 7. Sedans
+  if (
+    text.includes('corolla') && !text.includes('cross') ||
+    text.includes('civic') ||
+    text.includes('city') ||
+    text.includes('virtus') ||
+    text.includes('cronos') ||
+    text.includes('onix plus') ||
+    text.includes('hb20s') ||
+    text.includes('sentra') ||
+    text.includes('jetta') ||
+    text.includes('cruze') ||
+    text.includes('versa') ||
+    text.includes('cerato') ||
+    text.includes('seal') ||
+    text.includes('yaris sedan') ||
+    text.includes('sedan')
+  ) {
+    return 'sedan';
+  }
+
+  return 'sedan';
+}
+
 // ==============================================================================
 // ORDENS DE SERVIÇO E MÁQUINA DE ESTADOS (T3.3)
 // ==============================================================================
@@ -328,7 +521,17 @@ export const WorkOrderSchema = z.object({
   cancelReason: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   customerNotes: z.string().optional().nullable(),
+  publicNotes: z.string().optional().nullable(),
+  acceptedAt: z.date().or(z.string()).optional().nullable(),
+  acceptedIp: z.string().optional().nullable(),
+  acceptedUserAgent: z.string().optional().nullable(),
+  acceptedSignatureName: z.string().optional().nullable(),
+  depositRequiredCents: z.number().int().min(0).default(0).optional(),
+  depositPixCode: z.string().optional().nullable(),
+  depositPixQrBase64: z.string().optional().nullable(),
+  depositPaidAt: z.date().or(z.string()).optional().nullable(),
   trackingToken: z.string().uuid().optional(),
+  pixLastTxid: z.string().optional().nullable(),
   items: z.array(WorkOrderItemSchema).optional(),
   events: z.array(WorkOrderEventSchema).optional(),
   customer: z.any().optional(),
@@ -357,18 +560,22 @@ export interface CreateWorkOrderDto {
   status?: WorkOrderStatusType;
   origin?: string;
   discountCents?: number;
+  depositRequiredCents?: number;
   scheduledAt?: string | Date | null;
   notes?: string | null;
   customerNotes?: string | null;
+  publicNotes?: string | null;
   items?: CreateWorkOrderItemInput[];
 }
 
 export interface UpdateWorkOrderDto {
   technicianId?: string | null;
   discountCents?: number;
+  depositRequiredCents?: number;
   scheduledAt?: string | Date | null;
   notes?: string | null;
   customerNotes?: string | null;
+  publicNotes?: string | null;
 }
 
 export interface ChangeWorkOrderStatusDto {
@@ -376,6 +583,126 @@ export interface ChangeWorkOrderStatusDto {
   notes?: string | null;
   cancelReason?: string | null;
   metadata?: Record<string, any>;
+}
+
+// ==============================================================================
+// PIX INTEGRADO PARA ORDENS DE SERVIÇO & CONCILIAÇÃO ATÔMICA (T6.3)
+// ==============================================================================
+
+export const CreateWorkOrderPixChargeInputSchema = z.object({
+  amountCents: z.number().int().min(100, 'Valor mínimo para cobrança Pix é R$ 1,00').optional(),
+});
+export type CreateWorkOrderPixChargeInputDto = z.infer<typeof CreateWorkOrderPixChargeInputSchema>;
+
+export interface WorkOrderPixChargeResultDto {
+  workOrderId: string;
+  osNumber: number;
+  amountCents: number;
+  pixCode: string;
+  pixQrBase64: string;
+  txid: string;
+  remainingBalanceCents: number;
+  expiresAt: string;
+}
+
+export const ConfirmWorkOrderPixWebhookSchema = z.object({
+  txid: z.string().min(5, 'txid é obrigatório para conciliação Pix'),
+  amountCents: z.number().int().min(1).optional(),
+  e2eId: z.string().optional(),
+  payerName: z.string().optional(),
+  secretToken: z.string().optional(),
+});
+export type ConfirmWorkOrderPixWebhookDto = z.infer<typeof ConfirmWorkOrderPixWebhookSchema>;
+
+export interface WorkOrderPixStatusResultDto {
+  workOrderId: string;
+  osNumber: number;
+  txid: string;
+  status: 'pending' | 'approved' | 'refunded' | 'failed';
+  paidCents: number;
+  finalCents: number;
+  isFullyPaid: boolean;
+  paidAt?: string | null;
+}
+
+export interface PublicQuoteItemDto {
+  name: string;
+  category?: string | null;
+  quantity: number;
+  unitPriceCents: number;
+  discountCents: number;
+  finalCents: number;
+  estimatedMinutes?: number;
+  warrantyMonths?: number;
+}
+
+export interface PublicQuoteVcrPhotoDto {
+  url: string;
+  phase: string;
+  notes?: string | null;
+}
+
+export interface PublicQuoteDto {
+  trackingToken: string;
+  osNumber: number;
+  status: WorkOrderStatusType;
+  tenant: {
+    id: string;
+    name: string;
+    tradeName?: string | null;
+    document?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    logoUrl?: string | null;
+    address?: string | null;
+    whatsappNumber?: string | null;
+  };
+  customer: {
+    name: string;
+    phoneMasked?: string | null;
+  };
+  vehicle: {
+    brand: string;
+    model: string;
+    plate: string;
+    year?: number | null;
+    color?: string | null;
+    sizeCategory?: string | null;
+  };
+  items: PublicQuoteItemDto[];
+  totalCents: number;
+  discountCents: number;
+  finalCents: number;
+  depositRequiredCents: number;
+  depositPaidCents: number;
+  depositPixCode?: string | null;
+  depositPixQrBase64?: string | null;
+  depositPaidAt?: string | null;
+  acceptedAt?: string | null;
+  acceptedSignatureName?: string | null;
+  publicNotes?: string | null;
+  photos?: PublicQuoteVcrPhotoDto[];
+  createdAt: string;
+}
+
+export interface AcceptQuoteInputDto {
+  signatureName: string;
+  termsAccepted: boolean;
+  notes?: string;
+}
+
+export interface AcceptQuoteResponseDto {
+  success: boolean;
+  message: string;
+  status: WorkOrderStatusType;
+  acceptedAt: string;
+  depositRequiredCents: number;
+  depositPixCode?: string | null;
+  depositPixQrBase64?: string | null;
+}
+
+export interface RejectQuoteInputDto {
+  reason: string;
 }
 
 export interface PublicTrackingDto {
@@ -755,6 +1082,43 @@ export const CreateMaterialRollInputSchema = z.object({
 });
 export type CreateMaterialRollInputDto = z.infer<typeof CreateMaterialRollInputSchema>;
 
+export const RegisterRollScrapInputSchema = z.object({
+  meters: z.number().positive('Metragem de retalho/desperdício deve ser maior que zero'),
+  reason: z.string().min(3, 'Motivo do retalho/descarte é obrigatório'),
+  workOrderId: z.string().uuid().optional().nullable(),
+});
+export type RegisterRollScrapInputDto = z.infer<typeof RegisterRollScrapInputSchema>;
+
+export interface MaterialRollHistoryItemDto {
+  workOrderId: string;
+  osNumber: number;
+  customerName: string;
+  customerPhone?: string | null;
+  vehiclePlate: string;
+  vehicleModel: string;
+  serviceName: string;
+  metersUsed: number;
+  costAllocatedCents: number;
+  servicePriceCents: number;
+  grossProfitCents: number;
+  grossMarginPercent: number;
+  warrantyId?: string | null;
+  warrantyToken?: string | null;
+  appliedAt: string;
+}
+
+export interface MaterialRollDetailWithHistoryDto extends MaterialRollDto {
+  materialName: string;
+  costPerMeterCents: number;
+  consumedMeters: number;
+  scrapMeters: number;
+  efficiencyPercent: number;
+  totalRevenueCents: number;
+  totalGrossProfitCents: number;
+  averageMarginPercent: number;
+  history: MaterialRollHistoryItemDto[];
+}
+
 export const StockMovementSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
@@ -974,6 +1338,70 @@ export interface BayAvailabilitySlotDto {
   endTime: string;
   isAvailable: boolean;
   conflictingAppointmentId?: string | null;
+}
+
+// Multiplicadores automotivos de tempo por porte (T6.7)
+export const VEHICLE_SIZE_DURATION_MULTIPLIERS: Record<VehicleSizeClassType, number> = {
+  moto: 0.6,
+  hatch: 0.85,
+  sedan: 1.0,
+  suv: 1.25,
+  pickup: 1.35,
+  van: 1.5,
+  esportivo: 1.1,
+};
+
+export const CalculateDurationInputSchema = z.object({
+  serviceIds: z.array(z.string().uuid()).optional(),
+  baseMinutes: z.number().int().positive().optional(),
+  sizeClass: VehicleSizeClassEnum.default('sedan'),
+});
+export type CalculateDurationInputDto = z.infer<typeof CalculateDurationInputSchema>;
+
+export interface CalculatedDurationResultDto {
+  estimatedMinutes: number;
+  baseMinutes: number;
+  multiplier: number;
+  sizeClass: VehicleSizeClassType;
+  details?: Array<{
+    serviceId: string;
+    serviceName: string;
+    minutes: number;
+  }>;
+}
+
+export interface SmartAppointmentDto extends AppointmentDto {
+  isDelayed: boolean;
+  delayMinutes: number;
+  category: 'ppf' | 'insulfilm' | 'detailing' | 'lataria' | 'mecanica' | 'outro';
+  statusColor: string;
+}
+
+export interface SmartBayOverviewDto {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  orderIndex: number;
+  isActive: boolean;
+  assignedTechnicianName?: string | null;
+  assignedTechnicianId?: string | null;
+  occupancyStatus: 'free' | 'occupied' | 'delayed';
+  currentAppointment?: SmartAppointmentDto | null;
+  appointments: SmartAppointmentDto[];
+  freeSlots: Array<{
+    startTime: string;
+    endTime: string;
+    label: string;
+  }>;
+}
+
+export interface SmartScheduleOverviewResponseDto {
+  date: string;
+  bays: SmartBayOverviewDto[];
+  totalAppointments: number;
+  activeCount: number;
+  delayedCount: number;
 }
 
 // ==============================================================================
@@ -1310,16 +1738,59 @@ export interface WarrantyDto {
   updatedAt: string;
 }
 
+export interface VehiclePassportTimelineItemDto {
+  date: string;
+  type: 'service' | 'inspection' | 'transfer' | 'warranty_issued';
+  title: string;
+  description?: string | null;
+  category?: string | null;
+  workshopName: string;
+  osNumber?: number | null;
+  odometerKm?: number | null;
+  materialUsed?: string | null;
+  lotNumber?: string | null;
+}
+
+export interface VehiclePassportTransferItemDto {
+  transferredAt: string;
+  previousCustomerMasked: string;
+  newCustomerMasked: string;
+  odometerKm?: number | null;
+  reason?: string | null;
+}
+
+export const TransferVehiclePassportInputSchema = z.object({
+  newCustomerName: z.string().min(3, 'Nome do novo proprietário deve ter pelo menos 3 caracteres'),
+  newCustomerPhone: z.string().min(10, 'Telefone / WhatsApp com DDD é obrigatório'),
+  newCustomerEmail: z.string().email('E-mail inválido').optional().nullable(),
+  odometerKm: z.number().int().min(0).optional().nullable(),
+  reason: z.string().optional().nullable(),
+});
+export type TransferVehiclePassportInputDto = z.infer<typeof TransferVehiclePassportInputSchema>;
+
+export interface TransferVehiclePassportResultDto {
+  success: boolean;
+  message: string;
+  transferredAt: string;
+  newCustomerNameMasked: string;
+  verificationToken: string;
+}
+
 export interface PublicVehiclePassportDto {
   verificationToken: string;
   isValid: boolean;
   status: WarrantyStatusType;
   serviceName: string;
   materialLotNumber: string | null;
+  materialRollBrand?: string | null;
+  materialRollCode?: string | null;
   warrantyMonths: number;
   startsAt: string;
   expiresAt: string;
   remainingDays: number;
+  isTransferable: boolean;
+  transferredAt: string | null;
+  transferCount: number;
   vehicle: {
     brand: string;
     model: string;
@@ -1327,11 +1798,16 @@ export interface PublicVehiclePassportDto {
     year: number;
     color: string | null;
   };
+  vehicleBrand?: string;
+  vehicleModel?: string;
+  vehiclePlateMasked?: string;
   workshop: {
     tradeName: string;
     phone: string | null;
     city: string | null;
   };
+  timeline: VehiclePassportTimelineItemDto[];
+  transfersHistory: VehiclePassportTransferItemDto[];
 }
 
 // ============================================================================
@@ -1395,8 +1871,50 @@ export interface NpsSurveyDto {
   sentAt: string | null;
   answeredAt: string | null;
   googleReviewClicked: boolean;
+  googleReviewSentAt?: string | null;
+  googleReviewSentVia?: 'automatic' | 'manual' | null;
+  googleReviewClickedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export const UpdateGoogleReviewUrlSchema = z.object({
+  googleReviewUrl: z
+    .string()
+    .url('A URL de avaliação do Google deve ser válida (ex: https://g.page/r/.../review)')
+    .or(z.literal('')),
+});
+export type UpdateGoogleReviewUrlInputDto = z.infer<typeof UpdateGoogleReviewUrlSchema>;
+
+export interface GoogleReputationOverviewDto {
+  googleReviewUrl: string | null;
+  suggestedGoogleSearchUrl: string;
+  promotersCount: number;
+  googleInvitesSent: number;
+  googleReviewsClicked: number;
+  conversionRatePercent: number;
+  topPromoters: Array<{
+    surveyId: string;
+    osNumber?: number;
+    customerName: string;
+    customerPhone?: string | null;
+    vehicleModel?: string;
+    score: number;
+    comment?: string | null;
+    answeredAt: string;
+    googleReviewClicked: boolean;
+    googleReviewSentAt?: string | null;
+    googleReviewSentVia?: 'automatic' | 'manual' | null;
+    manualWhatsAppUrl: string;
+  }>;
+}
+
+export interface AnswerNpsSurveyResponseDto {
+  survey: NpsSurveyDto;
+  isPromoter: boolean;
+  isDetractor: boolean;
+  googleReviewSuggested: boolean;
+  googleReviewUrl?: string;
 }
 
 export interface NpsMetricsDto {
@@ -1543,6 +2061,7 @@ export type RealtimeEventType =
   | 'work_order.ready'
   | 'appointment.created'
   | 'stock.low'
+  | 'payment.received'
   | 'heartbeat'
   | 'connected';
 
@@ -1832,6 +2351,852 @@ export const PublicCreateWorkOrderSchema = z.object({
   scheduledAt: z.string().datetime().optional().nullable(),
 });
 export type PublicCreateWorkOrderInput = z.infer<typeof PublicCreateWorkOrderSchema>;
+
+// ==============================================================================
+// T6.9: CONTRATOS DO MINI-SITE INSTITUCIONAL DA OFICINA, PORTFÓLIO E LEADS
+// ==============================================================================
+
+export const CreateMiniSitePortfolioItemSchema = z.object({
+  title: z.string().min(2).max(255),
+  category: z.string().min(2).max(100).default('Geral'),
+  beforeImageUrl: z.string().optional().nullable(),
+  afterImageUrl: z.string().min(2),
+  description: z.string().max(2000).optional().nullable(),
+  isFeatured: z.boolean().default(false),
+  displayOrder: z.coerce.number().int().default(0),
+});
+export type CreateMiniSitePortfolioItemInputDto = z.infer<typeof CreateMiniSitePortfolioItemSchema>;
+
+export const UpdateMiniSitePortfolioItemSchema = CreateMiniSitePortfolioItemSchema.partial();
+export type UpdateMiniSitePortfolioItemInputDto = z.infer<typeof UpdateMiniSitePortfolioItemSchema>;
+
+export interface MiniSitePortfolioItemDto {
+  id: string;
+  tenantId: string;
+  title: string;
+  category: string;
+  beforeImageUrl: string | null;
+  afterImageUrl: string;
+  description: string | null;
+  isFeatured: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const CreateMiniSiteLeadSchema = z.object({
+  name: z.string().min(2).max(255),
+  phone: z.string().min(8).max(30),
+  vehicleModel: z.string().max(100).optional().nullable(),
+  serviceInterest: z.string().max(255).optional().nullable(),
+  message: z.string().max(1000).optional().nullable(),
+});
+export type CreateMiniSiteLeadInputDto = z.infer<typeof CreateMiniSiteLeadSchema>;
+
+export const UpdateMiniSiteLeadStatusSchema = z.object({
+  status: z.enum(['new', 'contacted', 'converted', 'discarded']),
+});
+export type UpdateMiniSiteLeadStatusInputDto = z.infer<typeof UpdateMiniSiteLeadStatusSchema>;
+
+export interface MiniSiteLeadDto {
+  id: string;
+  tenantId: string;
+  name: string;
+  phone: string;
+  vehicleModel: string | null;
+  serviceInterest: string | null;
+  message: string | null;
+  status: 'new' | 'contacted' | 'converted' | 'discarded';
+  createdAt: string;
+  updatedAt: string;
+  whatsappUrl: string;
+}
+
+export const UpdateMiniSiteSettingsSchema = z.object({
+  minisiteEnabled: z.boolean().optional(),
+  headline: z.string().max(255).optional().nullable(),
+  about: z.string().max(3000).optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
+  businessHours: z.record(z.string()).optional().nullable(),
+  features: z.array(z.string()).optional().nullable(),
+  primaryColor: z.string().max(30).optional().nullable(),
+  whatsappPhone: z.string().max(30).optional().nullable(),
+  socialInstagram: z.string().max(100).optional().nullable(),
+});
+export type UpdateMiniSiteSettingsInputDto = z.infer<typeof UpdateMiniSiteSettingsSchema>;
+
+export interface PublicMiniSiteResponseDto {
+  tenant: {
+    id: string;
+    name: string;
+    slug: string;
+    logoUrl: string | null;
+    coverUrl: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+    whatsappPhone: string | null;
+    phone: string | null;
+    instagram: string | null;
+    facebook: string | null;
+    headline: string;
+    about: string;
+    address: string;
+    businessHours: Record<string, string>;
+    features: string[];
+    googleReviewUrl: string | null;
+  };
+  services: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    category: string;
+    estimatedMinutes: number | null;
+    startingPriceCents: number;
+  }>;
+  portfolio: MiniSitePortfolioItemDto[];
+  reputation: {
+    npsScore: number;
+    totalReviews: number;
+    averageStars: number;
+    testimonials: Array<{
+      customerName: string;
+      vehicleModel: string | null;
+      score: number;
+      comment: string;
+      date: string;
+    }>;
+  };
+}
+
+// ==============================================================================
+// MÓDULO FISCAL: EMISSÃO AUTOMÁTICA DE NFS-E (T6.10)
+// ==============================================================================
+
+export const FiscalEnvironmentSchema = z.enum(['sandbox', 'production']);
+export type FiscalEnvironment = z.infer<typeof FiscalEnvironmentSchema>;
+
+export const FiscalProviderSchema = z.enum(['focus_nfe', 'plugnotas', 'enotas']);
+export type FiscalProvider = z.infer<typeof FiscalProviderSchema>;
+
+export const FiscalTaxRegimeSchema = z.enum(['simples_nacional', 'lucro_presumido', 'lucro_real', 'mei']);
+export type FiscalTaxRegime = z.infer<typeof FiscalTaxRegimeSchema>;
+
+export const FiscalInvoiceStatusSchema = z.enum(['draft', 'processing', 'authorized', 'error', 'cancelled']);
+export type FiscalInvoiceStatus = z.infer<typeof FiscalInvoiceStatusSchema>;
+
+export const UpdateFiscalSettingsSchema = z.object({
+  environment: FiscalEnvironmentSchema.default('sandbox'),
+  provider: FiscalProviderSchema.default('focus_nfe'),
+  apiToken: z.string().optional().nullable(),
+  certificatePfxBase64: z.string().optional().nullable(),
+  certificatePassword: z.string().optional().nullable(),
+  companyLegalName: z.string().max(255).optional().nullable(),
+  companyCnpj: z.string().max(20).optional().nullable(),
+  municipalInscription: z.string().max(50).optional().nullable(),
+  taxRegime: FiscalTaxRegimeSchema.default('simples_nacional'),
+  specialTaxRegime: z.string().max(30).optional().nullable(),
+  defaultServiceCode: z.string().max(30).default('14.01'),
+  cnaeCode: z.string().max(30).default('4520-0/05'),
+  defaultIssRateBasisPoints: z.number().int().min(0).max(10000).default(200),
+  issRetentionDefault: z.boolean().default(false),
+  autoIssueOnDelivery: z.boolean().default(false),
+  autoIssueOnPayment: z.boolean().default(false),
+  sendEmailToCustomer: z.boolean().default(true),
+  lastRpsNumber: z.number().int().min(0).optional(),
+  rpsSeries: z.string().max(10).default('1'),
+});
+export type UpdateFiscalSettingsInputDto = z.infer<typeof UpdateFiscalSettingsSchema>;
+
+export interface TenantFiscalSettingsDto {
+  tenantId: string;
+  environment: FiscalEnvironment;
+  provider: FiscalProvider;
+  hasApiToken: boolean;
+  hasCertificate: boolean;
+  certificateExpiresAt: string | null;
+  companyLegalName: string | null;
+  companyCnpj: string | null;
+  municipalInscription: string | null;
+  taxRegime: FiscalTaxRegime;
+  specialTaxRegime: string | null;
+  defaultServiceCode: string;
+  cnaeCode: string;
+  defaultIssRateBasisPoints: number;
+  issRetentionDefault: boolean;
+  autoIssueOnDelivery: boolean;
+  autoIssueOnPayment: boolean;
+  sendEmailToCustomer: boolean;
+  lastRpsNumber: number;
+  rpsSeries: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const IssueWorkOrderNfseInputSchema = z.object({
+  serviceCode: z.string().max(30).optional(),
+  cnaeCode: z.string().max(30).optional(),
+  issRateBasisPoints: z.number().int().min(0).max(10000).optional(),
+  deductionsCents: z.number().int().min(0).optional(),
+  customDescription: z.string().max(2000).optional(),
+  sendEmail: z.boolean().optional(),
+});
+export type IssueWorkOrderNfseInputDto = z.infer<typeof IssueWorkOrderNfseInputSchema>;
+
+export const CancelNfseInputSchema = z.object({
+  reason: z.string().min(5, 'Justificativa de cancelamento deve ter pelo menos 5 caracteres').max(500),
+});
+export type CancelNfseInputDto = z.infer<typeof CancelNfseInputSchema>;
+
+export interface FiscalInvoiceDto {
+  id: string;
+  tenantId: string;
+  workOrderId: string;
+  customerId: string | null;
+  environment: FiscalEnvironment;
+  provider: FiscalProvider;
+  providerInvoiceId: string | null;
+  rpsNumber: number;
+  rpsSeries: string;
+  invoiceNumber: string | null;
+  verificationCode: string | null;
+  status: FiscalInvoiceStatus;
+  grossAmountCents: number;
+  deductionsCents: number;
+  netAmountCents: number;
+  issRateBasisPoints: number;
+  issAmountCents: number;
+  description: string;
+  serviceCode: string;
+  cnaeCode: string;
+  errorMessage: string | null;
+  xmlUrl: string | null;
+  pdfUrl: string | null;
+  issuedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==============================================================================
+// MÓDULO FINANCEIRO AVANÇADO, DRE GERENCIAL E FLUXO DE CAIXA (T6.11)
+// ==============================================================================
+
+export type FinancialCategoryGroupType =
+  | 'gross_revenue'
+  | 'deduction'
+  | 'direct_cost'
+  | 'fixed_expense'
+  | 'operating_expense'
+  | 'financial'
+  | 'other';
+
+export const FinancialCategoryGroupTypeEnum = z.enum([
+  'gross_revenue',
+  'deduction',
+  'direct_cost',
+  'fixed_expense',
+  'operating_expense',
+  'financial',
+  'other',
+]);
+
+export interface FinancialCategoryDto {
+  id: string;
+  tenantId: string | null;
+  name: string;
+  type: 'revenue' | 'expense' | 'deduction';
+  groupType: FinancialCategoryGroupType;
+  isSystem: boolean;
+  displayOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const CreateFinancialCategorySchema = z.object({
+  name: z.string().min(2, 'Nome da categoria deve ter pelo menos 2 caracteres').max(100),
+  type: z.enum(['revenue', 'expense', 'deduction']),
+  groupType: FinancialCategoryGroupTypeEnum.default('other'),
+  displayOrder: z.number().int().default(0).optional(),
+});
+export type CreateFinancialCategoryInputDto = z.infer<typeof CreateFinancialCategorySchema>;
+
+export type FinancialBillType = 'payable' | 'receivable';
+export type FinancialBillStatus = 'pending' | 'paid' | 'overdue' | 'canceled';
+
+export const FinancialBillTypeEnum = z.enum(['payable', 'receivable']);
+export const FinancialBillStatusEnum = z.enum(['pending', 'paid', 'overdue', 'canceled']);
+
+export interface FinancialBillDto {
+  id: string;
+  tenantId: string;
+  categoryId: string | null;
+  categoryName?: string | null;
+  categoryGroup?: FinancialCategoryGroupType | null;
+  type: FinancialBillType;
+  description: string;
+  supplierCustomerName: string | null;
+  amountCents: number;
+  dueDate: string;
+  paidAt: string | null;
+  paidAmountCents: number | null;
+  status: FinancialBillStatus;
+  paymentMethod: string | null;
+  notes: string | null;
+  workOrderId: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const CreateFinancialBillSchema = z.object({
+  categoryId: z.string().uuid().optional().nullable(),
+  type: FinancialBillTypeEnum,
+  description: z.string().min(2, 'Descrição deve ter pelo menos 2 caracteres').max(255),
+  supplierCustomerName: z.string().max(255).optional().nullable(),
+  amountCents: z.number().int().min(0, 'Valor não pode ser negativo'),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de vencimento deve estar no formato YYYY-MM-DD'),
+  paymentMethod: z.string().max(30).optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+  workOrderId: z.string().uuid().optional().nullable(),
+});
+export type CreateFinancialBillInputDto = z.infer<typeof CreateFinancialBillSchema>;
+
+export const UpdateFinancialBillSchema = z.object({
+  categoryId: z.string().uuid().optional().nullable(),
+  description: z.string().min(2).max(255).optional(),
+  supplierCustomerName: z.string().max(255).optional().nullable(),
+  amountCents: z.number().int().min(0).optional(),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  paymentMethod: z.string().max(30).optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+  status: FinancialBillStatusEnum.optional(),
+  paidAt: z.string().optional().nullable(),
+  paidAmountCents: z.number().int().min(0).optional().nullable(),
+});
+export type UpdateFinancialBillInputDto = z.infer<typeof UpdateFinancialBillSchema>;
+
+export interface AdvancedDreReportDto {
+  startDate: string;
+  endDate: string;
+  grossRevenueCents: number;
+  serviceRevenueCents: number;
+  productRevenueCents: number;
+  deductions: {
+    discountsCents: number;
+    issTaxesCents: number;
+    totalDeductionsCents: number;
+  };
+  netRevenueCents: number;
+  variableCosts: {
+    materialStockCostsCents: number;
+    spoolRollCostsCents: number;
+    technicianCommissionsCents: number;
+    totalVariableCostsCents: number;
+  };
+  contributionMarginCents: number;
+  contributionMarginPercent: number;
+  fixedExpenses: {
+    rentCents: number;
+    utilitiesCents: number;
+    salariesCents: number;
+    softwareCents: number;
+    otherFixedCents: number;
+    totalFixedExpensesCents: number;
+  };
+  operatingExpenses: {
+    marketingCents: number;
+    toolsMaintenanceCents: number;
+    otherOperatingCents: number;
+    totalOperatingExpensesCents: number;
+  };
+  ebitdaCents: number;
+  ebitdaMarginPercent: number;
+  netIncomeCents: number;
+  pendingReceivablesCents: number;
+  workOrdersCount: number;
+  ticketMedioCents: number;
+}
+
+export interface CashFlowDayPointDto {
+  date: string;
+  incomingCents: number;
+  outgoingCents: number;
+  projectedBalanceCents: number;
+}
+
+export interface CashFlowPeriodSummaryDto {
+  totalIncomingCents: number;
+  totalOutgoingCents: number;
+  projectedNetCents: number;
+  finalBalanceCents: number;
+}
+
+export interface CashFlowProjectionDto {
+  currentBalanceCents: number;
+  dailyTimeline: CashFlowDayPointDto[];
+  summary30Days: CashFlowPeriodSummaryDto;
+  summary60Days: CashFlowPeriodSummaryDto;
+  summary90Days: CashFlowPeriodSummaryDto;
+}
+
+export const BatchPayCommissionsSchema = z.object({
+  technicianId: z.string().uuid(),
+  entryIds: z.array(z.string().uuid()).min(1, 'Selecione ao menos um lançamento de comissão'),
+  paymentMethod: z.string().optional().default('pix'),
+  notes: z.string().max(500).optional(),
+});
+export type BatchPayCommissionsInputDto = z.infer<typeof BatchPayCommissionsSchema>;
+
+export interface BatchPayCommissionsResultDto {
+  batchId: string;
+  technicianId: string;
+  technicianName: string;
+  paidCount: number;
+  totalPaidCents: number;
+  paidAt: string;
+}
+
+// ==============================================================================
+// T6.12: CONTRATOS DO PAINEL CORPORATIVO DE REDES E FRANQUIAS (MULTIUNIDADE)
+// ==============================================================================
+
+export interface UnitDto {
+  id: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  cnpj?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  addressStreet?: string | null;
+  addressNumber?: string | null;
+  addressComplement?: string | null;
+  addressNeighborhood?: string | null;
+  addressCity?: string | null;
+  addressState?: string | null;
+  addressPostalCode?: string | null;
+  isActive: boolean;
+  workOrdersCount?: number;
+  activeBaysCount?: number;
+  totalRollsCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const CreateUnitSchema = z.object({
+  name: z.string().min(2, 'Nome da unidade deve ter pelo menos 2 caracteres'),
+  slug: z
+    .string()
+    .min(2, 'Slug deve ter pelo menos 2 caracteres')
+    .regex(/^[a-z0-9-]+$/, 'Slug deve conter apenas letras minúsculas, números e hífens'),
+  cnpj: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  email: z.string().email('E-mail inválido').optional().nullable(),
+  addressStreet: z.string().optional().nullable(),
+  addressNumber: z.string().optional().nullable(),
+  addressComplement: z.string().optional().nullable(),
+  addressNeighborhood: z.string().optional().nullable(),
+  addressCity: z.string().optional().nullable(),
+  addressState: z.string().length(2, 'Estado deve ter 2 letras').optional().nullable(),
+  addressPostalCode: z.string().optional().nullable(),
+});
+export type CreateUnitInputDto = z.infer<typeof CreateUnitSchema>;
+
+export const UpdateUnitSchema = CreateUnitSchema.partial().extend({
+  isActive: z.boolean().optional(),
+});
+export type UpdateUnitInputDto = z.infer<typeof UpdateUnitSchema>;
+
+export interface UnitRankingItemDto {
+  unitId: string;
+  unitName: string;
+  unitSlug: string;
+  revenueCents: number;
+  workOrdersCount: number;
+  averageTicketCents: number;
+  bayOccupancyRatePercent: number;
+  totalBays: number;
+  occupiedBays: number;
+  activeRollsCount: number;
+  rank: number;
+}
+
+export interface CorporateDashboardOverviewDto {
+  totalRevenueCents: number;
+  totalWorkOrders: number;
+  averageTicketCents: number;
+  averageBayOccupancyRatePercent: number;
+  totalUnitsCount: number;
+  activeUnitsCount: number;
+  unitsRanking: UnitRankingItemDto[];
+  inventorySummary: {
+    unitId: string;
+    unitName: string;
+    rollsCount: number;
+    rollsTotalMeters: number;
+    materialsCount: number;
+    inventoryValuationCents: number;
+  }[];
+}
+
+export const CreateUnitTransferSchema = z
+  .object({
+    fromUnitId: z.string().uuid('Unidade de origem inválida'),
+    toUnitId: z.string().uuid('Unidade de destino inválida'),
+    transferType: z.enum(['material', 'roll']),
+    materialId: z.string().uuid().optional().nullable(),
+    rollId: z.string().uuid().optional().nullable(),
+    quantity: z.number().positive('Quantidade deve ser maior que zero'),
+    notes: z.string().max(500).optional().nullable(),
+  })
+  .refine((data) => data.fromUnitId !== data.toUnitId, {
+    message: 'A unidade de origem não pode ser igual à unidade de destino',
+    path: ['toUnitId'],
+  })
+  .refine(
+    (data) => {
+      if (data.transferType === 'roll') return !!data.rollId;
+      if (data.transferType === 'material') return !!data.materialId;
+      return false;
+    },
+    {
+      message: 'Material ou Bobina deve ser especificado de acordo com o tipo de transferência',
+      path: ['transferType'],
+    }
+  );
+export type CreateUnitTransferInputDto = z.infer<typeof CreateUnitTransferSchema>;
+
+export interface UnitTransferDto {
+  id: string;
+  tenantId: string;
+  fromUnitId: string;
+  fromUnitName: string;
+  toUnitId: string;
+  toUnitName: string;
+  transferType: 'material' | 'roll';
+  materialId?: string | null;
+  materialName?: string | null;
+  rollId?: string | null;
+  rollCode?: string | null;
+  rollBrand?: string | null;
+  quantity: number;
+  status: 'pending' | 'completed' | 'canceled';
+  notes?: string | null;
+  transferredBy?: string | null;
+  transferredByName?: string | null;
+  createdAt: string;
+}
+
+// ==============================================================================
+// T6.13: CONTRATOS DO APP DO TÉCNICO OFFLINE-FIRST & SINCRONIZAÇÃO EM LOTE
+// ==============================================================================
+
+export const OfflineActionTypeSchema = z.enum([
+  'START_TIMER',
+  'PAUSE_TIMER',
+  'RESUME_TIMER',
+  'STOP_TIMER',
+  'UPDATE_PROGRESS',
+  'CHECKLIST_ITEM',
+  'ADD_NOTE',
+]);
+export type OfflineActionType = z.infer<typeof OfflineActionTypeSchema>;
+
+export const SingleOfflineActionSchema = z.object({
+  id: z.string().uuid('ID de ação inválido'),
+  workOrderId: z.string().uuid('ID de OS inválido'),
+  actionType: OfflineActionTypeSchema,
+  payload: z.record(z.any()).default({}),
+  clientTimestamp: z.string().min(1, 'Carimbo de data/hora do cliente é obrigatório'),
+});
+export type SingleOfflineActionDto = z.infer<typeof SingleOfflineActionSchema>;
+
+export const BatchSyncActionsSchema = z.object({
+  actions: z.array(SingleOfflineActionSchema).min(1, 'A lista deve conter ao menos uma ação'),
+});
+export type BatchSyncActionsInputDto = z.infer<typeof BatchSyncActionsSchema>;
+
+export interface SyncActionResultDto {
+  actionId: string;
+  success: boolean;
+  actionType: string;
+  error?: string;
+  data?: any;
+}
+
+export interface BatchSyncResultDto {
+  total: number;
+  processed: number;
+  failed: number;
+  results: SyncActionResultDto[];
+  syncedAt: string;
+}
+
+// ==============================================================================
+// T6.14: INTELIGÊNCIA ARTIFICIAL APLICADA A VISTORIAS & ORÇAMENTOS
+// ==============================================================================
+
+export const AiSeverityEnum = z.enum(['low', 'medium', 'high', 'critical']);
+export type AiSeverityType = z.infer<typeof AiSeverityEnum>;
+
+export const AiDetectedDamageItemSchema = z.object({
+  id: z.string().optional(),
+  part: z.string().min(1, 'Identificação da peça é obrigatória'),
+  damageType: z.string().min(1, 'Tipo de dano é obrigatório'),
+  severity: AiSeverityEnum.default('medium'),
+  confidence: z.number().min(0).max(1).default(0.85),
+  view: z.enum(['top', 'front', 'rear', 'left', 'right', 'isometric']).default('top'),
+  xPercent: z.number().min(0).max(100).default(50),
+  yPercent: z.number().min(0).max(100).default(50),
+  description: z.string().default(''),
+  suggestedAction: z.string().optional(),
+});
+export type AiDetectedDamageItemDto = z.infer<typeof AiDetectedDamageItemSchema>;
+
+export const AiSuggestedServiceItemSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Nome do serviço é obrigatório'),
+  category: z.string().optional(),
+  estimatedPriceCents: z.number().int().nonnegative().default(0),
+  estimatedMinutes: z.number().int().nonnegative().optional(),
+  reason: z.string().default(''),
+  matchingDamageIndex: z.number().optional(),
+  selected: z.boolean().default(true),
+});
+export type AiSuggestedServiceItemDto = z.infer<typeof AiSuggestedServiceItemSchema>;
+
+export const AiAnalyzeDamageInputSchema = z.object({
+  workOrderId: z.string().uuid('ID de OS inválido').optional(),
+  inspectionId: z.string().uuid('ID de inspeção inválido').optional(),
+  imageUrl: z.string().optional(),
+  imageBase64: z.string().optional(),
+  imageFileId: z.string().uuid().optional(),
+  angleHint: z.string().optional(),
+  vehicleType: z.enum(['car', 'motorcycle', 'truck']).default('car'),
+});
+export type AiAnalyzeDamageInputDto = z.infer<typeof AiAnalyzeDamageInputSchema>;
+
+export interface AiDamageDetectionResultDto {
+  analysisId: string;
+  provider: string;
+  detectedDamages: AiDetectedDamageItemDto[];
+  suggestedServices: AiSuggestedServiceItemDto[];
+  summary: string;
+  confidenceScore: number;
+  tokensUsed: number;
+  analyzedAt: string;
+}
+
+export const AiVoiceChecklistInputSchema = z.object({
+  workOrderId: z.string().uuid('ID de OS inválido').optional(),
+  inspectionId: z.string().uuid('ID de inspeção inválido').optional(),
+  audioUrl: z.string().optional(),
+  audioBase64: z.string().optional(),
+  spokenText: z.string().optional(),
+});
+export type AiVoiceChecklistInputDto = z.infer<typeof AiVoiceChecklistInputSchema>;
+
+export interface AiVoiceChecklistResultDto {
+  analysisId: string;
+  provider: string;
+  transcription: string;
+  currentKm: number | null;
+  fuelLevel: string | null;
+  checklistItems: Array<{ id: string; label: string; checked: boolean; note?: string }>;
+  suggestedServices: AiSuggestedServiceItemDto[];
+  generalNotes: string;
+  analyzedAt: string;
+}
+
+export const ApplyAiSuggestionsInputSchema = z.object({
+  workOrderId: z.string().uuid('ID de OS inválido'),
+  inspectionId: z.string().uuid('ID de inspeção inválido').optional(),
+  damages: z.array(AiDetectedDamageItemSchema).optional().default([]),
+  services: z.array(AiSuggestedServiceItemSchema).optional().default([]),
+  checklist: z
+    .object({
+      currentKm: z.number().optional().nullable(),
+      fuelLevel: z.string().optional().nullable(),
+      checklistItems: z.array(z.any()).optional(),
+      generalNotes: z.string().optional().nullable(),
+    })
+    .optional(),
+});
+export type ApplyAiSuggestionsInputDto = z.infer<typeof ApplyAiSuggestionsInputSchema>;
+
+export interface ApplyAiSuggestionsResultDto {
+  success: boolean;
+  damagesAddedCount: number;
+  servicesAddedCount: number;
+  inspectionUpdated: boolean;
+  message: string;
+}
+
+export interface AiAnalysisHistoryItemDto {
+  id: string;
+  workOrderId: string | null;
+  inspectionId: string | null;
+  analysisType: 'image_damage_detection' | 'voice_checklist_extraction';
+  provider: string;
+  detectedDamagesCount: number;
+  suggestedServicesCount: number;
+  tokensUsed: number;
+  status: string;
+  createdAt: string;
+}
+
+// ==============================================================================
+// 37. CRM DE PÓS-VENDA, GARANTIAS PERIÓDICAS & RETENÇÃO ATIVA (T6.15)
+// ==============================================================================
+
+export const CrmRetentionTriggerTypeEnum = z.enum([
+  'warranty_revision',
+  'service_interval',
+  'customer_inactivity',
+]);
+export type CrmRetentionTriggerType = z.infer<typeof CrmRetentionTriggerTypeEnum>;
+
+export const CrmRetentionChannelEnum = z.enum(['whatsapp', 'email', 'sms']);
+export type CrmRetentionChannelType = z.infer<typeof CrmRetentionChannelEnum>;
+
+export const CrmRetentionRuleSchema = z.object({
+  id: z.string().uuid(),
+  tenantId: z.string().uuid(),
+  name: z.string().min(2, 'Nome da regra é obrigatório'),
+  serviceCategory: z.string().default('geral'),
+  triggerType: CrmRetentionTriggerTypeEnum,
+  intervalDays: z.number().int().positive('Intervalo de dias deve ser maior que zero').default(180),
+  channel: CrmRetentionChannelEnum.default('whatsapp'),
+  messageTemplate: z.string().min(5, 'Template da mensagem é obrigatório'),
+  discountType: z.enum(['percentage', 'fixed_amount', 'free_service']).default('percentage'),
+  discountValue: z.number().int().min(0).default(10),
+  isActive: z.boolean().default(true),
+  createdAt: z.string().or(z.date()).optional(),
+  updatedAt: z.string().or(z.date()).optional(),
+});
+export type CrmRetentionRuleDto = z.infer<typeof CrmRetentionRuleSchema>;
+
+export const CreateCrmRetentionRuleSchema = z.object({
+  name: z.string().min(2, 'Nome da regra é obrigatório'),
+  serviceCategory: z.string().default('geral'),
+  triggerType: CrmRetentionTriggerTypeEnum,
+  intervalDays: z.number().int().positive().default(180),
+  channel: CrmRetentionChannelEnum.default('whatsapp'),
+  messageTemplate: z.string().min(5, 'Template da mensagem é obrigatório'),
+  discountType: z.enum(['percentage', 'fixed_amount', 'free_service']).default('percentage'),
+  discountValue: z.number().int().min(0).default(10),
+  isActive: z.boolean().default(true).optional(),
+});
+export type CreateCrmRetentionRuleInputDto = z.infer<typeof CreateCrmRetentionRuleSchema>;
+
+export const UpdateCrmRetentionRuleSchema = CreateCrmRetentionRuleSchema.partial();
+export type UpdateCrmRetentionRuleInputDto = z.infer<typeof UpdateCrmRetentionRuleSchema>;
+
+export interface CrmRetentionOverviewDto {
+  totalCustomers: number;
+  activeCustomersCount: number; // Visita < 90 dias
+  riskCustomersCount: number; // Sem visita entre 90 e 180 dias
+  inactiveCustomersCount: number; // Sem visita > 180 dias
+  dormantCustomersCount: number; // Sem visita > 365 dias
+  repurchaseRatePercent: number; // Clientes com >= 2 visitas
+  pendingWarrantyRevisionsCount: number; // Revisões nos próximos 30d ou atrasadas
+  convertedContactsCount: number;
+  conversionRatePercent: number;
+  convertedRevenueCents: number;
+}
+
+export interface WarrantyRevisionItemDto {
+  warrantyId: string;
+  verificationToken: string;
+  serviceName: string;
+  serviceCategory: string;
+  customerId: string;
+  customerName: string;
+  customerPhone: string | null;
+  vehicleId: string;
+  vehiclePlate: string;
+  vehicleModel: string;
+  startsAt: string;
+  revisionDueDate: string;
+  daysRemainingOrOverdue: number; // negativo se atrasado, positivo se faltam dias
+  isOverdue: boolean;
+  ruleId?: string | null;
+}
+
+export interface InactiveCustomerItemDto {
+  customerId: string;
+  customerName: string;
+  customerPhone: string | null;
+  lastVisitDate: string;
+  daysInactive: number;
+  inactivityTier: '90_days' | '180_days' | '365_days_plus';
+  lastVehiclePlate: string | null;
+  lastVehicleModel: string | null;
+  lastServiceName: string | null;
+  totalWorkOrders: number;
+  lifetimeValueCents: number;
+  suggestedDiscountPercent: number;
+}
+
+export const TriggerRetentionContactInputSchema = z.object({
+  customerId: z.string().uuid('ID de cliente inválido'),
+  vehicleId: z.string().uuid().optional().nullable(),
+  warrantyId: z.string().uuid().optional().nullable(),
+  ruleId: z.string().uuid().optional().nullable(),
+  channel: CrmRetentionChannelEnum.default('whatsapp'),
+  customMessage: z.string().optional().nullable(),
+  discountPercent: z.number().int().min(0).max(100).optional().default(10),
+  couponDaysValid: z.number().int().min(1).max(90).optional().default(30),
+});
+export type TriggerRetentionContactInputDto = z.infer<typeof TriggerRetentionContactInputSchema>;
+
+export interface TriggerRetentionContactResultDto {
+  contactId: string;
+  customerId: string;
+  customerName: string;
+  destinationPhone: string;
+  couponCode: string;
+  discountValue: number;
+  discountType: string;
+  validUntil: string;
+  messageContent: string;
+  whatsappUrl: string;
+  status: string;
+}
+
+export const ConvertRetentionContactInputSchema = z.object({
+  convertedWorkOrderId: z.string().uuid().optional().nullable(),
+  conversionRevenueCents: z.number().int().min(0).optional().default(0),
+  notes: z.string().optional().nullable(),
+});
+export type ConvertRetentionContactInputDto = z.infer<typeof ConvertRetentionContactInputSchema>;
+
+export interface RetentionContactItemDto {
+  id: string;
+  tenantId: string;
+  customerName: string;
+  customerPhone: string;
+  vehiclePlate?: string | null;
+  vehicleModel?: string | null;
+  couponCode?: string | null;
+  discountValue?: number;
+  channel: string;
+  messageContent: string;
+  whatsappUrl?: string | null;
+  status: 'draft' | 'sent' | 'contacted' | 'scheduled' | 'converted' | 'ignored';
+  conversionRevenueCents: number;
+  convertedAt?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+
+
+
+
+
+
 
 
 

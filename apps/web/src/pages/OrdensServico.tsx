@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,8 +28,25 @@ import {
   Phone,
   QrCode,
   ShieldCheck,
+  Copy,
+  Check,
+  CreditCard,
+  Banknote,
+  AlertCircle,
+  MessageSquare,
+  Send,
+  FileText,
+  Download,
+  Ban,
+  Receipt,
 } from 'lucide-react';
-import type { WorkOrderStatusType } from '@carx/shared';
+import type {
+  WorkOrderStatusType,
+  WorkOrderPixChargeResultDto,
+  SendTransactionalWhatsAppResultDto,
+  WhatsAppTransactionalEventType,
+  FiscalInvoiceDto,
+} from '@carx/shared';
 
 function formatBRL(reaisOrCents: number, isCents = false): string {
   const val = isCents ? (reaisOrCents || 0) / 100 : reaisOrCents || 0;
@@ -80,6 +98,7 @@ function getStatusBadge(status: string) {
 }
 
 export const OrdensServico: React.FC = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isGestor } = useAuth();
 
@@ -92,6 +111,238 @@ export const OrdensServico: React.FC = () => {
   const [paymentAmount, setPaymentAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('pix');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+
+  // Estados para Cobrança Pix Integrada (T6.3)
+  const [pixCharge, setPixCharge] = useState<WorkOrderPixChargeResultDto | null>(null);
+  const [isGeneratingPix, setIsGeneratingPix] = useState(false);
+  const [isSimulatingPix, setIsSimulatingPix] = useState(false);
+  const [pixCopied, setPixCopied] = useState(false);
+  const [pixSettled, setPixSettled] = useState(false);
+
+  // Estados para Notificação WhatsApp por Evento de OS (T6.4)
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppEvent, setWhatsAppEvent] = useState<WhatsAppTransactionalEventType>('READY');
+  const [whatsAppCustomMessage, setWhatsAppCustomMessage] = useState('');
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsAppResult, setWhatsAppResult] = useState<SendTransactionalWhatsAppResultDto | null>(null);
+
+  // Estados para Módulo Fiscal (NFS-e Automática - T6.10)
+  const [fiscalInvoice, setFiscalInvoice] = useState<FiscalInvoiceDto | null>(null);
+  const [loadingFiscal, setLoadingFiscal] = useState<boolean>(false);
+  const [issuingFiscal, setIssuingFiscal] = useState<boolean>(false);
+  const [cancellingFiscal, setCancellingFiscal] = useState<boolean>(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
+  const [cancelReason, setCancelReason] = useState<string>('');
+  const [fiscalFeedback, setFiscalFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Carregar dados de NFS-e quando uma OS é selecionada
+  React.useEffect(() => {
+    if (!selectedOrder?.id) {
+      setFiscalInvoice(null);
+      setFiscalFeedback(null);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingFiscal(true);
+    setFiscalFeedback(null);
+
+    api.fiscal
+      .getInvoiceByWorkOrder(selectedOrder.id)
+      .then((inv) => {
+        if (isMounted) setFiscalInvoice(inv);
+      })
+      .catch((err) => {
+        console.warn('NFS-e não encontrada ou erro ao carregar:', err);
+        if (isMounted) setFiscalInvoice(null);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingFiscal(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrder?.id]);
+
+  // Monitoramento do status do Pix (Polling a cada 3s caso esteja aguardando pagamento)
+  React.useEffect(() => {
+    if (!pixCharge || pixSettled) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.workOrders.getPixStatus(pixCharge.workOrderId, pixCharge.txid);
+        if (res.status === 'approved') {
+          setPixSettled(true);
+          queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
+        }
+      } catch (err) {
+        // silencioso
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [pixCharge, pixSettled, queryClient]);
+
+  const handleOpenPaymentModal = (os: any) => {
+    setSelectedOrder(os);
+    const balanceCents = Math.max(0, (os.finalCents || os.totalCents || 0) - (os.paidCents || 0));
+    setPaymentAmount((balanceCents / 100).toFixed(2));
+    setPaymentMethod('pix');
+    setPixCharge(null);
+    setPixSettled(false);
+    setPixCopied(false);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setIsPaymentModalOpen(false);
+    setPixCharge(null);
+    setPixSettled(false);
+    setPixCopied(false);
+    setPaymentAmount('');
+  };
+
+  const handleGeneratePix = async () => {
+    if (!selectedOrder) return;
+    const amountVal = parseFloat(paymentAmount.replace(',', '.'));
+    const amountCents = !isNaN(amountVal) && amountVal > 0 ? Math.round(amountVal * 100) : undefined;
+
+    setIsGeneratingPix(true);
+    try {
+      const charge = await api.workOrders.createPixCharge(selectedOrder.id, amountCents);
+      setPixCharge(charge);
+      setPixSettled(false);
+      setPixCopied(false);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao gerar cobrança Pix.');
+    } finally {
+      setIsGeneratingPix(false);
+    }
+  };
+
+  const handleSimulatePixWebhook = async () => {
+    if (!pixCharge) return;
+    setIsSimulatingPix(true);
+    try {
+      await api.workOrders.confirmPixPayment({
+        txid: pixCharge.txid,
+        amountCents: pixCharge.amountCents,
+        payerName: selectedOrder?.customer?.name || 'Cliente Caixa',
+      });
+      setPixSettled(true);
+      queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
+    } catch (err: any) {
+      alert(err.message || 'Erro ao simular confirmação Pix.');
+    } finally {
+      setIsSimulatingPix(false);
+    }
+  };
+
+  const handleCopyPixCode = () => {
+    if (!pixCharge?.pixCode) return;
+    navigator.clipboard.writeText(pixCharge.pixCode);
+    setPixCopied(true);
+    setTimeout(() => setPixCopied(false), 2500);
+  };
+
+  // Disparo Transacional de WhatsApp (T6.4)
+  const handleOpenWhatsAppModal = (os: any) => {
+    setSelectedOrder(os);
+    let suggestedEvent: WhatsAppTransactionalEventType = 'READY';
+    if (os.status === 'CHECKED_IN') suggestedEvent = 'CHECKED_IN';
+    else if (os.status === 'IN_PROGRESS') suggestedEvent = 'IN_PROGRESS';
+    else if (os.status === 'DELIVERED') suggestedEvent = 'DELIVERED';
+    else if (os.status === 'SCHEDULED') suggestedEvent = 'APPOINTMENT_CONFIRMED';
+
+    setWhatsAppEvent(suggestedEvent);
+    setWhatsAppCustomMessage('');
+    setWhatsAppResult(null);
+    setIsWhatsAppModalOpen(true);
+  };
+
+  const handleCloseWhatsAppModal = () => {
+    setIsWhatsAppModalOpen(false);
+    setWhatsAppResult(null);
+    setWhatsAppCustomMessage('');
+  };
+
+  const handleSendWhatsAppNotification = async () => {
+    if (!selectedOrder) return;
+    setIsSendingWhatsApp(true);
+    setWhatsAppResult(null);
+    try {
+      const res = await api.workOrders.notifyWhatsApp(selectedOrder.id, {
+        eventType: whatsAppEvent,
+        customMessage: whatsAppCustomMessage.trim() || undefined,
+      });
+      setWhatsAppResult(res);
+      if (res.mode === 'manual' && res.whatsappUrl) {
+        window.open(res.whatsappUrl, '_blank');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro ao disparar notificação de WhatsApp.');
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+
+  // Emissão e Cancelamento de NFS-e (T6.10)
+  const handleIssueFiscal = async () => {
+    if (!selectedOrder?.id) return;
+    setIssuingFiscal(true);
+    setFiscalFeedback(null);
+    try {
+      const res = await api.fiscal.issueNfse(selectedOrder.id);
+      setFiscalInvoice(res);
+      setFiscalFeedback({
+        type: 'success',
+        message:
+          res.status === 'authorized'
+            ? `NFS-e #${res.invoiceNumber || res.rpsNumber} autorizada com sucesso!`
+            : 'NFS-e enviada com sucesso e em processamento na prefeitura.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+    } catch (err: any) {
+      setFiscalFeedback({
+        type: 'error',
+        message: err.message || 'Erro ao emitir NFS-e da ordem de serviço.',
+      });
+    } finally {
+      setIssuingFiscal(false);
+    }
+  };
+
+  const handleOpenCancelModal = () => {
+    setCancelReason('');
+    setIsCancelModalOpen(true);
+  };
+
+  const handleConfirmCancelFiscal = async () => {
+    if (!fiscalInvoice?.id) return;
+    if (!cancelReason.trim() || cancelReason.trim().length < 15) {
+      alert('A justificativa de cancelamento deve ter pelo menos 15 caracteres.');
+      return;
+    }
+
+    setCancellingFiscal(true);
+    try {
+      const res = await api.fiscal.cancelNfse(fiscalInvoice.id, cancelReason.trim());
+      setFiscalInvoice(res);
+      setIsCancelModalOpen(false);
+      setFiscalFeedback({
+        type: 'success',
+        message: 'NFS-e cancelada com sucesso junto à prefeitura.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+    } catch (err: any) {
+      alert(err.message || 'Erro ao cancelar a NFS-e.');
+    } finally {
+      setCancellingFiscal(false);
+    }
+  };
 
   // Consulta de Ordens de Serviço
   const { data: woData, isLoading, isFetching, refetch } = useQuery({
@@ -166,103 +417,101 @@ export const OrdensServico: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 font-body">
-      {/* Header OS */}
+    <div className="space-y-6 pb-12 font-sans text-[#0E1116]">
+      {/* Header OS Canônico Rebrand */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-black text-texto tracking-tight uppercase">
-            Ordens de Serviço & Orçamentos
+          <h1 className="font-display text-3xl font-bold text-[#0E1116] tracking-tight">
+            Ordens de serviço
           </h1>
-          <p className="text-xs md:text-sm text-muted mt-1">
-            Gestão do ciclo de vida automotivo: orçamentos, execução técnica, pagamentos e garantia.
+          <p className="text-sm text-[#5B6674] mt-0.5">
+            Gestão do ciclo operacional automotivo: orçamentos, execução técnica, pagamentos e garantia.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
+          <button
             onClick={() => refetch()}
-            isLoading={isFetching}
-            leftIcon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />}
+            className="carx-pill !h-12 !px-4 hover:bg-white"
+            title="Atualizar"
           >
-            Atualizar
-          </Button>
+            <RefreshCw size={15} className={isFetching ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Atualizar</span>
+          </button>
 
-          <Button
-            variant="volt"
-            size="desktop"
-            onClick={() => setIsNovoModalOpen(true)}
-            leftIcon={<Plus size={18} />}
+          <button
+            onClick={() => navigate('/ordens/nova')}
+            className="carx-btn-volt"
           >
-            + Nova OS / Orçamento
-          </Button>
+            <Plus size={18} />
+            + Nova OS
+          </button>
         </div>
       </div>
 
-      {/* Cards de Status (KPIs) */}
+      {/* Cards de Status (KPIs Brancos Rebrand) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card
+        <div
           onClick={() => setSelectedStatus(selectedStatus === 'CHECKED_IN' ? 'TODOS' : 'CHECKED_IN')}
-          className={`p-4 bg-grafite border cursor-pointer hover:border-volt/50 transition-all ${
-            selectedStatus === 'CHECKED_IN' ? 'border-volt bg-volt/5' : 'border-aco'
+          className={`carx-card p-5 cursor-pointer transition-all ${
+            selectedStatus === 'CHECKED_IN' ? 'border-[#0E1116] shadow-sm' : ''
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase">Aguardando Início</span>
-            <Clock size={16} className="text-alert" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Aguardando Início</span>
+            <Clock size={16} className="text-[#5B6674]" />
           </div>
-          <h3 className="font-display text-2xl font-black text-texto mt-2">{stats.aguardando}</h3>
-          <span className="text-[10px] text-muted">Aprovadas / No Pátio</span>
-        </Card>
+          <h3 className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{stats.aguardando}</h3>
+          <span className="text-xs text-[#5B6674]">Aprovadas / No Pátio</span>
+        </div>
 
-        <Card
+        <div
           onClick={() => setSelectedStatus(selectedStatus === 'IN_PROGRESS' ? 'TODOS' : 'IN_PROGRESS')}
-          className={`p-4 bg-grafite border cursor-pointer hover:border-volt/50 transition-all ${
-            selectedStatus === 'IN_PROGRESS' ? 'border-volt bg-volt/5' : 'border-aco'
+          className={`carx-card p-5 cursor-pointer transition-all ${
+            selectedStatus === 'IN_PROGRESS' ? 'border-2 border-[#C8F52E] shadow-sm' : ''
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase">Em Execução</span>
-            <TrendingUp size={16} className="text-info" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#0E1116]">Em Execução</span>
+            <TrendingUp size={16} className="text-[#0E1116]" />
           </div>
-          <h3 className="font-display text-2xl font-black text-texto mt-2">{stats.executando}</h3>
-          <span className="text-[10px] text-muted">Trabalho nos Boxes</span>
-        </Card>
+          <h3 className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{stats.executando}</h3>
+          <span className="text-xs text-[#5B6674]">Trabalho nos Boxes</span>
+        </div>
 
-        <Card
+        <div
           onClick={() => setSelectedStatus(selectedStatus === 'QA' ? 'TODOS' : 'QA')}
-          className={`p-4 bg-grafite border cursor-pointer hover:border-volt/50 transition-all ${
-            selectedStatus === 'QA' ? 'border-volt bg-volt/5' : 'border-aco'
+          className={`carx-card p-5 cursor-pointer transition-all ${
+            selectedStatus === 'QA' ? 'border-[#0E1116] shadow-sm' : ''
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase">Vistoria & Prontos</span>
-            <CheckCircle2 size={16} className="text-volt" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Vistoria & Prontos</span>
+            <CheckCircle2 size={16} className="text-[#0E1116]" />
           </div>
-          <h3 className="font-display text-2xl font-black text-texto mt-2">{stats.concluidas}</h3>
-          <span className="text-[10px] text-muted">Aguardando Retirada</span>
-        </Card>
+          <h3 className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{stats.concluidas}</h3>
+          <span className="text-xs text-[#5B6674]">Aguardando Retirada</span>
+        </div>
 
-        <Card
+        <div
           onClick={() => setSelectedStatus(selectedStatus === 'DELIVERED' ? 'TODOS' : 'DELIVERED')}
-          className={`p-4 bg-grafite border cursor-pointer hover:border-volt/50 transition-all ${
-            selectedStatus === 'DELIVERED' ? 'border-volt bg-volt/5' : 'border-aco'
+          className={`carx-card p-5 cursor-pointer transition-all ${
+            selectedStatus === 'DELIVERED' ? 'border-[#0E1116] shadow-sm' : ''
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-muted uppercase">Entregues</span>
-            <ShieldCheck size={16} className="text-volt" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Entregues</span>
+            <ShieldCheck size={16} className="text-[#0E1116]" />
           </div>
-          <h3 className="font-display text-2xl font-black text-texto mt-2">{stats.entregues}</h3>
-          <span className="text-[10px] text-muted">Garantia Ativa</span>
-        </Card>
+          <h3 className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{stats.entregues}</h3>
+          <span className="text-xs text-[#5B6674]">Garantia Ativa</span>
+        </div>
       </div>
 
       {/* Barra de Filtros e Busca */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" size={16} />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" size={16} />
           <input
             type="text"
             placeholder="Buscar por placa, cliente ou número..."
@@ -271,7 +520,7 @@ export const OrdensServico: React.FC = () => {
               setSearchTerm(e.target.value);
               setPage(1);
             }}
-            className="w-full h-11 pl-10 pr-4 bg-aco/50 border border-linha rounded-input text-xs text-texto placeholder:text-muted focus:outline-none focus:border-volt"
+            className="w-full h-11 pl-10 pr-4 bg-white border border-[#E1E6EC] rounded-xl text-xs text-[#0E1116] placeholder:text-[#5B6674] focus:outline-none focus:border-[#0E1116]"
           />
         </div>
 
@@ -283,10 +532,10 @@ export const OrdensServico: React.FC = () => {
                 setSelectedStatus(st);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-input text-xs font-semibold whitespace-nowrap transition-colors ${
+              className={`h-10 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
                 selectedStatus === st
-                  ? 'bg-volt text-asfalto font-bold'
-                  : 'bg-aco/40 text-muted hover:text-texto hover:bg-aco'
+                  ? 'bg-[#0E1116] text-white shadow-sm'
+                  : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
               }`}
             >
               {st === 'TODOS' ? 'Todos os Status' : st}
@@ -296,10 +545,10 @@ export const OrdensServico: React.FC = () => {
       </div>
 
       {/* Tabela de Ordens de Serviço */}
-      <Card className="bg-grafite border-aco overflow-hidden p-0 shadow-xl">
+      <div className="bg-white border border-[#E1E6EC] rounded-3xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-aco/60 text-muted uppercase tracking-wider border-b border-linha font-semibold">
+            <thead className="bg-[#F3F5F7] text-[#5B6674] uppercase tracking-wider border-b border-[#E1E6EC] font-semibold">
               <tr>
                 <th className="py-3.5 px-4">OS #</th>
                 <th className="py-3.5 px-4">Veículo</th>
@@ -332,43 +581,43 @@ export const OrdensServico: React.FC = () => {
                     <tr
                       key={os.id}
                       onClick={() => setSelectedOrder(os)}
-                      className="hover:bg-aco/30 cursor-pointer transition-colors"
+                      className="hover:bg-[#F3F5F7] cursor-pointer transition-colors"
                     >
-                      <td className="py-3.5 px-4 font-mono font-bold text-volt">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#0E1116]">
                         #{os.osNumber}
-                        <span className="block text-[10px] text-muted font-normal">
+                        <span className="block text-[10px] text-[#5B6674] font-normal">
                           {formatDateBR(os.createdAt)}
                         </span>
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-texto">
+                        <div className="font-bold text-[#0E1116]">
                           {os.vehicle ? `${os.vehicle.brand} ${os.vehicle.model}` : 'Veículo'}
                         </div>
-                        <span className="text-[11px] text-volt font-mono font-bold tracking-wider">
+                        <span className="text-[11px] text-[#0E1116] font-mono font-bold tracking-wider">
                           {os.vehicle?.plate || 'SEM PLACA'}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-texto">
+                      <td className="py-3.5 px-4 text-[#0E1116]">
                         <div className="font-medium">{os.customer?.name}</div>
-                        <span className="text-[11px] text-muted font-mono">{os.customer?.phone}</span>
+                        <span className="text-[11px] text-[#5B6674] font-mono">{os.customer?.phone}</span>
                       </td>
 
                       <td className="py-3.5 px-4">{getStatusBadge(os.status)}</td>
 
-                      <td className="py-3.5 px-4 text-muted">
-                        {os.technician?.name || <span className="text-muted/40 italic">Não alocado</span>}
+                      <td className="py-3.5 px-4 text-[#5B6674]">
+                        {os.technician?.name || <span className="text-[#5B6674]/50 italic">Não alocado</span>}
                       </td>
 
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col items-center gap-1 w-24 mx-auto">
-                          <span className="text-[10px] font-mono text-muted font-bold">
+                          <span className="text-[10px] font-mono text-[#5B6674] font-bold">
                             {os.progress || 0}%
                           </span>
-                          <div className="w-full h-1.5 bg-asfalto rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-[#F3F5F7] rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-volt"
+                              className="h-full bg-[#C8F52E]"
                               style={{ width: `${os.progress || 0}%` }}
                             />
                           </div>
@@ -376,15 +625,15 @@ export const OrdensServico: React.FC = () => {
                       </td>
 
                       <td className="py-3.5 px-4 font-mono">
-                        <div className="font-bold text-texto">
+                        <div className="font-bold text-[#0E1116]">
                           {formatBRL(os.finalCents || os.totalCents, true)}
                         </div>
                         {balanceCents > 0 ? (
-                          <span className="text-[10px] text-alert block">
+                          <span className="text-[10px] text-[#E5484D] block">
                             Falta {formatBRL(balanceCents, true)}
                           </span>
                         ) : (
-                          <span className="text-[10px] text-volt block">Pago Total</span>
+                          <span className="text-[10px] text-[#0E1116] font-bold block">Pago Total</span>
                         )}
                       </td>
 
@@ -392,30 +641,43 @@ export const OrdensServico: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setSelectedOrder(os)}
-                            className="p-1.5 text-muted hover:text-texto hover:bg-aco rounded-lg transition-colors"
+                            className="p-1.5 text-[#5B6674] hover:text-[#0E1116] hover:bg-[#F3F5F7] rounded-lg transition-colors"
                             title="Ver Detalhes"
                           >
                             <Eye size={16} />
                           </button>
 
+                          <button
+                            onClick={() => handleOpenWhatsAppModal(os)}
+                            className="p-1.5 text-[#10B981] hover:bg-[#10B981]/15 rounded-lg transition-colors"
+                            title="Notificar Cliente via WhatsApp"
+                          >
+                            <MessageSquare size={16} />
+                          </button>
+
                           {balanceCents > 0 && (
-                            <button
-                              onClick={() => {
-                                setSelectedOrder(os);
-                                setPaymentAmount((balanceCents / 100).toFixed(2));
-                                setIsPaymentModalOpen(true);
-                              }}
-                              className="p-1.5 text-alert hover:text-texto hover:bg-alert/20 rounded-lg transition-colors"
-                              title="Registrar Pagamento"
-                            >
-                              <DollarSign size={16} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenPaymentModal(os)}
+                                className="p-1.5 text-[#0E1116] bg-[#C8F52E]/30 hover:bg-[#C8F52E] rounded-lg transition-colors"
+                                title="Receber via Pix Dinâmico no Caixa"
+                              >
+                                <QrCode size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleOpenPaymentModal(os)}
+                                className="p-1.5 text-[#E5484D] hover:bg-[#FEE2E2] rounded-lg transition-colors"
+                                title="Registrar Pagamento Manual"
+                              >
+                                <DollarSign size={16} />
+                              </button>
+                            </>
                           )}
 
                           {os.status === 'APPROVED' && (
                             <button
                               onClick={() => handleTransition(os.id, 'CHECKED_IN')}
-                              className="p-1.5 text-volt hover:bg-volt/20 rounded-lg transition-colors"
+                              className="p-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-colors"
                               title="Realizar Check-in no Pátio"
                             >
                               <Play size={16} />
@@ -425,7 +687,7 @@ export const OrdensServico: React.FC = () => {
                           {os.status === 'READY' && (
                             <button
                               onClick={() => handleTransition(os.id, 'DELIVERED')}
-                              className="p-1.5 text-volt hover:bg-volt/20 rounded-lg transition-colors"
+                              className="p-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-colors"
                               title="Confirmar Entrega ao Cliente"
                             >
                               <CheckCircle2 size={16} />
@@ -443,7 +705,7 @@ export const OrdensServico: React.FC = () => {
 
         {/* Paginação */}
         {totalPages > 1 && (
-          <div className="p-4 bg-aco/40 border-t border-linha flex items-center justify-between text-xs text-muted">
+          <div className="p-4 bg-[#F3F5F7] border-t border-[#E1E6EC] flex items-center justify-between text-xs text-[#5B6674]">
             <span>
               Total: {totalOrders} ordens · Página {page} de {totalPages}
             </span>
@@ -469,7 +731,7 @@ export const OrdensServico: React.FC = () => {
             </div>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Modal Wizard: Nova OS e Orçamento */}
       <NovoOrcamentoModal
@@ -481,145 +743,686 @@ export const OrdensServico: React.FC = () => {
         }}
       />
 
-      {/* Modal de Pagamento Rápido */}
+      {/* Modal de Pagamento Rápido com Pix Integrado (T6.3) */}
       {isPaymentModalOpen && selectedOrder && (
-        <div className="fixed inset-0 bg-asfalto/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <Card className="bg-grafite border-aco w-full max-w-md shadow-2xl p-6">
-            <div className="flex items-center justify-between pb-4 border-b border-linha">
-              <h3 className="font-display text-base font-bold text-texto">
-                Registrar Pagamento · OS #{selectedOrder.osNumber}
-              </h3>
+        <div className="fixed inset-0 bg-[#0E1116]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E1E6EC] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Cabeçalho */}
+            <div className="px-6 py-5 border-b border-[#E1E6EC] flex items-center justify-between bg-[#F8FAFC]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-display text-lg font-bold text-[#0E1116]">
+                    Caixa & Recebimento
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-[#E1E6EC] text-[#0E1116]">
+                    OS #{selectedOrder.osNumber}
+                  </span>
+                </div>
+                <p className="text-xs text-[#5B6674] mt-0.5">
+                  {selectedOrder.customer?.name} · {selectedOrder.vehicle ? `${selectedOrder.vehicle.brand} ${selectedOrder.vehicle.model} (${selectedOrder.vehicle.plate})` : ''}
+                </p>
+              </div>
               <button
-                onClick={() => setIsPaymentModalOpen(false)}
-                className="text-muted hover:text-texto p-1"
+                onClick={handleClosePaymentModal}
+                className="text-[#5B6674] hover:text-[#0E1116] p-1.5 rounded-lg hover:bg-[#E1E6EC] transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleRegisterPayment} className="space-y-4 mt-4">
-              <Input
-                label="Valor a Pagar (R$) *"
-                required
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="0,00"
-              />
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Forma de Pagamento
-                </label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="h-12 px-3 rounded-input bg-aco/60 border border-linha text-texto text-sm focus:outline-none focus:border-volt"
-                >
-                  <option value="pix">PIX</option>
-                  <option value="credit_card">Cartão de Crédito</option>
-                  <option value="debit_card">Cartão de Débito</option>
-                  <option value="cash">Dinheiro em Espécie</option>
-                </select>
+            {/* Corpo do Modal */}
+            <div className="p-6 overflow-y-auto space-y-5">
+              {/* Resumo de Valores */}
+              <div className="grid grid-cols-3 gap-3 p-3.5 bg-[#F8FAFC] rounded-xl border border-[#E1E6EC] text-xs">
+                <div>
+                  <span className="text-[#5B6674] block">Total OS</span>
+                  <span className="font-bold text-[#0E1116] text-sm font-mono">
+                    {formatBRL(selectedOrder.finalCents || selectedOrder.totalCents, true)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#5B6674] block">Já Pago</span>
+                  <span className="font-bold text-[#10B981] text-sm font-mono">
+                    {formatBRL(selectedOrder.paidCents || 0, true)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#5B6674] block">Saldo Restante</span>
+                  <span className="font-bold text-[#E5484D] text-sm font-mono">
+                    {formatBRL(Math.max(0, (selectedOrder.finalCents || selectedOrder.totalCents || 0) - (selectedOrder.paidCents || 0)), true)}
+                  </span>
+                </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsPaymentModalOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="volt"
-                  size="desktop"
-                  isLoading={isSubmittingPayment}
-                >
-                  Confirmar Pagamento
-                </Button>
+              {/* Seletor de Método de Pagamento */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { id: 'pix', label: 'Pix Dinâmico', icon: QrCode },
+                  { id: 'credit_card', label: 'Crédito', icon: CreditCard },
+                  { id: 'debit_card', label: 'Débito', icon: CreditCard },
+                  { id: 'cash', label: 'Dinheiro', icon: Banknote },
+                ].map((m) => {
+                  const Icon = m.icon;
+                  const isSelected = paymentMethod === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        setPaymentMethod(m.id);
+                        if (m.id !== 'pix') setPixCharge(null);
+                      }}
+                      className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl text-xs font-semibold border transition-all ${
+                        isSelected
+                          ? 'bg-[#C8F52E]/15 border-[#0E1116] text-[#0E1116] shadow-sm'
+                          : 'bg-white border-[#E1E6EC] text-[#5B6674] hover:bg-[#F8FAFC]'
+                      }`}
+                    >
+                      <Icon size={18} className={isSelected ? 'text-[#0E1116]' : 'text-[#5B6674]'} />
+                      <span className="mt-1">{m.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </form>
-          </Card>
+
+              {/* FLUXO PIX DINÂMICO BACEN (T6.3) */}
+              {paymentMethod === 'pix' ? (
+                <div className="space-y-4">
+                  {pixSettled ? (
+                    <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-3">
+                      <div className="w-14 h-14 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-md">
+                        <Check size={28} />
+                      </div>
+                      <div>
+                        <h4 className="font-display text-lg font-bold text-emerald-900">
+                          Pagamento Pix Confirmado!
+                        </h4>
+                        <p className="text-xs text-emerald-700 mt-1">
+                          A ordem de serviço foi atualizada instantaneamente e o saldo foi liquidado no caixa.
+                        </p>
+                      </div>
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={handleClosePaymentModal}
+                          className="carx-btn-volt w-full justify-center !h-11"
+                        >
+                          Concluir e Fechar
+                        </button>
+                      </div>
+                    </div>
+                  ) : pixCharge ? (
+                    <div className="p-5 rounded-2xl bg-[#F8FAFC] border border-[#E1E6EC] space-y-4 text-center">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                        Aguardando leitura do cliente...
+                      </div>
+
+                      <div className="bg-white p-3 rounded-xl border border-[#E1E6EC] inline-block shadow-sm">
+                        <img
+                          src={pixCharge.pixQrBase64}
+                          alt="QR Code Pix"
+                          className="w-48 h-48 mx-auto object-contain"
+                        />
+                      </div>
+
+                      <div>
+                        <span className="text-xs text-[#5B6674] block">Valor a pagar</span>
+                        <span className="font-display text-2xl font-black text-[#0E1116]">
+                          {formatBRL(pixCharge.amountCents, true)}
+                        </span>
+                      </div>
+
+                      {/* Copia e Cola */}
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={pixCharge.pixCode}
+                          className="flex-1 h-10 px-3 bg-white border border-[#E1E6EC] rounded-lg text-xs font-mono text-[#5B6674] truncate select-all"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleCopyPixCode}
+                          className="h-10 px-3 carx-pill !bg-white hover:!bg-[#E1E6EC] text-xs font-semibold flex items-center gap-1.5"
+                        >
+                          {pixCopied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          <span>{pixCopied ? 'Copiado!' : 'Copiar'}</span>
+                        </button>
+                      </div>
+
+                      {/* Ações de Teste e Troca */}
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2 border-t border-[#E1E6EC]">
+                        <button
+                          type="button"
+                          onClick={() => setPixCharge(null)}
+                          className="text-xs text-[#5B6674] hover:text-[#0E1116] underline"
+                        >
+                          Alterar valor da cobrança
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isSimulatingPix}
+                          onClick={handleSimulatePixWebhook}
+                          className="text-xs font-medium text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                          title="Simula a confirmação via webhook bancário instantâneo"
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>{isSimulatingPix ? 'Confirmando...' : 'Simular Baixa Bancária'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-[#5B6674]">
+                          Valor da Cobrança Pix (R$)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          placeholder="0,00"
+                          className="w-full h-12 px-4 rounded-xl bg-white border border-[#E1E6EC] text-[#0E1116] font-display font-bold text-lg focus:outline-none focus:border-[#0E1116]"
+                        />
+                        <span className="text-[11px] text-[#5B6674]">
+                          Gera QR Code dinâmico do Banco Central para recebimento no caixa ou balcão.
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleGeneratePix}
+                        disabled={isGeneratingPix}
+                        className="carx-btn-volt w-full justify-center !h-12 !text-sm"
+                      >
+                        <QrCode size={18} />
+                        <span>{isGeneratingPix ? 'Gerando QR Code...' : 'Gerar QR Code Pix Dinâmico'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* OUTROS MÉTODOS DE PAGAMENTO (CARTÃO / DINHEIRO) */
+                <form onSubmit={handleRegisterPayment} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-[#5B6674]">
+                      Valor a Pagar (R$) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      placeholder="0,00"
+                      className="w-full h-12 px-4 rounded-xl bg-white border border-[#E1E6EC] text-[#0E1116] font-display font-bold text-lg focus:outline-none focus:border-[#0E1116]"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={handleClosePaymentModal}
+                      className="carx-pill !h-11 !px-4"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingPayment}
+                      className="carx-btn-volt !h-11 !px-6"
+                    >
+                      {isSubmittingPayment ? 'Registrando...' : 'Confirmar Pagamento'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
       {/* Modal de Detalhes da Ordem Selecionada */}
-      {selectedOrder && !isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-asfalto/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <Card className="bg-grafite border-aco w-full max-w-lg shadow-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-5 bg-aco/60 border-b border-linha flex items-center justify-between">
+      {selectedOrder && !isPaymentModalOpen && !isWhatsAppModalOpen && (
+        <div className="fixed inset-0 bg-[#0E1116]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E1E6EC] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-6 py-5 bg-[#F8FAFC] border-b border-[#E1E6EC] flex items-center justify-between">
               <div>
-                <h3 className="font-display text-base font-bold text-texto">
+                <h3 className="font-display text-base font-bold text-[#0E1116]">
                   Ordem de Serviço #{selectedOrder.osNumber}
                 </h3>
-                <span className="text-xs text-muted font-mono">
+                <span className="text-xs text-[#5B6674] font-mono">
                   {selectedOrder.trackingToken ? `Token: ${selectedOrder.trackingToken.slice(0, 8)}...` : ''}
                 </span>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="text-muted hover:text-texto p-1.5 rounded-lg hover:bg-aco"
+                className="text-[#5B6674] hover:text-[#0E1116] p-1.5 rounded-lg hover:bg-[#E1E6EC] transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-muted">Status Operacional</span>
+                <span className="text-[#5B6674]">Status Operacional</span>
                 {getStatusBadge(selectedOrder.status)}
               </div>
 
-              <div className="bg-aco/40 p-4 rounded-card border border-linha space-y-2">
+              <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-2">
                 <div className="flex items-center gap-3">
-                  <Car size={18} className="text-volt" />
+                  <Car size={18} className="text-[#0E1116]" />
                   <div>
-                    <h5 className="font-bold text-sm text-texto">
+                    <h5 className="font-bold text-sm text-[#0E1116]">
                       {selectedOrder.vehicle ? `${selectedOrder.vehicle.brand} ${selectedOrder.vehicle.model}` : 'Veículo'}
                     </h5>
-                    <span className="text-muted font-mono">{selectedOrder.vehicle?.plate}</span>
+                    <span className="text-[#5B6674] font-mono">{selectedOrder.vehicle?.plate}</span>
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-linha/60 flex items-center gap-3">
-                  <User size={18} className="text-muted" />
+                <div className="pt-2 border-t border-[#E1E6EC] flex items-center gap-3">
+                  <User size={18} className="text-[#5B6674]" />
                   <div>
-                    <span className="font-medium text-texto">{selectedOrder.customer?.name}</span>
-                    <span className="text-muted block font-mono">{selectedOrder.customer?.phone}</span>
+                    <span className="font-medium text-[#0E1116]">{selectedOrder.customer?.name}</span>
+                    <span className="text-[#5B6674] block font-mono">{selectedOrder.customer?.phone}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-asfalto p-4 rounded-card border border-linha space-y-2">
-                <div className="flex justify-between text-muted">
+              <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-2">
+                <div className="flex justify-between text-[#5B6674]">
                   <span>Valor Total da OS</span>
-                  <span className="font-bold text-texto font-mono">
+                  <span className="font-bold text-[#0E1116] font-mono">
                     {formatBRL(selectedOrder.finalCents || selectedOrder.totalCents, true)}
                   </span>
                 </div>
-                <div className="flex justify-between text-muted">
+                <div className="flex justify-between text-[#5B6674]">
                   <span>Valor Já Pago</span>
-                  <span className="font-bold text-volt font-mono">
+                  <span className="font-bold text-[#10B981] font-mono">
                     {formatBRL(selectedOrder.paidCents || 0, true)}
                   </span>
                 </div>
-                <div className="flex justify-between text-alert pt-1 border-t border-linha">
+                <div className="flex justify-between text-[#E5484D] pt-1 border-t border-[#E1E6EC]">
                   <span>Saldo a Pagar</span>
                   <span className="font-bold font-mono">
                     {formatBRL(Math.max(0, (selectedOrder.finalCents || selectedOrder.totalCents || 0) - (selectedOrder.paidCents || 0)), true)}
                   </span>
                 </div>
               </div>
+
+              {/* Módulo Fiscal (NFS-e) - T6.10 */}
+              <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Receipt size={16} className="text-[#0E1116]" />
+                    <span className="font-bold text-[#0E1116] text-xs">Nota Fiscal Eletrônica (NFS-e)</span>
+                  </div>
+                  {fiscalInvoice && (
+                    <Badge
+                      variant={
+                        fiscalInvoice.status === 'authorized'
+                          ? 'volt'
+                          : fiscalInvoice.status === 'processing'
+                          ? 'alert'
+                          : fiscalInvoice.status === 'error'
+                          ? 'error'
+                          : 'neutral'
+                      }
+                    >
+                      {fiscalInvoice.status === 'authorized'
+                        ? 'Autorizada'
+                        : fiscalInvoice.status === 'processing'
+                        ? 'Processando'
+                        : fiscalInvoice.status === 'error'
+                        ? 'Erro de Emissão'
+                        : fiscalInvoice.status === 'cancelled'
+                        ? 'Cancelada'
+                        : fiscalInvoice.status}
+                    </Badge>
+                  )}
+                </div>
+
+                {fiscalFeedback && (
+                  <div
+                    className={`p-2.5 rounded-lg text-xs flex items-start gap-2 ${
+                      fiscalFeedback.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border border-rose-200'
+                    }`}
+                  >
+                    {fiscalFeedback.type === 'success' ? (
+                      <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+                    ) : (
+                      <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                    )}
+                    <span>{fiscalFeedback.message}</span>
+                  </div>
+                )}
+
+                {loadingFiscal ? (
+                  <div className="py-2 text-center text-xs text-[#5B6674]">
+                    <Clock size={14} className="inline mr-1.5 animate-spin" />
+                    Consultando status fiscal na prefeitura...
+                  </div>
+                ) : fiscalInvoice ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="grid grid-cols-2 gap-2 bg-white p-3 rounded-lg border border-[#E1E6EC]">
+                      <div>
+                        <span className="text-[#5B6674] block text-[11px]">Número NFS-e</span>
+                        <span className="font-mono font-bold text-[#0E1116]">
+                          {fiscalInvoice.invoiceNumber ? `#${fiscalInvoice.invoiceNumber}` : '--'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[#5B6674] block text-[11px]">RPS</span>
+                        <span className="font-mono font-bold text-[#0E1116]">
+                          #{fiscalInvoice.rpsNumber} (Série {fiscalInvoice.rpsSeries})
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[#5B6674] block text-[11px]">Base ISS</span>
+                        <span className="font-mono font-bold text-[#0E1116]">
+                          {formatBRL(fiscalInvoice.grossAmountCents, true)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[#5B6674] block text-[11px]">Alíquota ISS</span>
+                        <span className="font-mono font-bold text-[#0E1116]">
+                          {(fiscalInvoice.issRateBasisPoints / 100).toFixed(2)}% ({formatBRL(fiscalInvoice.issAmountCents, true)})
+                        </span>
+                      </div>
+                      {fiscalInvoice.verificationCode && (
+                        <div className="col-span-2 pt-1 border-t border-[#E1E6EC]">
+                          <span className="text-[#5B6674] block text-[11px]">Cód. Verificação</span>
+                          <span className="font-mono text-[#0E1116] break-all">
+                            {fiscalInvoice.verificationCode}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {fiscalInvoice.errorMessage && fiscalInvoice.status === 'error' && (
+                      <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[11px]">
+                        <strong>Retorno da Prefeitura:</strong> {fiscalInvoice.errorMessage}
+                      </div>
+                    )}
+
+                    {/* Ações da Nota Fiscal */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {fiscalInvoice.pdfUrl && (
+                        <a
+                          href={fiscalInvoice.pdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-white border border-[#E1E6EC] hover:bg-[#F8FAFC] text-[#0E1116] font-medium inline-flex items-center gap-1.5 transition-colors"
+                        >
+                          <Download size={13} />
+                          Baixar PDF
+                        </a>
+                      )}
+                      {fiscalInvoice.xmlUrl && (
+                        <a
+                          href={fiscalInvoice.xmlUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-white border border-[#E1E6EC] hover:bg-[#F8FAFC] text-[#0E1116] font-medium inline-flex items-center gap-1.5 transition-colors"
+                        >
+                          <Download size={13} />
+                          Baixar XML
+                        </a>
+                      )}
+                      {fiscalInvoice.status === 'authorized' && (
+                        <button
+                          type="button"
+                          onClick={handleOpenCancelModal}
+                          className="px-3 py-1.5 rounded-lg bg-white border border-rose-200 hover:bg-rose-50 text-rose-700 font-medium inline-flex items-center gap-1.5 transition-colors"
+                        >
+                          <Ban size={13} />
+                          Cancelar NFS-e
+                        </button>
+                      )}
+                      {fiscalInvoice.status === 'error' && (
+                        <button
+                          type="button"
+                          disabled={issuingFiscal}
+                          onClick={handleIssueFiscal}
+                          className="px-3 py-1.5 rounded-lg bg-[#0E1116] text-white hover:bg-[#1E232B] font-medium inline-flex items-center gap-1.5 transition-colors"
+                        >
+                          <RefreshCw size={13} className={issuingFiscal ? 'animate-spin' : ''} />
+                          {issuingFiscal ? 'Reenviando...' : 'Reenviar NFS-e'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-white rounded-lg border border-[#E1E6EC] flex items-center justify-between gap-3">
+                    <span className="text-xs text-[#5B6674]">Nenhuma NFS-e emitida para esta OS.</span>
+                    <button
+                      type="button"
+                      disabled={issuingFiscal}
+                      onClick={handleIssueFiscal}
+                      className="carx-btn-volt !h-8 !px-3 !text-xs inline-flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      <FileText size={13} />
+                      {issuingFiscal ? 'Emitindo...' : 'Emitir NFS-e'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="p-4 bg-aco/40 border-t border-linha flex items-center justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(null)}>
+            <div className="p-4 bg-[#F8FAFC] border-t border-[#E1E6EC] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => handleOpenWhatsAppModal(selectedOrder)}
+                className="px-3.5 py-2 text-xs font-bold text-white bg-[#10B981] hover:bg-[#059669] rounded-xl flex items-center gap-1.5 transition-colors"
+              >
+                <MessageSquare size={14} />
+                Notificar via WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="px-4 py-2 text-xs font-medium text-[#5B6674] hover:text-[#0E1116] hover:bg-[#E1E6EC] rounded-xl transition-colors"
+              >
                 Fechar
-              </Button>
+              </button>
             </div>
-          </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Notificação Transacional por WhatsApp (T6.4) */}
+      {isWhatsAppModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-[#0E1116]/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E1E6EC] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
+            {/* Cabeçalho */}
+            <div className="px-6 py-5 border-b border-[#E1E6EC] flex items-center justify-between bg-[#F8FAFC]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#10B981]/15 text-[#10B981] flex items-center justify-center">
+                  <MessageSquare size={18} />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-bold text-[#0E1116]">
+                    Notificação WhatsApp · OS #{selectedOrder.osNumber}
+                  </h3>
+                  <p className="text-xs text-[#5B6674]">
+                    {selectedOrder.customer?.name} ({selectedOrder.customer?.phone || 'Sem telefone'})
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseWhatsAppModal}
+                className="text-[#5B6674] hover:text-[#0E1116] p-1.5 rounded-lg hover:bg-[#E1E6EC] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Corpo */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Info de Gating / Como funciona */}
+              <div className="p-3 bg-[#F0FDF4] border border-[#BBF7D0] rounded-xl text-[#166534] flex items-start gap-2">
+                <ShieldCheck size={16} className="mt-0.5 shrink-0" />
+                <span>
+                  <strong>Política de Envio:</strong> Lojas no plano Profissional/Premium com WhatsApp conectado enviam automaticamente em segundo plano pelo número da própria oficina. No plano Essencial ou com aparelho desconectado, o CarX gera o link oficial <code>wa.me</code> para envio imediato com 1 clique.
+                </span>
+              </div>
+
+              {/* Seletor de Evento */}
+              <div>
+                <label className="block text-xs font-bold text-[#0E1116] mb-1.5">
+                  Tipo de Mensagem / Evento
+                </label>
+                <select
+                  value={whatsAppEvent}
+                  onChange={(e) => setWhatsAppEvent(e.target.value as WhatsAppTransactionalEventType)}
+                  className="w-full h-10 px-3 rounded-xl border border-[#E1E6EC] bg-white text-xs font-medium text-[#0E1116] focus:outline-none focus:border-[#0E1116]"
+                >
+                  <option value="CHECKED_IN">🚗 Check-in: Veículo Recebido no Pátio</option>
+                  <option value="IN_PROGRESS">🔧 Em Execução: Serviços Iniciados</option>
+                  <option value="READY">✨ Veículo Pronto: Aguardando Retirada e Saldo</option>
+                  <option value="DELIVERED">🌟 Entrega Finalizada: Termo de Garantia Digital</option>
+                  <option value="APPOINTMENT_CONFIRMED">📅 Agendamento Confirmado</option>
+                </select>
+              </div>
+
+              {/* Mensagem Personalizada (Opcional) */}
+              <div>
+                <label className="block text-xs font-bold text-[#0E1116] mb-1.5">
+                  Mensagem Adicional ou Personalizada <span className="text-[#5B6674] font-normal">(opcional)</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={whatsAppCustomMessage}
+                  onChange={(e) => setWhatsAppCustomMessage(e.target.value)}
+                  placeholder="Deixe em branco para usar o modelo inteligente com dados do veículo e link da proposta..."
+                  className="w-full p-3 rounded-xl border border-[#E1E6EC] text-xs font-medium text-[#0E1116] focus:outline-none focus:border-[#0E1116] resize-none"
+                />
+              </div>
+
+              {/* Feedback de Envio */}
+              {whatsAppResult && (
+                <div
+                  className={`p-3.5 rounded-xl border text-xs space-y-2 ${
+                    whatsAppResult.mode === 'gateway'
+                      ? 'bg-[#F0FDF4] border-[#86EFAC] text-[#166534]'
+                      : 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E40AF]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-bold">
+                    <CheckCircle2 size={16} />
+                    {whatsAppResult.mode === 'gateway'
+                      ? 'Mensagem enviada com sucesso pelo WhatsApp oficial da oficina!'
+                      : 'Link manual wa.me gerado!'}
+                  </div>
+
+                  {whatsAppResult.warning && (
+                    <div className="text-[11px] text-[#854D0E] bg-[#FEF9C3] p-2 rounded-lg border border-[#FDE047]">
+                      {whatsAppResult.warning}
+                    </div>
+                  )}
+
+                  {whatsAppResult.mode === 'manual' && whatsAppResult.whatsappUrl && (
+                    <div className="pt-1">
+                      <a
+                        href={whatsAppResult.whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366] text-white font-bold hover:bg-[#1EBE5D] transition-colors"
+                      >
+                        <ExternalLink size={14} />
+                        Abrir Conversa no WhatsApp Web
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Rodapé */}
+            <div className="p-4 bg-[#F8FAFC] border-t border-[#E1E6EC] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCloseWhatsAppModal}
+                className="px-4 py-2 text-xs font-medium text-[#5B6674] hover:text-[#0E1116] hover:bg-[#E1E6EC] rounded-xl transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                type="button"
+                disabled={isSendingWhatsApp}
+                onClick={handleSendWhatsAppNotification}
+                className="carx-btn-volt !h-10 !px-5 flex items-center gap-1.5"
+              >
+                <Send size={14} />
+                {isSendingWhatsApp ? 'Enviando...' : 'Enviar Notificação'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Sub-modal de Cancelamento de NFS-e (T6.10) */}
+      {isCancelModalOpen && fiscalInvoice && (
+        <div className="fixed inset-0 bg-[#0E1116]/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E1E6EC] shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-6 py-4 bg-[#F8FAFC] border-b border-[#E1E6EC] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ban size={16} className="text-rose-600" />
+                <h4 className="font-display text-sm font-bold text-[#0E1116]">
+                  Cancelar NFS-e #{fiscalInvoice.invoiceNumber || fiscalInvoice.rpsNumber}
+                </h4>
+              </div>
+              <button
+                onClick={() => setIsCancelModalOpen(false)}
+                className="text-[#5B6674] hover:text-[#0E1116] p-1 rounded-lg"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800">
+                <strong>Atenção:</strong> O cancelamento é irreversível e será comunicado imediatamente à prefeitura municipal.
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#0E1116] mb-1.5">
+                  Motivo / Justificativa do Cancelamento <span className="text-rose-600">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="Informe o motivo detalhado (mínimo de 15 caracteres)..."
+                  className="w-full p-3 rounded-xl border border-[#E1E6EC] text-xs font-medium text-[#0E1116] focus:outline-none focus:border-[#0E1116] resize-none"
+                />
+                <span className="text-[11px] text-[#5B6674] block mt-1">
+                  Mínimo de 15 caracteres exigido pelo fisco municipal ({cancelReason.length}/15).
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 bg-[#F8FAFC] border-t border-[#E1E6EC] flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(false)}
+                className="px-4 py-2 text-xs font-medium text-[#5B6674] hover:text-[#0E1116] rounded-xl"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                disabled={cancellingFiscal || cancelReason.trim().length < 15}
+                onClick={handleConfirmCancelFiscal}
+                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 rounded-xl transition-colors"
+              >
+                {cancellingFiscal ? 'Cancelando...' : 'Confirmar Cancelamento'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

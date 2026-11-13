@@ -28,12 +28,14 @@ export function AuditLogsPage() {
     setError(null);
     try {
       const response = await adminApi.listAuditLogs({ page: pageNum, limit: 15 });
-      setLogs(response.data);
-      setPage(response.pagination.page);
-      setTotalPages(response.pagination.totalPages);
-      setTotalCount(response.pagination.total);
+      const items = (response as any)?.data || (response as any)?.logs || (Array.isArray(response) ? response : []);
+      setLogs(items);
+      setPage((response as any)?.pagination?.page || (response as any)?.page || pageNum);
+      setTotalPages((response as any)?.pagination?.totalPages || (response as any)?.totalPages || 1);
+      setTotalCount((response as any)?.pagination?.total || (response as any)?.total || items.length);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Falha ao carregar trilha de auditoria');
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -107,14 +109,14 @@ export function AuditLogsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-aco/20">
-              {loading && logs.length === 0 ? (
+              {loading && (!logs || logs.length === 0) ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-muted">
                     <div className="w-6 h-6 border-2 border-volt/20 border-t-volt rounded-full animate-spin mx-auto mb-2" />
                     Carregando registros imutáveis...
                   </td>
                 </tr>
-              ) : logs.length === 0 ? (
+              ) : !logs || logs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-muted">
                     <ShieldCheck size={32} className="mx-auto text-muted/40 mb-2" />
@@ -122,7 +124,7 @@ export function AuditLogsPage() {
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => {
+                (logs || []).map((log) => {
                   const isExpanded = expandedLogId === log.id;
                   return (
                     <React.Fragment key={log.id}>

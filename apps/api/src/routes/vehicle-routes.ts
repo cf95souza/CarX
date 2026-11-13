@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { vehicleService, VehicleError, ListVehiclesParams } from '../customers/vehicle-service.js';
+import { plateLookupService } from '../customers/plate-lookup-service.js';
 import { authenticateBearer } from './auth-routes.js';
 import { requireTenantContext } from '../plugins/tenant.js';
 import { CreateVehicleDto, UpdateVehicleDto } from '@carx/shared';
@@ -20,6 +21,26 @@ export async function vehicleRoutes(fastify: FastifyInstance) {
         return reply.code(200).send(result);
       } catch (err: any) {
         const statusCode = err.statusCode || 500;
+        return reply.code(statusCode).send({ statusCode, message: err.message });
+      }
+    }
+  );
+
+  /**
+   * GET /vehicles/lookup-plate/:plate — Consulta inteligente de placa com cache e porte veicular (T6.2)
+   */
+  fastify.get<{
+    Params: { plate: string };
+  }>(
+    '/vehicles/lookup-plate/:plate',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      try {
+        const tenantId = request.tenantId!;
+        const result = await plateLookupService.lookupPlate(tenantId, request.params.plate);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        const statusCode = err.statusCode || (err.name === 'ZodError' ? 400 : 500);
         return reply.code(statusCode).send({ statusCode, message: err.message });
       }
     }

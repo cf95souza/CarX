@@ -49,8 +49,8 @@ describe('T3.11 — Financeiro, Comissões e Relatórios no Servidor', () => {
     tenantAlphaSlug = `alpha-fin-${timestamp}`;
     const resAlpha = await tenantQuery<{ id: string }>(
       null,
-      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment)
-       VALUES ('CarX Detailing Alpha', 'Alpha Fin LTDA', $1, $2, '11.888.999/0001-44', 'active', 'estetica')
+      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment, plan_id)
+       VALUES ('CarX Detailing Alpha', 'Alpha Fin LTDA', $1, $2, '11.888.999/0001-44', 'active', 'estetica', (SELECT id FROM plans WHERE slug = 'profissional' LIMIT 1))
        RETURNING id;`,
       [`contato@${tenantAlphaSlug}.local`, tenantAlphaSlug],
       { bypassRls: true }
@@ -173,8 +173,8 @@ describe('T3.11 — Financeiro, Comissões e Relatórios no Servidor', () => {
     tenantBetaSlug = `beta-fin-${timestamp}`;
     const resBeta = await tenantQuery<{ id: string }>(
       null,
-      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment)
-       VALUES ('Oficina Beta Concorrente', 'Beta LTDA', $1, $2, '22.777.666/0001-55', 'active', 'funilaria')
+      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment, plan_id)
+       VALUES ('Oficina Beta Concorrente', 'Beta LTDA', $1, $2, '22.777.666/0001-55', 'active', 'funilaria', (SELECT id FROM plans WHERE slug = 'profissional' LIMIT 1))
        RETURNING id;`,
       [`contato@${tenantBetaSlug}.local`, tenantBetaSlug],
       { bypassRls: true }

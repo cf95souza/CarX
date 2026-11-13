@@ -4,37 +4,62 @@ import { BrandProvider } from './contexts/BrandContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import Sidebar from './components/layout/Sidebar';
-import Header from './components/layout/Header';
 import MobileLayout from './components/layout/MobileLayout';
-import { ShieldAlert, CheckCircle2, ClipboardList, User, LogOut } from 'lucide-react';
+import { ShieldAlert, CheckCircle2, ClipboardList, User, LogOut, Menu } from 'lucide-react';
 import { useBrand } from './contexts/BrandContext';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { ConfirmContainer } from './components/ui/ConfirmContainer';
 import { useOrders } from './hooks/useData';
 import ReloadPrompt from './components/ui/ReloadPrompt';
 
-// Páginas
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const Clientes = React.lazy(() => import('./pages/Clientes'));
-const Servicos = React.lazy(() => import('./pages/Servicos'));
-const Estoque = React.lazy(() => import('./pages/Materiais'));
-const Vendas = React.lazy(() => import('./pages/Vendas'));
-const OrdensServico = React.lazy(() => import('./pages/OrdensServico'));
-const Agenda = React.lazy(() => import('./pages/Agenda'));
-const Colaboradores = React.lazy(() => import('./pages/Colaboradores'));
-const SettingsPage = React.lazy(() => import('./pages/Settings'));
-const Trabalhos = React.lazy(() => import('./pages/Trabalhos'));
-const MonitorTV = React.lazy(() => import('./pages/MonitorTV'));
-const OperadorHome = React.lazy(() => import('./pages/OperadorHome'));
-const LoginPage = React.lazy(() => import('./pages/LoginPage'));
-const ExecutorView = React.lazy(() => import('./pages/ExecutorView'));
-const ProfilePage = React.lazy(() => import('./pages/Profile'));
-const CustomerStatus = React.lazy(() => import('./pages/CustomerStatus'));
-const Relatorios = React.lazy(() => import('./pages/Relatorios'));
-const Ajuda = React.lazy(() => import('./pages/Ajuda'));
-const SelfBooking = React.lazy(() => import('./pages/SelfBooking'));
-const ClientPortal = React.lazy(() => import('./pages/ClientPortal'));
-const PesquisaNPS = React.lazy(() => import('./pages/PesquisaNPS'));
+// Helper para import dinâmico blindado contra ausência de export default (prevenindo TypeError em lazyInitializer)
+const safeLazy = (importFn) =>
+  React.lazy(() =>
+    importFn().then((m) => {
+      const comp =
+        m.default ||
+        m.NovaOrdemServico ||
+        m.Agenda ||
+        m.Relatorios ||
+        m.Dashboard ||
+        Object.values(m).find((v) => typeof v === 'function') ||
+        (() => null);
+      return { default: comp };
+    })
+  );
+
+// Páginas com Carregamento Seguro
+const Dashboard = safeLazy(() => import('./pages/Dashboard'));
+const Clientes = safeLazy(() => import('./pages/Clientes'));
+const Servicos = safeLazy(() => import('./pages/Servicos'));
+const Estoque = safeLazy(() => import('./pages/Materiais'));
+const Vendas = safeLazy(() => import('./pages/Vendas'));
+const OrdensServico = safeLazy(() => import('./pages/OrdensServico'));
+const NovaOrdemServico = safeLazy(() => import('./pages/NovaOrdemServico'));
+const Agenda = safeLazy(() => import('./pages/Agenda'));
+const Colaboradores = safeLazy(() => import('./pages/Colaboradores'));
+const SettingsPage = safeLazy(() => import('./pages/Settings'));
+const Trabalhos = safeLazy(() => import('./pages/Trabalhos'));
+const MonitorTV = safeLazy(() => import('./pages/MonitorTV'));
+const OperadorHome = safeLazy(() => import('./pages/OperadorHome'));
+const LoginPage = safeLazy(() => import('./pages/LoginPage'));
+const ExecutorView = safeLazy(() => import('./pages/ExecutorView'));
+const ProfilePage = safeLazy(() => import('./pages/Profile'));
+const CustomerStatus = safeLazy(() => import('./pages/CustomerStatus'));
+const Relatorios = safeLazy(() => import('./pages/Relatorios'));
+const Ajuda = safeLazy(() => import('./pages/Ajuda'));
+const SelfBooking = safeLazy(() => import('./pages/SelfBooking'));
+const ClientPortal = safeLazy(() => import('./pages/ClientPortal'));
+const PesquisaNPS = safeLazy(() => import('./pages/PesquisaNPS'));
+const LandingPage = safeLazy(() => import('./pages/LandingPage'));
+const TermsOfService = safeLazy(() => import('./pages/TermsOfService'));
+const PrivacyPolicy = safeLazy(() => import('./pages/PrivacyPolicy'));
+const OnboardingPage = safeLazy(() => import('./pages/OnboardingPage'));
+const PublicQuotePage = safeLazy(() => import('./pages/PublicQuotePage'));
+const PublicPassportPage = safeLazy(() => import('./pages/PublicPassportPage'));
+const MiniSiteOficina = safeLazy(() => import('./pages/MiniSiteOficina'));
+const CorporatePage = safeLazy(() => import('./pages/Corporate'));
+const CrmRetencaoPage = safeLazy(() => import('./pages/CrmRetencao'));
 
 // Componente de Loading Premium para Transições de Rota
 const PageLoading = () => {
@@ -123,10 +148,30 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     );
   }
 
-  const userRole = String(profile?.cargo || '').toUpperCase();
+  const rawUserRole = String(profile?.cargo || '').toUpperCase();
+  const normalizedUserRole = ['OWNER', 'ADMIN', 'ADM'].includes(rawUserRole)
+    ? 'ADM'
+    : ['MANAGER', 'GESTOR', 'RECEPCIONISTA', 'RECEPTIONIST'].includes(rawUserRole)
+      ? 'GESTOR'
+      : ['TECHNICIAN', 'TECNICO', 'OPERADOR'].includes(rawUserRole)
+        ? 'OPERADOR'
+        : rawUserRole;
 
-  if (allowedRoles.length > 0 && !allowedRoles.map(r => String(r).toUpperCase()).includes(userRole)) {
-    if (userRole === 'OPERADOR') {
+  const normalizedAllowedRoles = allowedRoles.map((r) => {
+    const up = String(r).toUpperCase();
+    if (['OWNER', 'ADMIN', 'ADM'].includes(up)) return 'ADM';
+    if (['MANAGER', 'GESTOR'].includes(up)) return 'GESTOR';
+    if (['TECHNICIAN', 'TECNICO', 'OPERADOR'].includes(up)) return 'OPERADOR';
+    return up;
+  });
+
+  const hasAccess =
+    allowedRoles.length === 0 ||
+    normalizedAllowedRoles.includes(normalizedUserRole) ||
+    normalizedAllowedRoles.includes(rawUserRole);
+
+  if (!hasAccess) {
+    if (normalizedUserRole === 'OPERADOR') {
       if (location.pathname === '/operador') return children; // fail-safe
       return <Navigate to="/operador" replace />;
     }
@@ -250,26 +295,43 @@ const AppLayout = ({ children }) => {
   };
 
   return (
-    <div className="flex bg-transparent min-h-screen font-sans selection:bg-primary/10 selection:text-primary relative overflow-hidden">
-      
+    <div className="flex bg-[#F3F5F7] min-h-screen font-sans relative overflow-hidden">
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
+      {/* Sidebar Oficial Escura #0E1116 */}
       <div className="no-print">
         <Sidebar activePage={activePage} setActivePage={handleNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       </div>
       
+      {/* Área Principal de Conteúdo */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden w-full max-w-full print:h-auto print:overflow-visible print:block">
-        <div className="no-print">
-          <Header activePage={activePage} onMenuClick={() => setIsSidebarOpen(true)} />
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 custom-scrollbar relative print:overflow-visible print:h-auto print:p-0">
-          <div className="max-w-7xl mx-auto w-full print:max-w-full print:m-0">
+        {/* Mobile Topbar Clean */}
+        <header className="lg:hidden bg-[#0E1116] border-b border-[#1B2129] px-4 py-3 flex items-center justify-between no-print z-30">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#C8F52E] flex items-center justify-center font-display font-extrabold text-[#0E1116] text-sm">
+              CX
+            </div>
+            <span className="font-display font-bold text-lg text-white">
+              Car<span className="text-[#C8F52E]">X</span>
+            </span>
+          </div>
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 text-[#9AA7B8] hover:text-white rounded-lg focus:outline-none"
+            title="Abrir menu"
+          >
+            <Menu size={22} />
+          </button>
+        </header>
+
+        {/* Scrollable Main Canvas */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8 lg:px-10 lg:py-8 custom-scrollbar relative print:overflow-visible print:h-auto print:p-0">
+          <div className="max-w-[1400px] mx-auto w-full print:max-w-full print:m-0">
             {children}
           </div>
         </div>
@@ -290,9 +352,29 @@ function App() {
             <ReloadPrompt />
             <React.Suspense fallback={<PageLoading />}>
               <Routes>
+              {/* Páginas Públicas Institucionais da Landing Page */}
+              <Route path="/landing" element={<LandingPage />} />
+              <Route path="/precos" element={<LandingPage />} />
+              <Route path="/recursos" element={<LandingPage />} />
+              <Route path="/para/:segment" element={<LandingPage />} />
+              <Route path="/termos" element={<TermsOfService />} />
+              <Route path="/privacidade" element={<PrivacyPolicy />} />
+
+              {/* Onboarding Self-Service Guiado por Segmento (T5.3) */}
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/comecar-gratis" element={<OnboardingPage />} />
+              <Route path="/cadastro" element={<OnboardingPage />} />
+
               <Route path="/login" element={<LoginPage />} />
               <Route path="/tv" element={<MonitorTV />} />
+              <Route path="/monitor-tv" element={<Navigate to="/tv" replace />} />
+              <Route path="/ordens-servico" element={<Navigate to="/ordens" replace />} />
               <Route path="/status/:id" element={<CustomerStatus />} />
+              <Route path="/proposta/:token" element={<PublicQuotePage />} />
+              <Route path="/orcamento/:token" element={<PublicQuotePage />} />
+              <Route path="/v/:token" element={<PublicPassportPage />} />
+              <Route path="/passaporte/:token" element={<PublicPassportPage />} />
+              <Route path="/garantia/:token" element={<PublicPassportPage />} />
               <Route path="/agendar" element={<SelfBooking />} />
               <Route path="/reserva" element={<SelfBooking />} />
               <Route path="/meu-veiculo" element={<ClientPortal />} />
@@ -300,17 +382,30 @@ function App() {
               <Route path="/nps/:osId" element={<PesquisaNPS />} />
               <Route path="/avaliar/:osId" element={<PesquisaNPS />} />
 
+              {/* Mini-Site Institucional da Oficina & Captação de Leads (T6.9) */}
+              <Route path="/loja/:slug" element={<MiniSiteOficina />} />
+              <Route path="/oficina/:slug" element={<MiniSiteOficina />} />
+              <Route path="/site/:slug" element={<MiniSiteOficina />} />
+              <Route path="/site" element={<MiniSiteOficina />} />
+
               {/* Rotas Administrativas */}
               <Route path="/" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/clientes" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Clientes /></AppLayout></ProtectedRoute>} />
               <Route path="/vendas" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Vendas /></AppLayout></ProtectedRoute>} />
               <Route path="/ordens" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR', 'OPERADOR']}><AppLayout><OrdensServico /></AppLayout></ProtectedRoute>} />
+              <Route path="/ordens/nova" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR', 'OPERADOR']}><AppLayout><NovaOrdemServico /></AppLayout></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Agenda /></AppLayout></ProtectedRoute>} />
               <Route path="/trabalhos" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Trabalhos /></AppLayout></ProtectedRoute>} />
               <Route path="/servicos" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Servicos /></AppLayout></ProtectedRoute>} />
               <Route path="/estoque" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Estoque /></AppLayout></ProtectedRoute>} />
               <Route path="/colaboradores" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Colaboradores /></AppLayout></ProtectedRoute>} />
               <Route path="/relatorios" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Relatorios /></AppLayout></ProtectedRoute>} />
+              <Route path="/corporate" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><CorporatePage /></AppLayout></ProtectedRoute>} />
+              <Route path="/redes" element={<Navigate to="/corporate" replace />} />
+              <Route path="/multiunidade" element={<Navigate to="/corporate" replace />} />
+              <Route path="/crm" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><CrmRetencaoPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/retencao" element={<Navigate to="/crm" replace />} />
+              <Route path="/pos-venda" element={<Navigate to="/crm" replace />} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/ajuda" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Ajuda /></AppLayout></ProtectedRoute>} />
 

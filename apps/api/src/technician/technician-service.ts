@@ -10,6 +10,9 @@ import type {
   StartWithChecklistInputDto,
   WorkOrderTimerDto,
   VehicleSizeClassType,
+  SingleOfflineActionDto,
+  BatchSyncResultDto,
+  SyncActionResultDto,
 } from '@carx/shared';
 
 export class TechnicianError extends Error {
@@ -642,6 +645,250 @@ export class TechnicianService {
        WHERE tenant_id = $1 AND technician_id = $2 AND status = 'running';`,
       [tenantId, technicianId]
     );
+  }
+
+  /**
+   * Sincroniza em lote ações capturadas offline pelo técnico no box automotivo (T6.13)
+   */
+  async syncOfflineActions(
+    tenantId: string,
+    technicianId: string,
+    actions: SingleOfflineActionDto[]
+  ): Promise<BatchSyncResultDto> {
+    const results: SyncActionResultDto[] = [];
+    let processedCount = 0;
+    let failedCount = 0;
+
+    for (const action of actions) {
+      try {
+        // 1. Idempotência estrita: verifica se esta ação específica já foi sincronizada
+        const existingLog = await tenantQuery<{ id: string }>(
+          tenantId,
+          'SELECT id FROM technician_offline_sync_logs WHERE tenant_id = $1 AND action_id = $2 LIMIT 1;',
+          [tenantId, action.id]
+        );
+
+        if (existingLog.rows.length > 0) {
+          results.push({
+            actionId: action.id,
+            success: true,
+            actionType: action.actionType,
+            data: { alreadyProcessed: true },
+          });
+          processedCount++;
+          continue;
+        }
+
+        // 2. Valida existência da OS no tenant
+        const woCheck = await tenantQuery<{ id: string; status: string }>(
+          tenantId,
+          'SELECT id, status FROM work_orders WHERE id = $1 AND tenant_id = $2 LIMIT 1;',
+          [action.workOrderId, tenantId]
+        );
+
+        if (woCheck.rows.length === 0) {
+          throw new TechnicianError('Ordem de serviço não encontrada nesta oficina.', 404);
+        }
+
+        // 3. Processamento do tipo de ação offline
+        let actionResultData: any = null;
+
+        switch (action.actionType) {
+          case 'START_TIMER': {
+            await this.pauseAllRunningTimersForTechnician(tenantId, technicianId);
+            const clientDate = new Date(action.clientTimestamp);
+            const timerInsert = await tenantQuery<any>(
+              tenantId,
+              `INSERT INTO work_order_timers (
+                tenant_id, work_order_id, service_item_id, technician_id,
+                status, started_at, notes
+              ) VALUES ($1, $2, $3, $4, 'running', $5, $6)
+              RETURNING *;`,
+              [
+                tenantId,
+                action.workOrderId,
+                action.payload?.serviceItemId || null,
+                technicianId,
+                clientDate,
+                action.payload?.notes || null,
+              ]
+            );
+
+            // Atualiza status da OS para IN_PROGRESS se ainda for QUOTE ou APPROVED
+            await tenantQuery(
+              tenantId,
+              `UPDATE work_orders 
+               SET status = 'IN_PROGRESS', technician_id = COALESCE(technician_id, $1), updated_at = NOW() 
+               WHERE id = $2 AND tenant_id = $3 AND status IN ('QUOTE', 'APPROVED');`,
+              [technicianId, action.workOrderId, tenantId]
+            );
+
+            actionResultData = { timerId: timerInsert.rows[0]?.id };
+            break;
+          }
+
+          case 'PAUSE_TIMER': {
+            const runningTimer = await tenantQuery<any>(
+              tenantId,
+              `SELECT * FROM work_order_timers 
+               WHERE tenant_id = $1 AND work_order_id = $2 AND technician_id = $3 AND status = 'running' 
+               ORDER BY created_at DESC LIMIT 1;`,
+              [tenantId, action.workOrderId, technicianId]
+            );
+
+            if (runningTimer.rows.length > 0) {
+              const timer = runningTimer.rows[0];
+              const pauseDate = new Date(action.clientTimestamp);
+              const startDate = new Date(timer.started_at);
+              const deltaSeconds = Math.max(0, Math.floor((pauseDate.getTime() - startDate.getTime()) / 1000));
+              const newAccumulated = Number(timer.accumulated_seconds || 0) + deltaSeconds;
+
+              await tenantQuery(
+                tenantId,
+                `UPDATE work_order_timers 
+                 SET status = 'paused', paused_at = $1, accumulated_seconds = $2, pause_reason = $3, updated_at = NOW()
+                 WHERE id = $4 AND tenant_id = $5;`,
+                [pauseDate, newAccumulated, action.payload?.reason || 'Pausa offline', timer.id, tenantId]
+              );
+              actionResultData = { timerId: timer.id, accumulatedSeconds: newAccumulated };
+            }
+            break;
+          }
+
+          case 'RESUME_TIMER': {
+            await this.pauseAllRunningTimersForTechnician(tenantId, technicianId);
+            const resumeDate = new Date(action.clientTimestamp);
+            const pausedTimer = await tenantQuery<any>(
+              tenantId,
+              `SELECT * FROM work_order_timers 
+               WHERE tenant_id = $1 AND work_order_id = $2 AND technician_id = $3 AND status = 'paused' 
+               ORDER BY created_at DESC LIMIT 1;`,
+              [tenantId, action.workOrderId, technicianId]
+            );
+
+            if (pausedTimer.rows.length > 0) {
+              const timer = pausedTimer.rows[0];
+              await tenantQuery(
+                tenantId,
+                `UPDATE work_order_timers 
+                 SET status = 'running', started_at = $1, paused_at = NULL, updated_at = NOW()
+                 WHERE id = $2 AND tenant_id = $3;`,
+                [resumeDate, timer.id, tenantId]
+              );
+              actionResultData = { timerId: timer.id, status: 'running' };
+            }
+            break;
+          }
+
+          case 'STOP_TIMER': {
+            const stopDate = new Date(action.clientTimestamp);
+            const activeTimer = await tenantQuery<any>(
+              tenantId,
+              `SELECT * FROM work_order_timers 
+               WHERE tenant_id = $1 AND work_order_id = $2 AND technician_id = $3 AND status IN ('running', 'paused') 
+               ORDER BY created_at DESC LIMIT 1;`,
+              [tenantId, action.workOrderId, technicianId]
+            );
+
+            if (activeTimer.rows.length > 0) {
+              const timer = activeTimer.rows[0];
+              let addSeconds = 0;
+              if (timer.status === 'running') {
+                const startDate = new Date(timer.started_at);
+                addSeconds = Math.max(0, Math.floor((stopDate.getTime() - startDate.getTime()) / 1000));
+              }
+              const totalSec = Number(timer.accumulated_seconds || 0) + addSeconds;
+
+              await tenantQuery(
+                tenantId,
+                `UPDATE work_order_timers 
+                 SET status = 'completed', stopped_at = $1, accumulated_seconds = $2, updated_at = NOW()
+                 WHERE id = $3 AND tenant_id = $4;`,
+                [stopDate, totalSec, timer.id, tenantId]
+              );
+              actionResultData = { timerId: timer.id, totalSeconds: totalSec };
+            }
+            break;
+          }
+
+          case 'UPDATE_PROGRESS': {
+            const progress = Math.min(100, Math.max(0, Number(action.payload?.progress || 0)));
+            await tenantQuery(
+              tenantId,
+              `UPDATE work_orders SET progress = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3;`,
+              [progress, action.workOrderId, tenantId]
+            );
+            actionResultData = { progress };
+            break;
+          }
+
+          case 'CHECKLIST_ITEM': {
+            actionResultData = {
+              itemKey: action.payload?.itemKey,
+              checked: action.payload?.checked,
+              notes: action.payload?.notes,
+            };
+            break;
+          }
+
+          case 'ADD_NOTE': {
+            const noteText = action.payload?.note || '';
+            if (noteText) {
+              await tenantQuery(
+                tenantId,
+                `UPDATE work_orders 
+                 SET notes = CONCAT(COALESCE(notes, ''), E'\n[Offline ' || $1 || ']: ' || $2), updated_at = NOW()
+                 WHERE id = $3 AND tenant_id = $4;`,
+                [action.clientTimestamp, noteText, action.workOrderId, tenantId]
+              );
+            }
+            actionResultData = { noteAdded: true };
+            break;
+          }
+        }
+
+        // 4. Grava o log de sincronização idempotente
+        await tenantQuery(
+          tenantId,
+          `INSERT INTO technician_offline_sync_logs (
+            tenant_id, technician_id, action_id, work_order_id, action_type, payload, client_timestamp, synced_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW());`,
+          [
+            tenantId,
+            technicianId,
+            action.id,
+            action.workOrderId,
+            action.actionType,
+            JSON.stringify(action.payload || {}),
+            new Date(action.clientTimestamp),
+          ]
+        );
+
+        results.push({
+          actionId: action.id,
+          success: true,
+          actionType: action.actionType,
+          data: actionResultData,
+        });
+        processedCount++;
+      } catch (err: any) {
+        failedCount++;
+        results.push({
+          actionId: action.id,
+          success: false,
+          actionType: action.actionType,
+          error: err.message || 'Falha ao processar ação offline.',
+        });
+      }
+    }
+
+    return {
+      total: actions.length,
+      processed: processedCount,
+      failed: failedCount,
+      results,
+      syncedAt: new Date().toISOString(),
+    };
   }
 
   /**

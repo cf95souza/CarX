@@ -16,7 +16,7 @@ import {
   FileText
 } from 'lucide-react';
 import { toast } from '../../utils/toast';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../services/api';
 
 const TemplatesMarketplace = () => {
   const [selectedCategory, setSelectedCategory] = useState('TODOS');
@@ -125,18 +125,19 @@ const TemplatesMarketplace = () => {
   const handleImportTemplate = async (tpl) => {
     setImportingId(tpl.id);
     try {
-      // 1. Tentar salvar na tabela 'servicos' do Supabase
       const novoServico = {
-        nome: tpl.titulo,
-        descricao: `${tpl.descricao} (Importado via Marketplace)`,
-        preco: tpl.preco_sugerido,
-        garantia_meses: tpl.garantia_meses,
-        categoria: tpl.categoria,
-        ativo: true
+        name: tpl.titulo,
+        description: `${tpl.descricao} (Importado via Marketplace)`,
+        priceCents: Math.round(Number(tpl.preco_sugerido || 0) * 100),
+        estimatedMinutes: 60,
+        category: tpl.categoria,
       };
 
-      const { error } = await supabase.from('servicos').insert([novoServico]);
-      if (error) console.warn('Falha remota ao salvar no Supabase, mantendo cache local:', error);
+      try {
+        await api.catalog.createService(novoServico);
+      } catch (err) {
+        console.warn('Falha remota ao salvar serviço via API:', err);
+      }
 
       // 2. Persistir na lista local de importados
       const novosImportados = [...importedIds, tpl.id];

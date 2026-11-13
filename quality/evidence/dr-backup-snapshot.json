@@ -1,0 +1,179 @@
+{
+  "metadata": {
+    "exportedAt": "2026-11-13T17:13:45.509Z",
+    "tenantId": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+    "drillSlug": "dr-drill-vault-1794590025403"
+  },
+  "data": {
+    "tenants": [
+      {
+        "id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "slug": "dr-drill-vault-1794590025403",
+        "trade_name": "Oficina DR Drill Test",
+        "legal_name": "DR Drill Automotiva LTDA",
+        "cnpj": null,
+        "email": "dr@carx.com.br",
+        "phone": "11999990000",
+        "status": "active",
+        "plan_id": null,
+        "custom_domain": null,
+        "settings": {},
+        "trial_ends_at": null,
+        "created_at": "2026-11-13T17:13:45.425Z",
+        "updated_at": "2026-11-13T17:13:45.425Z",
+        "segment": "mecanica",
+        "is_read_only": false,
+        "suspended_reason": null,
+        "last_dunning_stage": null,
+        "dunning_updated_at": null
+      }
+    ],
+    "units": [
+      {
+        "id": "a733fcd9-05fd-4541-8c9a-f44095f3f160",
+        "tenant_id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "name": "Unidade Matriz DR",
+        "slug": "matriz-dr",
+        "cnpj": null,
+        "phone": null,
+        "email": null,
+        "address_street": null,
+        "address_number": null,
+        "address_complement": null,
+        "address_neighborhood": null,
+        "address_city": null,
+        "address_state": null,
+        "address_postal_code": null,
+        "is_active": true,
+        "created_at": "2026-11-13T17:13:45.459Z",
+        "updated_at": "2026-11-13T17:13:45.459Z"
+      }
+    ],
+    "customers": [
+      {
+        "id": "5255f57f-1980-472d-96f9-bed514cbb03f",
+        "tenant_id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "name": "Roberto Cliente DR",
+        "document": "11122233344",
+        "document_type": "cpf",
+        "phone": "11988887777",
+        "phone_raw": null,
+        "email": "roberto@dr.com",
+        "address_street": null,
+        "address_number": null,
+        "address_complement": null,
+        "address_neighborhood": null,
+        "address_city": null,
+        "address_state": null,
+        "address_zip_code": null,
+        "notes": null,
+        "is_active": true,
+        "created_at": "2026-11-13T17:13:45.469Z",
+        "updated_at": "2026-11-13T17:13:45.469Z"
+      }
+    ],
+    "vehicles": [
+      {
+        "id": "5ced0cc4-f20c-4832-b0f8-11b5d91aab63",
+        "tenant_id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "customer_id": "5255f57f-1980-472d-96f9-bed514cbb03f",
+        "plate": "DRX9A99",
+        "plate_raw": null,
+        "brand": "Porsche",
+        "model": "Taycan Turbo S",
+        "year": 2025,
+        "color": "Cinza",
+        "size_class": "esportivo",
+        "vin": null,
+        "current_km": 0,
+        "notes": null,
+        "is_active": true,
+        "created_at": "2026-11-13T17:13:45.476Z",
+        "updated_at": "2026-11-13T17:13:45.476Z"
+      }
+    ],
+    "work_orders": [
+      {
+        "id": "b683725b-4c42-4abe-aba2-c14488908ea0",
+        "tenant_id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "customer_id": "5255f57f-1980-472d-96f9-bed514cbb03f",
+        "vehicle_id": "5ced0cc4-f20c-4832-b0f8-11b5d91aab63",
+        "technician_id": null,
+        "os_number": 1001,
+        "status": "completed",
+        "previous_status": null,
+        "progress": 0,
+        "total_cents": 1850000,
+        "discount_cents": 0,
+        "final_cents": 0,
+        "paid_cents": 0,
+        "estimated_minutes": 0,
+        "scheduled_at": null,
+        "checked_in_at": null,
+        "started_at": null,
+        "completed_at": null,
+        "delivered_at": null,
+        "canceled_at": null,
+        "cancel_reason": null,
+        "notes": null,
+        "customer_notes": null,
+        "tracking_token": "40889d84-5e87-444c-9fbc-21dd4e480720",
+        "created_at": "2026-11-13T17:13:45.483Z",
+        "updated_at": "2026-11-13T17:13:45.483Z",
+        "origin": "INTERNAL",
+        "is_rework": false,
+        "rework_reason": null,
+        "accepted_at": null,
+        "accepted_ip": null,
+        "accepted_user_agent": null,
+        "accepted_signature_name": null,
+        "deposit_required_cents": 0,
+        "deposit_pix_code": null,
+        "deposit_pix_qr_base64": null,
+        "deposit_paid_at": null,
+        "public_notes": null,
+        "pix_last_txid": null,
+        "unit_id": "a733fcd9-05fd-4541-8c9a-f44095f3f160"
+      }
+    ],
+    "financial_bills": [
+      {
+        "id": "6673361b-1d4e-44b1-927b-a01f26b41e21",
+        "tenant_id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "category_id": null,
+        "type": "receivable",
+        "description": "Faturamento PPF Taycan",
+        "supplier_customer_name": null,
+        "amount_cents": 1850000,
+        "due_date": "2026-11-13",
+        "paid_at": null,
+        "paid_amount_cents": null,
+        "status": "paid",
+        "payment_method": null,
+        "notes": null,
+        "work_order_id": "b683725b-4c42-4abe-aba2-c14488908ea0",
+        "created_by": null,
+        "created_at": "2026-11-13T17:13:45.493Z",
+        "updated_at": "2026-11-13T17:13:45.493Z"
+      }
+    ],
+    "crm_retention_rules": [
+      {
+        "id": "ba8d6b07-f27e-4750-a158-a4140ace35a4",
+        "tenant_id": "08e89375-69ed-4ff7-9ae5-881ced061cda",
+        "name": "Revisão PPF 6 Meses DR",
+        "service_category": "ppf",
+        "trigger_type": "warranty_revision",
+        "interval_days": 180,
+        "channel": "whatsapp",
+        "message_template": "Olá {cliente}",
+        "discount_type": "percentage",
+        "discount_value": 10,
+        "is_active": true,
+        "created_at": "2026-11-13T17:13:45.501Z",
+        "updated_at": "2026-11-13T17:13:45.501Z"
+      }
+    ]
+  },
+  "checksum": "143f5467f096f1f079e8398ed79e4387083e3cd91ec61e1ba2c4e7db165bc858"
+}

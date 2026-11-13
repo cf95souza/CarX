@@ -19,6 +19,75 @@ import type {
   PortalPhotoDto,
   PortalWarrantyDto,
   PortalAuthResponseDto,
+  TenantWhatsAppInstanceDto,
+  ConnectWhatsAppInputDto,
+  ConnectWhatsAppResponseDto,
+  SendWhatsAppMessageInputDto,
+  SendWhatsAppMessageResponseDto,
+  PlateLookupResultDto,
+  WorkOrderPixChargeResultDto,
+  WorkOrderPixStatusResultDto,
+  SendTransactionalWhatsAppResultDto,
+  WhatsAppTransactionalEventType,
+  MaterialRollDto,
+  CreateMaterialRollInputDto,
+  RegisterRollScrapInputDto,
+  MaterialRollDetailWithHistoryDto,
+  PublicVehiclePassportDto,
+  TransferVehiclePassportInputDto,
+  TransferVehiclePassportResultDto,
+  SmartScheduleOverviewResponseDto,
+  CalculateDurationInputDto,
+  CalculatedDurationResultDto,
+  GoogleReputationOverviewDto,
+  AnswerNpsSurveyResponseDto,
+  PublicMiniSiteResponseDto,
+  CreateMiniSiteLeadInputDto,
+  MiniSiteLeadDto,
+  MiniSitePortfolioItemDto,
+  CreateMiniSitePortfolioItemInputDto,
+  UpdateMiniSitePortfolioItemInputDto,
+  UpdateMiniSiteSettingsInputDto,
+  TenantFiscalSettingsDto,
+  UpdateFiscalSettingsInputDto,
+  FiscalInvoiceDto,
+  IssueWorkOrderNfseInputDto,
+  CancelNfseInputDto,
+  FinancialCategoryDto,
+  CreateFinancialCategoryInputDto,
+  FinancialBillType,
+  FinancialBillStatus,
+  FinancialBillDto,
+  CreateFinancialBillInputDto,
+  AdvancedDreReportDto,
+  CashFlowDayPointDto,
+  CashFlowProjectionDto,
+  BatchPayCommissionsInputDto,
+  BatchPayCommissionsResultDto,
+  UnitDto,
+  CreateUnitInputDto,
+  UpdateUnitInputDto,
+  CorporateDashboardOverviewDto,
+  CreateUnitTransferInputDto,
+  UnitTransferDto,
+  BatchSyncActionsInputDto,
+  BatchSyncResultDto,
+  AiAnalyzeDamageInputDto,
+  AiDamageDetectionResultDto,
+  AiVoiceChecklistInputDto,
+  AiVoiceChecklistResultDto,
+  ApplyAiSuggestionsInputDto,
+  ApplyAiSuggestionsResultDto,
+  AiAnalysisHistoryItemDto,
+  CrmRetentionOverviewDto,
+  WarrantyRevisionItemDto,
+  InactiveCustomerItemDto,
+  CrmRetentionRuleDto,
+  CreateCrmRetentionRuleInputDto,
+  TriggerRetentionContactInputDto,
+  TriggerRetentionContactResultDto,
+  ConvertRetentionContactInputDto,
+  RetentionContactItemDto,
 } from '@carx/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -355,6 +424,20 @@ export const api = {
     },
   },
 
+  // --- MEMBROS / COLABORADORES DA OFICINA ---
+  members: {
+    list: async () => fetchClient<any[]>('/tenant/members'),
+    create: async (data: { name: string; email: string; password?: string; role?: string }) =>
+      fetchClient<any>('/tenant/members', { method: 'POST', body: JSON.stringify(data) }),
+    update: async (id: string, data: any) =>
+      fetchClient<any>(`/tenant/members/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    resetPassword: async (id: string, newPassword: string) =>
+      fetchClient<any>(`/tenant/members/${id}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ newPassword }),
+      }),
+  },
+
   // --- ORDENS DE SERVIÇO ---
   workOrders: {
     list: async (params?: { status?: string; limit?: number; offset?: number; search?: string }) => {
@@ -398,6 +481,52 @@ export const api = {
     getPublicTracking: async (token: string) => {
       return fetchClient<any>(`/work-orders/tracking/${token}`);
     },
+
+    update: async (id: string, data: any) => {
+      return fetchClient<any>(`/work-orders/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+    },
+
+    delete: async (id: string) => {
+      return fetchClient<any>(`/work-orders/${id}`, {
+        method: 'DELETE',
+      });
+    },
+
+    createPixCharge: async (id: string, amountCents?: number) => {
+      return fetchClient<WorkOrderPixChargeResultDto>(`/work-orders/${id}/pix-charge`, {
+        method: 'POST',
+        body: JSON.stringify({ amountCents }),
+      });
+    },
+
+    getPixStatus: async (id: string, txid: string) => {
+      return fetchClient<WorkOrderPixStatusResultDto>(`/work-orders/${id}/pix-status/${txid}`);
+    },
+
+    confirmPixPayment: async (payload: { txid: string; amountCents?: number; payerName?: string }) => {
+      return fetchClient<WorkOrderPixStatusResultDto>('/webhooks/pix/confirm', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+
+    notifyWhatsApp: async (
+      id: string,
+      payload: {
+        eventType: WhatsAppTransactionalEventType;
+        customMessage?: string;
+        appointmentDate?: string;
+        appointmentTime?: string;
+      }
+    ) => {
+      return fetchClient<SendTransactionalWhatsAppResultDto>(`/work-orders/${id}/notify-whatsapp`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
   },
 
   // --- PAGAMENTOS & ADIANTAMENTOS (SINAL) ---
@@ -430,25 +559,96 @@ export const api = {
   },
 
   vehicles: {
-    list: async (customerId?: string) => {
-      const q = customerId ? `?customerId=${customerId}` : '';
-      return fetchClient<{ vehicles: any[] }>(`/vehicles${q}`);
+    list: async (customerId?: string, search?: string) => {
+      const q = new URLSearchParams();
+      if (customerId) q.append('customerId', customerId);
+      if (search) q.append('search', search);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<{ vehicles: any[]; total?: number }>(`/vehicles${qs}`);
     },
+    getById: async (id: string) => fetchClient<any>(`/vehicles/${id}`),
+    getByPlate: async (plate: string) => fetchClient<any>(`/vehicles/by-plate/${encodeURIComponent(plate)}`),
+    lookupPlate: async (plate: string) =>
+      fetchClient<PlateLookupResultDto>(`/vehicles/lookup-plate/${encodeURIComponent(plate)}`),
     create: async (data: any) =>
       fetchClient<any>('/vehicles', { method: 'POST', body: JSON.stringify(data) }),
     update: async (id: string, data: any) =>
-      fetchClient<any>(`/vehicles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      fetchClient<any>(`/vehicles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: async (id: string) =>
+      fetchClient<any>(`/vehicles/${id}`, { method: 'DELETE' }),
   },
 
   // --- CATÁLOGO DE SERVIÇOS ---
   catalog: {
-    getServices: async () => fetchClient<{ services: any[] }>('/catalog/services'),
+    getServices: async () => fetchClient<any[]>('/catalog/services'),
     getPackages: async () => fetchClient<{ packages: any[] }>('/catalog/packages'),
+    createService: async (data: any) =>
+      fetchClient<any>('/catalog/services', { method: 'POST', body: JSON.stringify(data) }),
+    updateService: async (id: string, data: any) =>
+      fetchClient<any>(`/catalog/services/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteService: async (id: string) =>
+      fetchClient<any>(`/catalog/services/${id}`, { method: 'DELETE' }),
+  },
+
+  // --- MATERIAIS / ESTOQUE ---
+  materials: {
+    list: async (params?: { search?: string; category?: string; isRoll?: boolean; page?: number; limit?: number }) => {
+      const q = new URLSearchParams();
+      if (params?.search) q.append('search', params.search);
+      if (params?.category) q.append('category', params.category);
+      if (params?.isRoll !== undefined) q.append('isRoll', String(params.isRoll));
+      if (params?.page) q.append('page', String(params.page));
+      if (params?.limit) q.append('limit', String(params.limit));
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<{ materials: any[]; total: number }>(`/materials${qs}`);
+    },
+    getById: async (id: string) => fetchClient<any>(`/materials/${id}`),
+    create: async (data: any) =>
+      fetchClient<any>('/materials', { method: 'POST', body: JSON.stringify(data) }),
+    update: async (id: string, data: any) =>
+      fetchClient<any>(`/materials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: async (id: string) =>
+      fetchClient<any>(`/materials/${id}`, { method: 'DELETE' }),
+    getLowStockAlerts: async () =>
+      fetchClient<any>('/materials/alerts/low-stock'),
+    createMovement: async (data: any) =>
+      fetchClient<any>('/materials/movements', { method: 'POST', body: JSON.stringify(data) }),
+    getMovements: async (materialId: string) =>
+      fetchClient<any[]>(`/materials/${materialId}/movements`),
+  },
+
+  // --- CONTROLE DE BOBINAS & ROLOS (PPF E PELÍCULAS - T6.5) ---
+  rolls: {
+    list: async (params?: { materialId?: string; status?: string; brand?: string; lotNumber?: string }) => {
+      const q = new URLSearchParams();
+      if (params?.materialId) q.append('materialId', params.materialId);
+      if (params?.status) q.append('status', params.status);
+      if (params?.brand) q.append('brand', params.brand);
+      if (params?.lotNumber) q.append('lotNumber', params.lotNumber);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<MaterialRollDto[]>(`/materials/rolls${qs}`);
+    },
+    getById: async (id: string) => fetchClient<MaterialRollDto>(`/materials/rolls/${id}`),
+    create: async (data: CreateMaterialRollInputDto) =>
+      fetchClient<MaterialRollDto>('/materials/rolls', { method: 'POST', body: JSON.stringify(data) }),
+    getHistory: async (id: string) =>
+      fetchClient<MaterialRollDetailWithHistoryDto>(`/materials/rolls/${id}/history`),
+    registerScrap: async (id: string, data: RegisterRollScrapInputDto) =>
+      fetchClient<MaterialRollDto>(`/materials/rolls/${id}/scrap`, { method: 'POST', body: JSON.stringify(data) }),
   },
 
   // --- AGENDA INTELIGENTE POR BOX ---
   appointments: {
     getBays: async () => fetchClient<any[]>('/bays'),
+    getSmartOverview: async (date?: string): Promise<SmartScheduleOverviewResponseDto> => {
+      const q = date ? `?date=${encodeURIComponent(date)}` : '';
+      return fetchClient<SmartScheduleOverviewResponseDto>(`/appointments/smart-overview${q}`);
+    },
+    calculateDuration: async (data: CalculateDurationInputDto): Promise<CalculatedDurationResultDto> =>
+      fetchClient<CalculatedDurationResultDto>('/appointments/calculate-duration', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     list: async (params?: { startDate?: string; endDate?: string; bayId?: string; status?: string }) => {
       const q = new URLSearchParams();
       if (params?.startDate) q.append('startDate', params.startDate);
@@ -464,6 +664,13 @@ export const api = {
     },
     create: async (data: any) =>
       fetchClient<any>('/appointments', { method: 'POST', body: JSON.stringify(data) }),
+    bookOnline: async (data: any, tenantSlug?: string) => {
+      const slug = tenantSlug || getStoredTenantSlug() || 'demo';
+      return fetchClient<any>(`/public/book/${slug}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
     updateStatus: async (id: string, status: string) =>
       fetchClient<any>(`/appointments/${id}/status`, {
         method: 'PATCH',
@@ -506,6 +713,11 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ reason }),
       }),
+    syncOfflineActions: async (data: BatchSyncActionsInputDto): Promise<BatchSyncResultDto> =>
+      fetchClient<BatchSyncResultDto>('/technician/sync', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // --- RELATÓRIOS & FINANCEIRO ---
@@ -516,6 +728,13 @@ export const api = {
       if (params?.endDate) q.append('endDate', params.endDate);
       const queryStr = q.toString() ? `?${q.toString()}` : '';
       return fetchClient<DreReportDto>(`/reports/dre${queryStr}`);
+    },
+    getAdvancedDre: async (params?: { startDate?: string; endDate?: string }): Promise<AdvancedDreReportDto> => {
+      const q = new URLSearchParams();
+      if (params?.startDate) q.append('startDate', params.startDate);
+      if (params?.endDate) q.append('endDate', params.endDate);
+      const queryStr = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<AdvancedDreReportDto>(`/reports/dre/advanced${queryStr}`);
     },
     getRanking: async (params?: { startDate?: string; endDate?: string }): Promise<TechnicianRankingItemDto[]> => {
       const q = new URLSearchParams();
@@ -562,15 +781,103 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data || {}),
       }),
+    batchPay: async (data: BatchPayCommissionsInputDto): Promise<BatchPayCommissionsResultDto> =>
+      fetchClient<BatchPayCommissionsResultDto>('/commissions/batch-pay', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     calculate: async (workOrderId: string): Promise<CommissionEntryDto[]> =>
       fetchClient<CommissionEntryDto[]>(`/commissions/calculate/${workOrderId}`, {
         method: 'POST',
       }),
   },
 
-  // --- NPS & PESQUISAS DE SATISFAÇÃO ---
+  // --- MÓDULO FINANCEIRO, CONTAS E FLUXO DE CAIXA (T6.11) ---
+  financial: {
+    listCategories: async (): Promise<FinancialCategoryDto[]> =>
+      fetchClient<FinancialCategoryDto[]>('/financial/categories'),
+    createCategory: async (data: CreateFinancialCategoryInputDto): Promise<FinancialCategoryDto> =>
+      fetchClient<FinancialCategoryDto>('/financial/categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listBills: async (filters?: {
+      type?: FinancialBillType;
+      status?: FinancialBillStatus;
+      categoryId?: string;
+      startDate?: string;
+      endDate?: string;
+      limit?: number;
+      offset?: number;
+    }): Promise<{
+      bills: FinancialBillDto[];
+      total: number;
+      summary: {
+        totalPendingPayableCents: number;
+        totalPendingReceivableCents: number;
+        totalPaidCents: number;
+        totalOverdueCents: number;
+      };
+    }> => {
+      const q = new URLSearchParams();
+      if (filters?.type) q.append('type', filters.type);
+      if (filters?.status) q.append('status', filters.status);
+      if (filters?.categoryId) q.append('categoryId', filters.categoryId);
+      if (filters?.startDate) q.append('startDate', filters.startDate);
+      if (filters?.endDate) q.append('endDate', filters.endDate);
+      if (filters?.limit) q.append('limit', String(filters.limit));
+      if (filters?.offset) q.append('offset', String(filters.offset));
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<any>(`/financial/bills${qs}`);
+    },
+    createBill: async (data: CreateFinancialBillInputDto): Promise<FinancialBillDto> =>
+      fetchClient<FinancialBillDto>('/financial/bills', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    payBill: async (
+      id: string,
+      data?: { paidAmountCents?: number; paymentMethod?: string }
+    ): Promise<FinancialBillDto> =>
+      fetchClient<FinancialBillDto>(`/financial/bills/${id}/pay`, {
+        method: 'PATCH',
+        body: JSON.stringify(data || {}),
+      }),
+    deleteBill: async (id: string): Promise<{ success: boolean }> =>
+      fetchClient<{ success: boolean }>(`/financial/bills/${id}`, {
+        method: 'DELETE',
+      }),
+    getCashFlowProjection: async (days?: number): Promise<CashFlowProjectionDto> => {
+      const q = days ? `?days=${days}` : '';
+      return fetchClient<CashFlowProjectionDto>(`/financial/cashflow/projection${q}`);
+    },
+  },
+
+  // --- NPS & PESQUISAS DE SATISFAÇÃO & MOTOR DE REPUTAÇÃO NO GOOGLE (T6.8) ---
   nps: {
     getMetrics: async (): Promise<NpsMetricsDto> => fetchClient<NpsMetricsDto>('/nps/metrics'),
+    getReputationOverview: async (): Promise<GoogleReputationOverviewDto> =>
+      fetchClient<GoogleReputationOverviewDto>('/nps/reputation-overview'),
+    updateGoogleReviewUrl: async (url: string): Promise<{ success: boolean; googleReviewUrl: string }> =>
+      fetchClient<{ success: boolean; googleReviewUrl: string }>('/nps/google-review-url', {
+        method: 'PUT',
+        body: JSON.stringify({ googleReviewUrl: url }),
+      }),
+    sendGoogleInvite: async (surveyId: string): Promise<{ success: boolean; mode: string; whatsappUrl?: string; messageText: string }> =>
+      fetchClient<any>(`/nps/surveys/${surveyId}/send-google-invite`, {
+        method: 'POST',
+      }),
+    getSurveyByToken: async (token: string): Promise<any> =>
+      fetchClient<any>(`/public/nps/${token}`),
+    answerSurvey: async (token: string, data: { score: number; comment?: string; googleReviewClicked?: boolean }): Promise<AnswerNpsSurveyResponseDto> =>
+      fetchClient<AnswerNpsSurveyResponseDto>(`/public/nps/${token}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    recordGoogleClick: async (token: string): Promise<{ success: boolean }> =>
+      fetchClient<{ success: boolean }>(`/public/nps/${token}/google-click`, {
+        method: 'POST',
+      }),
     listSurveys: async (params?: { classification?: string; status?: string }): Promise<any[]> => {
       const q = new URLSearchParams();
       if (params?.classification) q.append('classification', params.classification);
@@ -654,6 +961,12 @@ export const api = {
     },
     getFileUrl: async (fileId: string) =>
       fetchClient<{ downloadUrl: string }>(`/storage/files/${fileId}/url`),
+    listFiles: async (category?: string) => {
+      const q = category ? `?category=${encodeURIComponent(category)}` : '';
+      return fetchClient<any[]>(`/storage/files${q}`);
+    },
+    deleteFile: async (fileId: string) =>
+      fetchClient<any>(`/storage/files/${fileId}`, { method: 'DELETE' }),
   },
 
   // --- CONTROLE DE QUALIDADE (QA) & GARANTIAS ---
@@ -674,11 +987,27 @@ export const api = {
     getWarranties: async (workOrderId: string) =>
       fetchClient<{ warranties: any[] }>(`/work-orders/${workOrderId}/warranties`),
     verifyPassport: async (token: string) =>
-      fetchClient<any>(`/public/passports/${token}`),
+      fetchClient<PublicVehiclePassportDto>(`/public/passports/${token}`),
+    transferPassport: async (token: string, data: TransferVehiclePassportInputDto) =>
+      fetchClient<TransferVehiclePassportResultDto>(`/public/passports/${token}/transfer`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     getWarrantyPdfUrl: (warrantyId: string) => {
       const token = getStoredToken();
       return `${API_BASE_URL}/warranties/${warrantyId}/pdf${token ? `?token=${encodeURIComponent(token)}` : ''}`;
     },
+  },
+
+  // --- PASSAPORTE DIGITAL DO VEÍCULO (T6.6) ---
+  passports: {
+    getByToken: async (token: string) =>
+      fetchClient<PublicVehiclePassportDto>(`/public/passports/${token}`),
+    transfer: async (token: string, data: TransferVehiclePassportInputDto) =>
+      fetchClient<TransferVehiclePassportResultDto>(`/public/passports/${token}/transfer`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // --- TEMPO REAL SSE ---
@@ -691,7 +1020,12 @@ export const api = {
 
   // --- BRANDING & IDENTIDADE VISUAL ---
   branding: {
-    get: async () => fetchClient<any>('/tenant/branding'),
+    get: async (slug?: string) => {
+      const q = slug ? `?slug=${encodeURIComponent(slug)}` : '';
+      return fetchClient<any>(`/tenant/branding${q}`);
+    },
+    update: async (data: any) =>
+      fetchClient<any>('/tenant/branding', { method: 'PUT', body: JSON.stringify(data) }),
   },
 
   // --- PORTAL DO CLIENTE ("MEU VEÍCULO") ---
@@ -744,6 +1078,255 @@ export const api = {
     logout: () => {
       clearStoredPortalAuth();
     },
+  },
+
+  // Gateway de WhatsApp Desacoplado da Loja (Padrão OperaBeauty)
+  whatsapp: {
+    getInstance: async () => fetchClient<TenantWhatsAppInstanceDto>('/tenant/whatsapp/instance'),
+    connect: async (data: ConnectWhatsAppInputDto) =>
+      fetchClient<ConnectWhatsAppResponseDto>('/tenant/whatsapp/connect', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    disconnect: async () =>
+      fetchClient<TenantWhatsAppInstanceDto>('/tenant/whatsapp/disconnect', {
+        method: 'POST',
+      }),
+    sendTestMessage: async (data: SendWhatsAppMessageInputDto) =>
+      fetchClient<SendWhatsAppMessageResponseDto>('/tenant/whatsapp/send-test', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // Onboarding Self-Service Guiado por Segmento (T5.3)
+  onboarding: {
+    selfRegister: async (data: {
+      trade_name: string;
+      owner_name: string;
+      owner_email: string;
+      owner_password: string;
+      phone?: string;
+      cnpj?: string;
+      slug?: string;
+      segment?: string;
+      plan_slug?: string;
+      website?: string;
+    }) => {
+      const res = await fetch(`${API_BASE_URL}/public/onboarding`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return handleResponse<{
+        success: boolean;
+        message: string;
+        tokens: { accessToken: string; refreshToken: string; expiresInSeconds: number };
+        tenant: { id: string; slug: string; trade_name: string; segment: string; status: string; trial_ends_at: string };
+        user: { id: string; name: string; email: string; role: string };
+        injectedCatalog: { servicesCount: number; checklistTemplatesCount: number; sampleServices: string[] };
+        firstStepsChecklist: Array<{ id: string; title: string; description: string; completed: boolean; actionUrl: string }>;
+      }>(res);
+    },
+    getStatus: async () =>
+      fetchClient<{
+        is_completed: boolean;
+        progress_percent: number;
+        steps: Array<{ id: string; title: string; description: string; completed: boolean; actionUrl: string }>;
+        segment: string;
+        trial_ends_at: string | null;
+        days_remaining: number;
+      }>('/tenant/onboarding/status'),
+    complete: async () =>
+      fetchClient<{ success: boolean; message: string; is_completed: boolean }>('/tenant/onboarding/complete', {
+        method: 'POST',
+      }),
+    markStep: async (stepId: string) =>
+      fetchClient<{ success: boolean; stepId: string; completed: boolean }>('/tenant/onboarding/step', {
+        method: 'POST',
+        body: JSON.stringify({ stepId }),
+      }),
+  },
+
+  // --- MINI-SITE INSTITUCIONAL DA OFICINA, PORTFÓLIO E LEADS (T6.9) ---
+  minisite: {
+    // Público
+    getPublicData: async (slug: string): Promise<PublicMiniSiteResponseDto> =>
+      fetchClient<PublicMiniSiteResponseDto>(`/public/tenant/${slug}/site`),
+    createLead: async (slug: string, data: CreateMiniSiteLeadInputDto): Promise<MiniSiteLeadDto> =>
+      fetchClient<MiniSiteLeadDto>(`/public/tenant/${slug}/leads`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    // Gestor Autenticado
+    listPortfolio: async (): Promise<MiniSitePortfolioItemDto[]> =>
+      fetchClient<MiniSitePortfolioItemDto[]>('/minisite/portfolio'),
+    createPortfolioItem: async (data: CreateMiniSitePortfolioItemInputDto): Promise<MiniSitePortfolioItemDto> =>
+      fetchClient<MiniSitePortfolioItemDto>('/minisite/portfolio', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updatePortfolioItem: async (id: string, data: UpdateMiniSitePortfolioItemInputDto): Promise<MiniSitePortfolioItemDto> =>
+      fetchClient<MiniSitePortfolioItemDto>(`/minisite/portfolio/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    deletePortfolioItem: async (id: string): Promise<{ success: boolean }> =>
+      fetchClient<{ success: boolean }>(`/minisite/portfolio/${id}`, {
+        method: 'DELETE',
+      }),
+    listLeads: async (status?: string): Promise<MiniSiteLeadDto[]> => {
+      const q = status ? `?status=${encodeURIComponent(status)}` : '';
+      return fetchClient<MiniSiteLeadDto[]>(`/minisite/leads${q}`);
+    },
+    updateLeadStatus: async (id: string, status: 'new' | 'contacted' | 'converted' | 'discarded'): Promise<{ success: boolean }> =>
+      fetchClient<{ success: boolean }>(`/minisite/leads/${id}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    updateSettings: async (data: UpdateMiniSiteSettingsInputDto): Promise<{ success: boolean }> =>
+      fetchClient<{ success: boolean }>('/minisite/settings', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+  },
+
+  // --- MÓDULO FISCAL: EMISSÃO AUTOMÁTICA DE NFS-E (T6.10) ---
+  fiscal: {
+    getSettings: async (): Promise<TenantFiscalSettingsDto> =>
+      fetchClient<TenantFiscalSettingsDto>('/fiscal/settings'),
+    updateSettings: async (data: UpdateFiscalSettingsInputDto): Promise<TenantFiscalSettingsDto> =>
+      fetchClient<TenantFiscalSettingsDto>('/fiscal/settings', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    getInvoiceByWorkOrder: async (workOrderId: string): Promise<FiscalInvoiceDto | null> => {
+      try {
+        return await fetchClient<FiscalInvoiceDto>(`/work-orders/${workOrderId}/fiscal-invoice`);
+      } catch (err: any) {
+        if (err.statusCode === 404) return null;
+        throw err;
+      }
+    },
+    issueNfse: async (workOrderId: string, data?: IssueWorkOrderNfseInputDto): Promise<FiscalInvoiceDto> =>
+      fetchClient<FiscalInvoiceDto>(`/work-orders/${workOrderId}/issue-nfse`, {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+      }),
+    listInvoices: async (filters?: { status?: string; limit?: number; offset?: number }): Promise<{ invoices: FiscalInvoiceDto[]; total: number }> => {
+      const params = new URLSearchParams();
+      if (filters?.status) params.set('status', filters.status);
+      if (filters?.limit) params.set('limit', String(filters.limit));
+      if (filters?.offset) params.set('offset', String(filters.offset));
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      return fetchClient<{ invoices: FiscalInvoiceDto[]; total: number }>(`/fiscal/invoices${qs}`);
+    },
+    cancelNfse: async (invoiceId: string, reason: string): Promise<FiscalInvoiceDto> =>
+      fetchClient<FiscalInvoiceDto>(`/fiscal/invoices/${invoiceId}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+  },
+
+  // --- PAINEL CORPORATIVO DE REDES E FRANQUIAS MULTIUNIDADE (T6.12) ---
+  corporate: {
+    getOverview: async (filters?: {
+      startDate?: string;
+      endDate?: string;
+    }): Promise<CorporateDashboardOverviewDto> => {
+      const params = new URLSearchParams();
+      if (filters?.startDate) params.set('startDate', filters.startDate);
+      if (filters?.endDate) params.set('endDate', filters.endDate);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      return fetchClient<CorporateDashboardOverviewDto>(`/corporate/overview${qs}`);
+    },
+    listUnits: async (): Promise<UnitDto[]> =>
+      fetchClient<UnitDto[]>('/corporate/units'),
+    getUnitById: async (id: string): Promise<UnitDto> =>
+      fetchClient<UnitDto>(`/corporate/units/${id}`),
+    createUnit: async (data: CreateUnitInputDto): Promise<UnitDto> =>
+      fetchClient<UnitDto>('/corporate/units', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    updateUnit: async (id: string, data: UpdateUnitInputDto): Promise<UnitDto> =>
+      fetchClient<UnitDto>(`/corporate/units/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    transferInventory: async (
+      data: CreateUnitTransferInputDto
+    ): Promise<UnitTransferDto> =>
+      fetchClient<UnitTransferDto>('/corporate/transfers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    listTransfers: async (): Promise<UnitTransferDto[]> =>
+      fetchClient<UnitTransferDto[]>('/corporate/transfers'),
+  },
+
+  // --- INTELIGÊNCIA ARTIFICIAL: VISTORIA INTELIGENTE & SUGESTÃO DE ORÇAMENTO (T6.14) ---
+  ai: {
+    analyzeDamage: async (data: AiAnalyzeDamageInputDto): Promise<AiDamageDetectionResultDto> =>
+      fetchClient<AiDamageDetectionResultDto>('/ai/inspections/analyze-damage', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    extractVoiceChecklist: async (data: AiVoiceChecklistInputDto): Promise<AiVoiceChecklistResultDto> =>
+      fetchClient<AiVoiceChecklistResultDto>('/ai/inspections/extract-voice', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    applyToWorkOrder: async (data: ApplyAiSuggestionsInputDto): Promise<ApplyAiSuggestionsResultDto> =>
+      fetchClient<ApplyAiSuggestionsResultDto>('/ai/inspections/apply-to-work-order', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getHistory: async (workOrderId: string): Promise<{ history: AiAnalysisHistoryItemDto[] }> =>
+      fetchClient<{ history: AiAnalysisHistoryItemDto[] }>(`/ai/inspections/history/${workOrderId}`),
+  },
+
+  // --- CRM DE PÓS-VENDA, GARANTIAS PERIÓDICAS & RETENÇÃO ATIVA (T6.15) ---
+  crm: {
+    getOverview: async (): Promise<CrmRetentionOverviewDto> =>
+      fetchClient<CrmRetentionOverviewDto>('/crm/retention/overview'),
+    getWarrantyRevisions: async (): Promise<WarrantyRevisionItemDto[]> =>
+      fetchClient<WarrantyRevisionItemDto[]>('/crm/retention/warranty-revisions'),
+    getInactiveCustomers: async (params?: {
+      minDays?: number;
+      tier?: string;
+    }): Promise<InactiveCustomerItemDto[]> => {
+      const q = new URLSearchParams();
+      if (params?.minDays) q.set('minDays', String(params.minDays));
+      if (params?.tier) q.set('tier', params.tier);
+      const qs = q.toString() ? `?${q.toString()}` : '';
+      return fetchClient<InactiveCustomerItemDto[]>(`/crm/retention/inactive-customers${qs}`);
+    },
+    getRules: async (): Promise<CrmRetentionRuleDto[]> =>
+      fetchClient<CrmRetentionRuleDto[]>('/crm/retention/rules'),
+    createRule: async (data: CreateCrmRetentionRuleInputDto): Promise<CrmRetentionRuleDto> =>
+      fetchClient<CrmRetentionRuleDto>('/crm/retention/rules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    triggerContact: async (
+      data: TriggerRetentionContactInputDto
+    ): Promise<TriggerRetentionContactResultDto> =>
+      fetchClient<TriggerRetentionContactResultDto>('/crm/retention/trigger-contact', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getContacts: async (): Promise<RetentionContactItemDto[]> =>
+      fetchClient<RetentionContactItemDto[]>('/crm/retention/contacts'),
+    convertContact: async (
+      contactId: string,
+      data: ConvertRetentionContactInputDto
+    ): Promise<{ success: boolean; message: string }> =>
+      fetchClient<{ success: boolean; message: string }>(`/crm/retention/contacts/${contactId}/convert`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 };
 

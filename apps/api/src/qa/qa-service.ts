@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
-import { tenantQuery } from '../database/tenant-query.js';
+import { tenantQuery, tenantTransaction } from '../database/tenant-query.js';
 import { storageService } from '../storage/storage-service.js';
 import { auditService } from '../audit/audit-service.js';
 import {
@@ -11,9 +11,25 @@ import {
   WarrantyDto,
   WarrantyStatusEnum,
   PublicVehiclePassportDto,
+  VehiclePassportTimelineItemDto,
+  VehiclePassportTransferItemDto,
+  TransferVehiclePassportInputDto,
+  TransferVehiclePassportResultDto,
   WorkOrderStatus,
 } from '@carx/shared';
 import { StorageFileCategory } from '@carx/shared';
+
+function maskName(name: string): string {
+  if (!name) return 'Proprietário';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    const first = parts[0];
+    return first.length > 2 ? `${first.substring(0, 2)}***` : `${first}***`;
+  }
+  const first = parts[0];
+  const lastInitial = parts[parts.length - 1][0];
+  return `${first} ${lastInitial}***`;
+}
 
 export class QaError extends Error {
   statusCode: number;
@@ -237,13 +253,28 @@ export class QaService {
 
     const wo = woRes.rows[0];
 
-    // 2. Se foi vinculada uma bobina/rolo de estoque, busca o lote se não informado
+    // 2. Se foi vinculada uma bobina/rolo de estoque (ou se a OS usou bobina), vincula e busca lote
+    let rollId = input.materialRollId || null;
     let lotNumber = input.materialLotNumber || null;
-    if (input.materialRollId && !lotNumber) {
+
+    if (!rollId) {
+      const rollMatRes = await tenantQuery<{ material_roll_id: string }>(
+        tenantId,
+        `SELECT material_roll_id FROM work_order_materials 
+         WHERE tenant_id = $1 AND work_order_id = $2 AND material_roll_id IS NOT NULL 
+         LIMIT 1;`,
+        [tenantId, input.workOrderId]
+      );
+      if (rollMatRes.rows.length > 0 && rollMatRes.rows[0].material_roll_id) {
+        rollId = rollMatRes.rows[0].material_roll_id;
+      }
+    }
+
+    if (rollId && !lotNumber) {
       const rollRes = await tenantQuery<{ lot_number: string | null }>(
         tenantId,
         `SELECT lot_number FROM material_rolls WHERE tenant_id = $1 AND id = $2 LIMIT 1;`,
-        [tenantId, input.materialRollId]
+        [tenantId, rollId]
       );
       if (rollRes.rows.length > 0 && rollRes.rows[0].lot_number) {
         lotNumber = rollRes.rows[0].lot_number;
@@ -302,7 +333,7 @@ export class QaService {
         wo.vehicle_id,
         input.serviceId || null,
         input.serviceName,
-        input.materialRollId || null,
+        rollId,
         lotNumber,
         months,
         startsAt.toISOString(),
@@ -394,20 +425,23 @@ export class QaService {
 
   /**
    * Verificação Pública do Passaporte do Veículo (QR Code / URL pública `/v/:token`)
-   * CRITÉRIO DE ACEITE: Exibe autenticidade, validade e lote do material SEM expor dados pessoais (LGPD).
+   * CRITÉRIO DE ACEITE: Exibe autenticidade, validade, lote e timeline SEM expor dados sensíveis (LGPD).
    */
   async verifyPublicPassport(verificationToken: string): Promise<PublicVehiclePassportDto> {
-    // Consulta pública: bypassRls = true pois o token é global e a requisição é não autenticada
     const res = await tenantQuery<{
       id: string;
       tenant_id: string;
       status: string;
       service_name: string;
       material_lot_number: string | null;
+      material_roll_id: string | null;
       warranty_months: number;
       starts_at: string;
       expires_at: string;
       verification_token: string;
+      is_transferable: boolean;
+      transferred_at: string | null;
+      vehicle_id: string;
       vehicle_brand: string;
       vehicle_model: string;
       vehicle_plate: string;
@@ -415,6 +449,8 @@ export class QaService {
       vehicle_color: string | null;
       workshop_trade_name: string;
       workshop_phone: string | null;
+      material_roll_brand: string | null;
+      material_roll_code: string | null;
     }>(
       null,
       `SELECT
@@ -423,19 +459,27 @@ export class QaService {
          w.status,
          w.service_name,
          w.material_lot_number,
+         w.material_roll_id,
          w.warranty_months,
          w.starts_at,
          w.expires_at,
          w.verification_token,
+         COALESCE(w.is_transferable, true) as is_transferable,
+         w.transferred_at,
+         w.vehicle_id,
          v.brand as vehicle_brand,
          v.model as vehicle_model,
          v.plate as vehicle_plate,
          v.year as vehicle_year,
          v.color as vehicle_color,
-         COALESCE(t.trade_name, t.legal_name, 'Oficina CarX') as workshop_trade_name
+         COALESCE(t.trade_name, t.legal_name, 'Oficina CarX') as workshop_trade_name,
+         t.phone as workshop_phone,
+         r.brand as material_roll_brand,
+         r.code as material_roll_code
        FROM warranties w
        JOIN vehicles v ON v.id = w.vehicle_id
        JOIN tenants t ON t.id = w.tenant_id
+       LEFT JOIN material_rolls r ON r.id = w.material_roll_id
        WHERE w.verification_token = $1
        LIMIT 1;`,
       [verificationToken],
@@ -461,16 +505,132 @@ export class QaService {
       plateMasked = `${plateRaw.substring(0, 3)}-***${plateRaw.slice(-1)}`;
     }
 
+    // 2. Buscar transferências de custódia
+    const transfersRes = await tenantQuery<{
+      created_at: string;
+      previous_customer_name: string | null;
+      new_customer_name: string;
+      odometer_km: number | null;
+      reason: string | null;
+    }>(
+      null,
+      `SELECT created_at, previous_customer_name, new_customer_name, odometer_km, reason
+       FROM warranty_transfers
+       WHERE warranty_id = $1
+       ORDER BY created_at DESC;`,
+      [row.id],
+      { bypassRls: true }
+    );
+
+    const transfersHistory: VehiclePassportTransferItemDto[] = transfersRes.rows.map((t) => ({
+      transferredAt: new Date(t.created_at).toISOString(),
+      previousCustomerMasked: maskName(t.previous_customer_name || 'Proprietário Anterior'),
+      newCustomerMasked: maskName(t.new_customer_name),
+      odometerKm: t.odometer_km ? Number(t.odometer_km) : null,
+      reason: t.reason,
+    }));
+
+    // 3. Buscar linha do tempo (timeline) completa de serviços concluídos do veículo nesta oficina
+    const timelineRes = await tenantQuery<{
+      work_order_id: string;
+      os_number: number;
+      event_date: string;
+      service_title: string;
+      category: string | null;
+      notes: string | null;
+      workshop_name: string;
+      material_name: string | null;
+      lot_number: string | null;
+    }>(
+      null,
+      `SELECT
+         wo.id as work_order_id,
+         wo.os_number,
+         COALESCE(wo.delivered_at, wo.completed_at, wo.created_at) as event_date,
+         COALESCE(woi.name, 'Manutenção e Cuidados Automotivos') as service_title,
+         woi.category,
+         wo.public_notes as notes,
+         COALESCE(t.trade_name, 'Oficina Certificada') as workshop_name,
+         m.name as material_name,
+         r.lot_number as lot_number
+       FROM work_orders wo
+       JOIN tenants t ON t.id = wo.tenant_id
+       LEFT JOIN work_order_items woi ON woi.work_order_id = wo.id
+       LEFT JOIN work_order_materials wom ON wom.work_order_id = wo.id
+       LEFT JOIN materials m ON m.id = wom.material_id
+       LEFT JOIN material_rolls r ON r.id = wom.material_roll_id
+       WHERE wo.vehicle_id = $1 AND wo.status IN ('READY', 'DELIVERED')
+       ORDER BY event_date DESC;`,
+      [row.vehicle_id],
+      { bypassRls: true }
+    );
+
+    // Constrói a lista cronológica da timeline
+    const timeline: VehiclePassportTimelineItemDto[] = [];
+
+    // Adiciona o marco da emissão deste certificado
+    timeline.push({
+      date: new Date(row.starts_at).toISOString(),
+      type: 'warranty_issued',
+      title: `Emissão de Certificado de Garantia: ${row.service_name}`,
+      description: `Garantia de ${row.warranty_months} meses emitida com cobertura técnica antifraude.`,
+      category: 'garantia',
+      workshopName: row.workshop_trade_name,
+      materialUsed: row.material_roll_brand || row.service_name,
+      lotNumber: row.material_lot_number,
+    });
+
+    // Adiciona eventos das transferências na timeline
+    for (const t of transfersRes.rows) {
+      timeline.push({
+        date: new Date(t.created_at).toISOString(),
+        type: 'transfer',
+        title: 'Transferência de Titularidade na Revenda',
+        description: `Garantia transferida de ${maskName(t.previous_customer_name || 'Proprietário')} para ${maskName(t.new_customer_name)}.${t.odometer_km ? ` Hodômetro: ${t.odometer_km} km.` : ''}`,
+        category: 'custodia',
+        workshopName: row.workshop_trade_name,
+        odometerKm: t.odometer_km ? Number(t.odometer_km) : null,
+      });
+    }
+
+    // Adiciona serviços concluídos na timeline (desduplicados por OS)
+    const seenOs = new Set<string>();
+    for (const tl of timelineRes.rows) {
+      const key = `${tl.work_order_id}-${tl.service_title}`;
+      if (!seenOs.has(key)) {
+        seenOs.add(key);
+        timeline.push({
+          date: new Date(tl.event_date).toISOString(),
+          type: 'service',
+          title: tl.service_title,
+          description: tl.notes || undefined,
+          category: tl.category,
+          workshopName: tl.workshop_name,
+          osNumber: tl.os_number,
+          materialUsed: tl.material_name,
+          lotNumber: tl.lot_number,
+        });
+      }
+    }
+
+    // Ordena do mais recente para o mais antigo
+    timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
     return {
       verificationToken: row.verification_token,
       isValid,
       status: isExpired ? WarrantyStatusEnum.EXPIRED : (row.status as any),
       serviceName: row.service_name,
       materialLotNumber: row.material_lot_number,
+      materialRollBrand: row.material_roll_brand,
+      materialRollCode: row.material_roll_code,
       warrantyMonths: row.warranty_months,
       startsAt: new Date(row.starts_at).toISOString(),
       expiresAt: expiresAtDate.toISOString(),
       remainingDays,
+      isTransferable: row.is_transferable,
+      transferredAt: row.transferred_at ? new Date(row.transferred_at).toISOString() : null,
+      transferCount: transfersRes.rows.length,
       vehicle: {
         brand: row.vehicle_brand,
         model: row.vehicle_model,
@@ -478,12 +638,170 @@ export class QaService {
         year: row.vehicle_year,
         color: row.vehicle_color,
       },
+      vehicleBrand: row.vehicle_brand,
+      vehicleModel: row.vehicle_model,
+      vehiclePlateMasked: plateMasked,
       workshop: {
         tradeName: row.workshop_trade_name,
-        phone: null,
+        phone: row.workshop_phone || null,
         city: null,
       },
+      timeline,
+      transfersHistory,
     };
+  }
+
+  /**
+   * Transferência de Titularidade e Custódia da Garantia do Veículo na Revenda
+   * Argumento de venda direto na negociação de veículos protegidos com PPF/Vitrificação.
+   */
+  async transferWarrantyCustody(
+    verificationToken: string,
+    input: TransferVehiclePassportInputDto,
+    clientMeta?: { ip?: string; userAgent?: string }
+  ): Promise<TransferVehiclePassportResultDto> {
+    const res = await tenantQuery<{
+      id: string;
+      tenant_id: string;
+      vehicle_id: string;
+      customer_id: string;
+      status: string;
+      is_transferable: boolean;
+      work_order_id: string;
+      current_customer_name: string;
+      vehicle_plate: string;
+    }>(
+      null,
+      `SELECT
+         w.id,
+         w.tenant_id,
+         w.vehicle_id,
+         w.customer_id,
+         w.status,
+         COALESCE(w.is_transferable, true) as is_transferable,
+         w.work_order_id,
+         c.name as current_customer_name,
+         v.plate as vehicle_plate
+       FROM warranties w
+       JOIN customers c ON c.id = w.customer_id
+       JOIN vehicles v ON v.id = w.vehicle_id
+       WHERE w.verification_token = $1
+       LIMIT 1;`,
+      [verificationToken],
+      { bypassRls: true }
+    );
+
+    if (res.rows.length === 0) {
+      throw new QaError('Certificado de garantia não localizado para transferência.', 404, 'PASSPORT_NOT_FOUND');
+    }
+
+    const warranty = res.rows[0];
+
+    if (warranty.status !== 'active') {
+      throw new QaError(
+        `Esta garantia está com status "${warranty.status}" e não pode ser transferida.`,
+        400,
+        'WARRANTY_NOT_ACTIVE'
+      );
+    }
+
+    if (!warranty.is_transferable) {
+      throw new QaError(
+        'Este certificado de garantia foi configurado como intransferível.',
+        400,
+        'WARRANTY_NON_TRANSFERABLE'
+      );
+    }
+
+    const tenantId = warranty.tenant_id;
+    const cleanPhone = input.newCustomerPhone.replace(/\D/g, '');
+    const now = new Date();
+
+    return await tenantTransaction(tenantId, async (client) => {
+      // 2. Busca ou cria o novo cliente no tenant
+      let newCustomerId: string;
+
+      const custCheck = await client.query<{ id: string }>(
+        `SELECT id FROM customers
+         WHERE tenant_id = $1 AND (REGEXP_REPLACE(phone, '\\D', '', 'g') = $2 OR (email = $3 AND $3 IS NOT NULL))
+         LIMIT 1;`,
+        [tenantId, cleanPhone, input.newCustomerEmail || null]
+      );
+
+      if (custCheck.rows.length > 0) {
+        newCustomerId = custCheck.rows[0].id;
+      } else {
+        const createCustRes = await client.query<{ id: string }>(
+          `INSERT INTO customers (
+             tenant_id, name, phone, email, notes
+           ) VALUES ($1, $2, $3, $4, 'Cadastrado automaticamente via Transferência de Passaporte Digital')
+           RETURNING id;`,
+          [tenantId, input.newCustomerName.trim(), input.newCustomerPhone.trim(), input.newCustomerEmail || null]
+        );
+        newCustomerId = createCustRes.rows[0].id;
+      }
+
+      // 3. Atualiza o veículo com o novo proprietário
+      await client.query(
+        `UPDATE vehicles SET customer_id = $2, updated_at = NOW() WHERE tenant_id = $1 AND id = $3;`,
+        [tenantId, newCustomerId, warranty.vehicle_id]
+      );
+
+      // 4. Atualiza a garantia
+      await client.query(
+        `UPDATE warranties
+         SET customer_id = $2,
+             transferred_at = NOW(),
+             transferred_from_customer_id = $3,
+             updated_at = NOW()
+         WHERE tenant_id = $1 AND id = $4;`,
+        [tenantId, newCustomerId, warranty.customer_id, warranty.id]
+      );
+
+      // 5. Registra o histórico na tabela warranty_transfers
+      await client.query(
+        `INSERT INTO warranty_transfers (
+           tenant_id, warranty_id, vehicle_id, previous_customer_id, previous_customer_name,
+           new_customer_id, new_customer_name, new_customer_phone, new_customer_email,
+           odometer_km, reason, ip_address, user_agent
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);`,
+        [
+          tenantId,
+          warranty.id,
+          warranty.vehicle_id,
+          warranty.customer_id,
+          warranty.current_customer_name,
+          newCustomerId,
+          input.newCustomerName.trim(),
+          input.newCustomerPhone.trim(),
+          input.newCustomerEmail || null,
+          input.odometerKm || null,
+          input.reason || 'Venda e transferência de propriedade do veículo',
+          clientMeta?.ip || null,
+          clientMeta?.userAgent || null,
+        ]
+      );
+
+      // 6. Registra na timeline da OS
+      await client.query(
+        `INSERT INTO work_order_events (
+           tenant_id, work_order_id, event_type, from_status, to_status, notes
+         ) VALUES ($1, $2, 'WARRANTY_TRANSFERRED', 'DELIVERED', 'DELIVERED', $3);`,
+        [
+          tenantId,
+          warranty.work_order_id,
+          `Passaporte e garantia transferidos de "${warranty.current_customer_name}" para "${input.newCustomerName.trim()}".`,
+        ]
+      );
+
+      return {
+        success: true,
+        message: 'Garantia e custódia do veículo transferidas com sucesso para o novo proprietário.',
+        transferredAt: now.toISOString(),
+        newCustomerNameMasked: maskName(input.newCustomerName),
+        verificationToken,
+      };
+    });
   }
 
   /**

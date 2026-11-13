@@ -112,42 +112,42 @@ const ServicosView = () => {
   }
 
   return (
-    <div className="fade-in space-y-6 pb-20">
+    <div className="space-y-6 pb-20 font-sans text-[#0E1116]">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Catálogo de Serviços</h2>
-          <p className="text-sm text-slate-500 font-medium">Defina os serviços oferecidos e seus tempos de garantia.</p>
+          <h1 className="font-display text-3xl font-bold text-[#0E1116] tracking-tight">Catálogo de Serviços & Combos</h1>
+          <p className="text-sm text-[#5B6674] mt-0.5">Preços por porte de veículo, tempo estimado de aplicação e garantia certificada.</p>
         </div>
         <button 
           onClick={handleOpenAdd}
-          className="bg-primary text-white px-5 py-2.5 rounded-xl shadow-lg shadow-primary/20 flex items-center gap-2 hover:bg-emerald-600 transition-all font-black uppercase text-[10px] tracking-widest"
+          className="carx-btn-volt"
         >
           <Plus size={18} /> Novo Serviço
         </button>
       </div>
 
       <div className="relative w-full">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" />
         <input 
           type="text" 
-          placeholder="Buscar no catálogo..." 
-          className="w-full pl-12 pr-4 py-4 bg-white border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/30 transition-all text-sm font-bold shadow-sm"
+          placeholder="Buscar serviço por nome ou categoria..." 
+          className="w-full pl-11 pr-4 py-3 bg-white border border-[#E1E6EC] rounded-xl outline-none focus:border-[#0E1116] transition-all text-sm font-medium text-[#0E1116] placeholder:text-[#5B6674]"
           value={searchTerm}
           onChange={handleSearchChange}
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {filteredServices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((s) => (
-          <div key={s.id} className="bg-white p-8 flex flex-col justify-between border border-slate-100 rounded-[2rem] shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all duration-300 group">
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300">
-                  <Wrench size={28} />
+          <div key={s.id} className="carx-card p-6 flex flex-col justify-between hover:border-[#0E1116] transition-all duration-200">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#F3F5F7] flex items-center justify-center text-[#0E1116] border border-[#E1E6EC]">
+                  <Wrench size={22} />
                 </div>
                 <div>
-                  <h4 className="font-black text-slate-800 text-lg leading-tight uppercase tracking-tight">{s.nome}</h4>
-                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  <h4 className="font-display font-bold text-[#0E1116] text-base leading-tight">{s.nome}</h4>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary bg-primary/5 px-2 py-0.5 rounded-md">{s.categoria || 'Geral'}</span>
                     <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${
                       s.tipo_veiculo === 'MOTO' ? 'bg-orange-50 text-orange-600 border-orange-100' : 
@@ -646,9 +646,9 @@ const ServicosView = () => {
                 <button 
                   onClick={handleAddService}
                   disabled={isSaving}
-                  className="flex-1 bg-primary text-white py-5 rounded-[2rem] shadow-xl shadow-primary/20 uppercase tracking-[0.2em] font-black text-[10px] flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all active:scale-[0.98]"
+                  className="flex-1 bg-[#C8F52E] hover:bg-[#d6fb4f] text-[#0E1116] py-4 rounded-2xl shadow-xs font-extrabold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                 >
-                  {isSaving ? <Loader2 className="animate-spin" size={20} /> : <Plus size={20} />}
+                  {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
                   {editingService ? 'Atualizar Serviço' : 'Salvar no Catálogo'}
                 </button>
               </div>

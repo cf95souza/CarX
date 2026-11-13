@@ -9,6 +9,8 @@ import {
   UpdateMaterialInputSchema,
   CreateMaterialRollInputDto,
   CreateMaterialRollInputSchema,
+  RegisterRollScrapInputDto,
+  RegisterRollScrapInputSchema,
   CreateStockMovementInputDto,
   CreateStockMovementInputSchema,
   AllocateWorkOrderMaterialInputDto,
@@ -179,6 +181,37 @@ export async function stockRoutes(fastify: FastifyInstance) {
     }
   );
 
+  /**
+   * DELETE /materials/:id — Remove material do inventário
+   */
+  fastify.delete<{ Params: { id: string } }>(
+    '/materials/:id',
+    {
+      preHandler: [
+        authenticateBearer,
+        requireTenantContext,
+        requireRole(['owner', 'gestor', 'superadmin']),
+      ],
+    },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+      }
+
+      try {
+        const userId = (request.user as any)?.userId || (request.user as any)?.sub;
+        const res = await stockService.deleteMaterial(tenantId, request.params.id, userId);
+        return reply.code(200).send(res);
+      } catch (err: any) {
+        if (err instanceof StockValidationError || err instanceof StockNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
   // ============================================================================
   // BOBINAS / ROLOS DE PELÍCULA (PPF E INSULFILM)
   // ============================================================================
@@ -225,6 +258,81 @@ export async function stockRoutes(fastify: FastifyInstance) {
       } catch (err: any) {
         if (err instanceof StockNotFoundError) {
           return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * GET /materials/rolls/:id/history — Histórico de aplicações, rastreabilidade e margem real por metro
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/materials/rolls/:id/history',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+      }
+
+      try {
+        const history = await stockService.getRollDetailedHistory(tenantId, request.params.id);
+        return reply.code(200).send(history);
+      } catch (err: any) {
+        if (err instanceof StockNotFoundError || err instanceof StockValidationError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        if (err.statusCode === 403) {
+          return reply.code(403).send({ statusCode: 403, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /materials/rolls/:id/scrap — Registra retalho / perda de película da bobina
+   */
+  fastify.post<{ Params: { id: string }; Body: RegisterRollScrapInputDto }>(
+    '/materials/rolls/:id/scrap',
+    {
+      preHandler: [
+        authenticateBearer,
+        requireTenantContext,
+        requireRole(['owner', 'gestor', 'atendente', 'superadmin']),
+      ],
+    },
+    async (request, reply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+      }
+
+      const parseRes = RegisterRollScrapInputSchema.safeParse(request.body || {});
+      if (!parseRes.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          message: 'Dados de retalho/desperdício inválidos.',
+          errors: parseRes.error.errors,
+        });
+      }
+
+      try {
+        const userId = (request.user as any)?.userId || (request.user as any)?.sub;
+        const updated = await stockService.registerRollScrap(
+          tenantId,
+          request.params.id,
+          parseRes.data,
+          userId
+        );
+        return reply.code(200).send(updated);
+      } catch (err: any) {
+        if (err instanceof StockValidationError || err instanceof StockNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        if (err.statusCode === 403) {
+          return reply.code(403).send({ statusCode: 403, message: err.message });
         }
         throw err;
       }

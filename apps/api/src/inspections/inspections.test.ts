@@ -44,8 +44,8 @@ describe('T3.7 — Laudo de Inspeção Digital (VCR), Checklist e Fotos', () => 
     tenantAlphaSlug = `alpha-vcr-${timestamp}`;
     const resAlpha = await tenantQuery<{ id: string }>(
       null,
-      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment)
-       VALUES ('Alpha VCR Auto Detail', 'Alpha VCR LTDA', $1, $2, '12.345.678/0001-90', 'active', 'estetica')
+      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment, plan_id)
+       VALUES ('Alpha VCR Auto Detail', 'Alpha VCR LTDA', $1, $2, '12.345.678/0001-90', 'active', 'estetica', (SELECT id FROM plans WHERE slug = 'profissional' LIMIT 1))
        RETURNING id`,
       [`contato@${tenantAlphaSlug}.local`, tenantAlphaSlug],
       { bypassRls: true }
@@ -109,8 +109,8 @@ describe('T3.7 — Laudo de Inspeção Digital (VCR), Checklist e Fotos', () => 
     tenantBetaSlug = `beta-vcr-${timestamp}`;
     const resBeta = await tenantQuery<{ id: string }>(
       null,
-      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment)
-       VALUES ('Beta Oficina Concorrente', 'Beta LTDA', $1, $2, '98.765.432/0001-11', 'active', 'mecanica')
+      `INSERT INTO tenants (trade_name, legal_name, email, slug, cnpj, status, segment, plan_id)
+       VALUES ('Beta Oficina Concorrente', 'Beta LTDA', $1, $2, '98.765.432/0001-11', 'active', 'mecanica', (SELECT id FROM plans WHERE slug = 'profissional' LIMIT 1))
        RETURNING id`,
       [`contato@${tenantBetaSlug}.local`, tenantBetaSlug],
       { bypassRls: true }

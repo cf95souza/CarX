@@ -3,33 +3,21 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('ossystem_theme');
-    if (saved === 'dark' || saved === 'light') {
-      return saved;
-    }
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  const [theme, setTheme] = useState('light');
 
   const toggleTheme = () => {
-    setTheme((prevTheme) => {
-      const nextTheme = prevTheme === 'light' ? 'dark' : 'light';
-      localStorage.setItem('ossystem_theme', nextTheme);
-      return nextTheme;
-    });
+    // Mantém compatibilidade mas preserva o tema canônico do Rebrand
+    setTheme('light');
   };
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-  }, [theme]);
+    root.classList.remove('dark');
+    localStorage.setItem('ossystem_theme', 'light');
+  }, []);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
+    <ThemeContext.Provider value={{ theme: 'light', toggleTheme, isDark: false }}>
       {children}
     </ThemeContext.Provider>
   );

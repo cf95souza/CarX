@@ -223,6 +223,22 @@ export async function storageRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  /**
+   * GET /storage/files — Lista arquivos da oficina com URLs assinadas
+   */
+  fastify.get<{ Querystring: { category?: string } }>(
+    '/storage/files',
+    {
+      preHandler: [authenticateBearer, requireTenantContext],
+    },
+    async (request, reply) => {
+      const tenantId = request.tenantId!;
+      const category = request.query?.category;
+      const files = await storageService.listFiles(tenantId, category);
+      return reply.code(200).send(files);
+    }
+  );
 }
 
 export default storageRoutes;

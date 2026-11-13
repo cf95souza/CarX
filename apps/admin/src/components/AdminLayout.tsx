@@ -10,6 +10,8 @@ import {
   MessageSquareCode,
   Users2,
   ShieldCheck,
+  Layers,
+  Ticket,
   LogOut,
   Shield,
   Menu,
@@ -33,6 +35,8 @@ export function AdminLayout() {
     { label: 'Criar Oficina', to: '/tenants/new', icon: PlusCircle },
     { label: 'Contratos e Licenças', to: '/contracts', icon: FileSignature },
     { label: 'Faturas e Cobranças', to: '/invoices', icon: Receipt },
+    { label: 'Planos e Recursos', to: '/plans', icon: Layers },
+    { label: 'Cupons de Desconto', to: '/coupons', icon: Ticket },
     { label: 'Gerenciador WhatsApp', to: '/whatsapp', icon: MessageSquareCode },
     { label: 'Funil de Leads', to: '/leads', icon: Users2 },
     { label: 'Trilha de Auditoria', to: '/audit', icon: ShieldCheck },
@@ -99,7 +103,7 @@ export function AdminLayout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === '/'}
+                  end
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-btn text-xs font-medium transition-all ${

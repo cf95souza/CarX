@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Youtube, Palette, Type, Globe, CheckCircle2, AlertCircle, Image as ImageIcon, Zap, ShoppingBag } from 'lucide-react';
+import { Settings, Save, Youtube, Palette, Type, Globe, CheckCircle2, AlertCircle, Image as ImageIcon, Zap, ShoppingBag, MessageSquare, FileText } from 'lucide-react';
 import { useBrand } from '../contexts/BrandContext';
-import { supabase } from '../lib/supabase';
 import ApiWebhooksManager from '../components/features/ApiWebhooksManager';
 import TemplatesMarketplace from '../components/features/TemplatesMarketplace';
+import WhatsAppManager from '../components/features/WhatsAppManager';
+import { MiniSiteManager } from '../components/features/MiniSiteManager';
+import { FiscalSettingsManager } from '../components/features/FiscalSettingsManager';
 
 const SettingsPage = () => {
   const { updateConfig, ...brand } = useBrand();
-  const [activeTab, setActiveTab] = useState('GERAL'); // 'GERAL', 'API_WEBHOOKS', 'MARKETPLACE'
+  const [activeTab, setActiveTab] = useState('GERAL'); // 'GERAL', 'WHATSAPP', 'API_WEBHOOKS', 'MARKETPLACE'
   const [formData, setFormData] = useState({
     nome_loja: brand.name || '',
     logo_url: brand.logoUrl || '',
@@ -36,7 +38,7 @@ const SettingsPage = () => {
       setStatus({ type: 'success', message: 'Configurações salvas com sucesso! As mudanças foram aplicadas em tempo real.' });
     } catch (err) {
       console.error(err);
-      const errorMsg = err?.message || err?.details || 'Dica: Verifique se o RLS está desativado no Supabase.';
+      const errorMsg = err?.message || err?.details || 'Falha ao salvar configurações no servidor.';
       setStatus({ type: 'error', message: `Erro: ${errorMsg}` });
     } finally {
       setSaving(false);
@@ -44,18 +46,18 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className={`mx-auto space-y-6 fade-in pb-20 ${activeTab === 'GERAL' ? 'max-w-4xl' : 'max-w-6xl'}`}>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+    <div className={`mx-auto space-y-6 pb-20 font-sans text-[#0E1116] ${activeTab === 'GERAL' ? 'max-w-4xl' : 'max-w-6xl'}`}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#E1E6EC] pb-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight uppercase">Configurações & Integrações</h2>
-          <p className="text-slate-500 text-xs font-medium">Gerencie a identidade visual, APIs REST, webhooks e marketplace da sua loja.</p>
+          <h1 className="font-display text-3xl font-bold text-[#0E1116] tracking-tight">Configurações & Integrações</h1>
+          <p className="text-sm text-[#5B6674] mt-0.5">Identidade visual, parâmetros operacionais da loja, APIs REST, webhooks e marketplace.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl w-full">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActiveTab('GERAL')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'GERAL' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+            className={`h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'GERAL' ? 'bg-[#0E1116] text-white shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
             }`}
           >
             <Palette size={15} />
@@ -63,9 +65,39 @@ const SettingsPage = () => {
           </button>
 
           <button
+            onClick={() => setActiveTab('MINISITE')}
+            className={`h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'MINISITE' ? 'bg-[#0E1116] text-[#C8F52E] shadow-sm font-bold' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
+            }`}
+          >
+            <Globe size={15} />
+            <span>Mini-Site da Loja</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('FISCAL')}
+            className={`h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'FISCAL' ? 'bg-[#0E1116] text-[#C8F52E] shadow-sm font-bold' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
+            }`}
+          >
+            <FileText size={15} />
+            <span>Módulo Fiscal (NFS-e)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('WHATSAPP')}
+            className={`h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'WHATSAPP' ? 'bg-[#0E1116] text-white shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
+            }`}
+          >
+            <MessageSquare size={15} />
+            <span>WhatsApp da Loja</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('API_WEBHOOKS')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'API_WEBHOOKS' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+            className={`h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'API_WEBHOOKS' ? 'bg-[#0E1116] text-white shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
             }`}
           >
             <Zap size={15} />
@@ -74,8 +106,8 @@ const SettingsPage = () => {
 
           <button
             onClick={() => setActiveTab('MARKETPLACE')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-              activeTab === 'MARKETPLACE' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+            className={`h-10 px-4 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              activeTab === 'MARKETPLACE' ? 'bg-[#0E1116] text-white shadow-sm' : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
             }`}
           >
             <ShoppingBag size={15} />
@@ -93,6 +125,9 @@ const SettingsPage = () => {
         </div>
       )}
 
+      {activeTab === 'MINISITE' && <MiniSiteManager />}
+      {activeTab === 'FISCAL' && <FiscalSettingsManager />}
+      {activeTab === 'WHATSAPP' && <WhatsAppManager />}
       {activeTab === 'API_WEBHOOKS' && <ApiWebhooksManager />}
       {activeTab === 'MARKETPLACE' && <TemplatesMarketplace />}
 
@@ -265,9 +300,9 @@ const SettingsPage = () => {
            <button 
               type="submit"
               disabled={saving}
-              className="bg-primary text-white px-8 py-4 rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-all disabled:opacity-50"
+              className="carx-btn-volt disabled:opacity-50"
            >
-             {saving ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div> : <Save size={18} />}
+             {saving ? <div className="w-4 h-4 border-2 border-[#0E1116]/20 border-t-[#0E1116] rounded-full animate-spin"></div> : <Save size={18} />}
              Salvar Configurações
            </button>
         </div>

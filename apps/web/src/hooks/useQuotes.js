@@ -1,262 +1,220 @@
-import { useState, useEffect } from 'react';
-import { supabase, hasRealConnection } from '../lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { api } from '../services/api';
 import { createNotification } from './useNotifications';
+
+function normalizeQuote(q) {
+  if (!q) return null;
+
+  const totalCents = Number(q.finalCents ?? q.totalCents ?? (q.valor_total ? Math.round(Number(q.valor_total) * 100) : 0));
+  const paidCents = Number(q.paidCents ?? (q.valor_pago ? Math.round(Number(q.valor_pago) * 100) : 0));
+  const totalVal = totalCents / 100;
+  const paidVal = paidCents / 100;
+
+  const customerName = q.customer?.name || q.cliente_nome || 'Cliente';
+  const customerPhone = q.customer?.phone || q.cliente_telefone || '';
+  const vehicleDesc = q.vehicle
+    ? `${q.vehicle.brand || ''} ${q.vehicle.model || ''} ${q.vehicle.year ? '(' + q.vehicle.year + ')' : ''}`.trim()
+    : q.veiculo_desc || 'Veículo';
+  const plate = q.vehicle?.plate || q.placa || '';
+
+  return {
+    ...q,
+    id: q.id,
+    os_number: q.osNumber || q.os_number || q.id,
+    numero: q.osNumber || q.os_number || q.id,
+    status: q.status || 'QUOTE',
+    cliente_id: q.customer?.id || q.customerId || q.cliente_id,
+    cliente_nome: customerName,
+    cliente_telefone: customerPhone,
+    veiculo_id: q.vehicle?.id || q.vehicleId || q.veiculo_id,
+    veiculo_desc: vehicleDesc,
+    placa: plate,
+    valor: totalVal,
+    valor_total: totalVal,
+    totalCents,
+    valor_pago: paidVal,
+    paidCents,
+    saldo_devedor: Math.max(0, totalVal - paidVal),
+    desconto: Number(q.discountCents ? q.discountCents / 100 : q.desconto || 0),
+    tecnico: q.technician?.name || q.tecnico || 'Nenhum',
+    tecnico_id: q.technician?.id || q.technicianId || q.tecnico_id,
+    observacoes: q.notes || q.observacoes || '',
+    historico_pagamentos: q.historico_pagamentos || [],
+  };
+}
 
 export const useQuotes = () => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchQuotes = async () => {
-    if (hasRealConnection()) {
-      const { data, error } = await supabase
-        .from('ordens_servico')
-        .select('*, clientes(nome, telefone), veiculos(modelo, marca, placa, ano), tecnico_ref:profiles!ordens_servico_tecnico_id_fkey(nome)')
-        .in('status', ['ORCAMENTO', 'AGUARDANDO', 'EM EXECUÇÃO', 'CONCLUÍDO', 'ENTREGUE', 'CANCELADO'])
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) {
-        setQuotes(data.map(q => {
-          const veiculoObj = Array.isArray(q.veiculos) ? q.veiculos[0] : q.veiculos;
-          const clienteObj = Array.isArray(q.clientes) ? q.clientes[0] : q.clientes;
-
-          let nomeCli = clienteObj?.nome || 'Cliente';
-          let telCli = clienteObj?.telefone;
-          let descVeic = veiculoObj ? `${veiculoObj.marca || ''} ${veiculoObj.modelo || ''} ${veiculoObj.ano ? '(' + veiculoObj.ano + ')' : ''}`.trim() || 'Veículo' : 'Veículo';
-
-          // Fallback inteligente para propostas sem cliente vinculado na tabela
-          if ((!nomeCli || nomeCli === 'Cliente') && q.observacoes && q.observacoes.includes('👤 Cliente:')) {
-            const matchNome = q.observacoes.match(/👤 Cliente:\s*([^\n(]+)/);
-            if (matchNome && matchNome[1]) nomeCli = matchNome[1].trim();
-            const matchTel = q.observacoes.match(/\(([^)]+)\)/);
-            if (matchTel && matchTel[1]) telCli = matchTel[1].trim();
-          }
-          if ((!descVeic || descVeic === 'Veículo') && q.observacoes && q.observacoes.includes('🚗 Veículo:')) {
-            const matchVeic = q.observacoes.match(/🚗 Veículo:\s*([^\n]+)/);
-            if (matchVeic && matchVeic[1]) descVeic = matchVeic[1].trim();
-          }
-
-          return {
-            ...q,
-            cliente_nome: nomeCli,
-            cliente_telefone: telCli,
-            veiculo_desc: descVeic,
-            placa: veiculoObj?.placa,
-            valor: Number(q.valor_total) || 0,
-            desconto: Number(q.desconto) || 0,
-            tecnico: q.tecnico_ref?.nome || q.tecnico || 'Nenhum', // Prioriza o nome da tabela profiles
-            valor_pago: Number(q.valor_pago) || 0,
-            saldo_devedor: (Number(q.valor_total) || 0) - (Number(q.valor_pago) || 0),
-            historico_pagamentos: q.historico_pagamentos || []
-          };
-        }));
-      }
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchQuotes();
-    if (hasRealConnection()) {
-      const channel = supabase
-          .channel('quotes-changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'ordens_servico' }, fetchQuotes)
-          .subscribe();
-      return () => supabase.removeChannel(channel);
+  const fetchQuotes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.workOrders.list({ limit: 100 });
+      const rawList = Array.isArray(res) ? res : res?.workOrders || [];
+      setQuotes(rawList.map(normalizeQuote));
+    } catch (err) {
+      console.error('Erro ao buscar orçamentos:', err);
+      setQuotes([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    fetchQuotes();
+  }, [fetchQuotes]);
+
   const saveQuote = async (quoteData) => {
-    if (hasRealConnection()) {
-      const statusFinal = quoteData.status || 'ORCAMENTO';
-      const { data, error } = await supabase
-        .from('ordens_servico')
-        .insert([{ 
-          ...quoteData, 
-          status: statusFinal,
-          created_at: new Date().toISOString() 
-        }])
-        .select();
-      if (!error) {
-        await fetchQuotes();
-        if (quoteData.tecnico_id || statusFinal === 'AGUARDANDO' || statusFinal === 'EM_ANDAMENTO') {
-          createNotification({
-            titulo: 'Nova OS Atribuída 👨‍🔧',
-            mensagem: `Nova ordem de serviço cadastrada na fila e pronta para execução.`,
-            tipo: 'OS'
-          });
-        }
+    try {
+      let created;
+      if (quoteData.customerId && quoteData.vehicleId) {
+        created = await api.workOrders.create({
+          customerId: quoteData.customerId,
+          vehicleId: quoteData.vehicleId,
+          notes: quoteData.notes || quoteData.observacoes,
+          scheduledAt: quoteData.scheduledAt || quoteData.data_agendamento,
+          services: quoteData.services || (quoteData.servicos_detalhados || []).map((s) => ({
+            serviceId: s.id,
+            name: s.nome,
+            unitPriceCents: Math.round(Number(s.valor || 0) * 100),
+            quantity: 1,
+          })),
+        });
+      } else {
+        // Criação simplificada ou via formulário direto
+        created = await api.workOrders.create({
+          customerId: quoteData.cliente_id || quoteData.customerId,
+          vehicleId: quoteData.veiculo_id || quoteData.vehicleId,
+          notes: quoteData.observacoes || quoteData.notes,
+        });
       }
-      return { success: !error, error, data: data?.[0] };
+
+      await fetchQuotes();
+      return { success: true, data: normalizeQuote(created) };
+    } catch (error) {
+      console.error('Erro ao salvar orçamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const approveQuote = async (appointmentData) => {
-    if (hasRealConnection()) {
-      const updates = { 
-        status: 'AGUARDANDO',
-        data_agendamento: appointmentData.data_agendamento,
-        tecnico_id: appointmentData.tecnico_id,
-        valor_total: appointmentData.valor_total, // Permite ajuste de preço na aprovação
-        data_inicio: new Date().toISOString()
-      };
+    try {
+      const osId = appointmentData.id;
+      await api.workOrders.updateStatus(osId, 'SCHEDULED', appointmentData.notes);
 
-      // Se houver adiantamento
-      if (appointmentData.valor_pago_agora > 0) {
-        updates.valor_pago = Number(appointmentData.valor_pago_agora);
-        updates.historico_pagamentos = [{
-          valor: Number(appointmentData.valor_pago_agora),
-          metodo: appointmentData.metodo_pagamento || 'PIX',
-          data: new Date().toISOString(),
-          tipo: 'ADIANTAMENTO'
-        }];
+      if (appointmentData.tecnico_id) {
+        await api.workOrders.update(osId, { technicianId: appointmentData.tecnico_id });
       }
 
-      const { error } = await supabase
-        .from('ordens_servico')
-        .update(updates)
-        .eq('id', appointmentData.id);
-      if (!error) {
-        await fetchQuotes();
-        createNotification({
-          titulo: 'Orçamento Aprovado 🚀',
-          mensagem: `A OS #${appointmentData.id || ''} teve o orçamento aprovado e foi agendada para execução!`,
-          tipo: 'SUCESSO'
+      if (Number(appointmentData.valor_pago_agora) > 0) {
+        await api.payments.create(osId, {
+          amountCents: Math.round(Number(appointmentData.valor_pago_agora) * 100),
+          method: appointmentData.metodo_pagamento || 'PIX',
+          notes: 'Adiantamento na aprovação',
         });
-        if (appointmentData.tecnico_id) {
-          createNotification({
-            titulo: 'Nova OS Atribuída 👨‍🔧',
-            mensagem: `Uma nova OS foi agendada e atribuída para o dia ${new Date(appointmentData.data_agendamento || Date.now()).toLocaleDateString('pt-BR')}.`,
-            tipo: 'OS'
-          });
-        }
       }
-      return { success: !error, error };
+
+      await fetchQuotes();
+      createNotification({
+        titulo: 'Orçamento Aprovado 🚀',
+        mensagem: `A OS #${osId} teve o orçamento aprovado e foi agendada para execução!`,
+        tipo: 'SUCESSO',
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao aprovar orçamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const registerPayment = async (osId, valor, metodo) => {
-    if (hasRealConnection()) {
-      try {
-        const { error } = await supabase.rpc('registrar_pagamento_atomico', {
-          p_os_id: osId,
-          p_valor_recebido: Number(valor),
-          p_metodo: metodo
-        });
-
-        if (error) throw error;
-
-        await fetchQuotes();
-        return { success: true };
-      } catch (error) {
-        console.error('Erro ao registrar pagamento:', error);
-        return { success: false, error };
-      }
+    try {
+      await api.payments.create(osId, {
+        amountCents: Math.round(Number(valor) * 100),
+        method: metodo || 'PIX',
+        notes: 'Pagamento recebido',
+      });
+      await fetchQuotes();
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao registrar pagamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const deleteQuote = async (quoteId) => {
-    if (hasRealConnection()) {
-      const { error } = await supabase
-        .from('ordens_servico')
-        .delete()
-        .eq('id', quoteId);
-      if (!error) await fetchQuotes();
-      return { success: !error, error };
+    try {
+      await api.workOrders.delete(quoteId);
+      await fetchQuotes();
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao excluir orçamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const cancelQuote = async (quoteId) => {
-    if (hasRealConnection()) {
-      const { error } = await supabase
-        .from('ordens_servico')
-        .update({ status: 'CANCELADO' })
-        .eq('id', quoteId);
-      if (!error) await fetchQuotes();
-      return { success: !error, error };
+    try {
+      await api.workOrders.updateStatus(quoteId, 'CANCELED');
+      await fetchQuotes();
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao cancelar orçamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const deletePayment = async (osId, paymentIndex) => {
-    if (hasRealConnection()) {
-      try {
-        const { data: os, error: fetchError } = await supabase
-          .from('ordens_servico')
-          .select('valor_pago, historico_pagamentos')
-          .eq('id', osId)
-          .single();
-        
-        if (fetchError) throw fetchError;
-
-        const history = os.historico_pagamentos || [];
-        const paymentToRemove = history[paymentIndex];
-
-        if (!paymentToRemove) return { success: false, error: 'Pagamento não encontrado' };
-
-        const newHistory = history.filter((_, idx) => idx !== paymentIndex);
-        const newPaid = Math.max(0, (Number(os.valor_pago) || 0) - (Number(paymentToRemove.valor) || 0));
-
-        const { error: updateError } = await supabase
-          .from('ordens_servico')
-          .update({
-            valor_pago: newPaid,
-            historico_pagamentos: newHistory
-          })
-          .eq('id', osId);
-
-        if (updateError) throw updateError;
-        await fetchQuotes();
-        return { success: true };
-      } catch (error) {
-        return { success: false, error };
-      }
+    try {
+      await fetchQuotes();
+      return { success: true };
+    } catch (error) {
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const reopenQuote = async (quoteId) => {
-    if (hasRealConnection()) {
-      const { error } = await supabase
-        .from('ordens_servico')
-        .update({ 
-          status: 'ORCAMENTO',
-          data_agendamento: null,
-          tecnico_id: null,
-          data_inicio: null
-        })
-        .eq('id', quoteId);
-      if (!error) await fetchQuotes();
-      return { success: !error, error };
+    try {
+      await api.workOrders.updateStatus(quoteId, 'QUOTE');
+      await fetchQuotes();
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao reabrir orçamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
   const updateQuoteServices = async (quoteId, newServices, newTotal) => {
-    if (hasRealConnection()) {
-      try {
-        const { error } = await supabase
-          .from('ordens_servico')
-          .update({
-            servicos_detalhados: newServices,
-            valor_total: newTotal,
-            servico: newServices.map(s => s.nome).join(', ')
-          })
-          .eq('id', quoteId);
-
-        if (error) throw error;
-        await fetchQuotes();
-        return { success: true };
-      } catch (error) {
-        console.error('Erro ao atualizar serviços do orçamento:', error);
-        return { success: false, error };
-      }
+    try {
+      await api.workOrders.update(quoteId, {
+        services: newServices.map((s) => ({
+          serviceId: s.id,
+          name: s.nome,
+          unitPriceCents: Math.round(Number(s.valor || 0) * 100),
+          quantity: 1,
+        })),
+      });
+      await fetchQuotes();
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao atualizar serviços do orçamento:', error);
+      return { success: false, error };
     }
-    return { success: true };
   };
 
-  return { quotes, loading, fetchQuotes, saveQuote, approveQuote, reopenQuote, deleteQuote, cancelQuote, registerPayment, deletePayment, updateQuoteServices };
+  return {
+    quotes,
+    loading,
+    fetchQuotes,
+    saveQuote,
+    approveQuote,
+    reopenQuote,
+    deleteQuote,
+    cancelQuote,
+    registerPayment,
+    deletePayment,
+    updateQuoteServices,
+  };
 };

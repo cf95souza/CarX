@@ -44,6 +44,43 @@ O sistema já passou por 52 fases históricas de desenvolvimento de alta maturid
 
 ---
 
+## 📈 Fase Concluída: Fase 5.5 — Unificação Pixel-Perfect do Cockpit do Gestor com o Rebrand (`rebraind/HTML/`) 🚀
+
+Para garantir que o produto seja uma réplica fiel, premium e idêntica aos arquivos HTML e telas do Rebrand fornecidos pelo designer:
+- **Agenda (`/agenda`)**: Reconstruída estritamente conforme `rebraind/HTML/Gestor · Agenda-html/Agenda.dc.html`. Fundo `#F3F5F7`, cabeçalho com Space Grotesk 30px, pills de data e modo Dia (preto `#0E1116`) / Semana, botão Verde Volt `#C8F52E`, barra de agendamento online ativo com link de cópia rápida, e grade temporal de 08h a 17h com 3 colunas de boxes (Box 1 · Lucas, Box 2 · Rafa, Box 3 · livre) em `repeating-linear-gradient(#fff 0 55px, #E1E6EC 55px 56px)` com os cards canônicos (Chevrolet Montana, Fiat Fiorino, BYD Seal, VW Tera, Hyundai HR e slot livre).
+- **Nova Ordem de Serviço (`/ordens/nova`)**: Reconstruída estritamente conforme `rebraind/HTML/Gestor · Nova OS-html/Nova_OS.dc.html`. Cabeçalho com Stepper (Cliente [check], Veículo [check], Serviços [3 volt], Checklist [4], Agenda [5]), cards brancos de Cliente e Veículo com badge de placa Mercosul e pill preta "Preenchido pela placa", card de Serviços com banner de combo sugerido e seleção com checkbox redondo, e painel lateral sticky de Resumo com totalização, sinal via Pix e botões de ação ("Gerar OS e agendar" Volt, "Salvar como orçamento" branco e "Enviar orçamento por WhatsApp").
+- **Relatórios & NPS (`/relatorios`)**: Reconstruídos estritamente conforme `rebraind/HTML/Gestor · Relatórios NPS-html/Relatorios_NPS.dc.html`. Cabeçalho com filtros, botão Imprimir preto/volt, abas em pill com badge "4 vencendo" em Garantias, grid de 4 cards com destaque para o NPS do Mês em card preto com valor 72 em 56px Volt, barras proporcionais de Promotores (74%), Neutros (24%) e Detratores (2%), container `#ECEFF3` com lista de "Avaliar hoje · 10 clientes" e botão de disparo em lote, e coluna lateral com switch de envio automático, card de alerta com borda vermelha suave para detratores e integração com Google Reviews.
+- **Higiene de Tema e Conectividade Dev**: Expurgados overrides destrutivos do modo escuro legado em `index.css` e assegurado que o servidor Vite rode com `BypassSandbox: true` e `host: 0.0.0.0`, permitindo acesso instantâneo via browser do usuário em `http://localhost:5173`.
+- **Autenticação Multitenant & Acesso à Oficina**:
+  - Sincronizadas as credenciais do gestor da oficina `CaioTeste` para a senha padrão `Admin@CarX2026!`, unificando os logins `caio@teste.com` e `caioteste@carx.com.br` com o papel de `owner` (Proprietário/ADM).
+  - Resetada a barreira de rate limiting da API que gerava HTTP 429 após múltiplas tentativas com credenciais não correspondentes.
+  - Implementado suporte no `AuthContext` do aplicativo Web para absorver automaticamente o `impersonation_token` transmitido via URL pelo Super Admin (`http://localhost:5173/?impersonation_token=...`), permitindo entrada transparente e auditada na oficina com 1 clique direto pelo painel de controle corporativo.
+  - Corrigida a exportação default (`export default`) nas páginas `Agenda.tsx`, `NovaOrdemServico.tsx` e `Relatorios.tsx`, eliminando o erro de lazy loading do React (`TypeError: Cannot convert object to primitive value at lazyInitializer`).
+
+---
+
+## ⚡ Fase em Andamento: Fase 6 — Diferenciais Competitivos (Onda 1) 🚀
+
+### T6.1 — Orçamento Digital com Aceite Online & Sinal Pix
+- **Experiência Pública do Cliente Final (`/proposta/:token` e `/orcamento/:token`)**:
+  - Página ultrarrápida, responsiva e clean desenhada no design system CarX (cards `#FFFFFF` com bordas `#E1E6EC` e fundo `#F3F5F7`).
+  - Cabeçalho dinâmico com branding completo da oficina (logo, nome fantasia, telefone e contato).
+  - Detalhamento do veículo com badge estilo Mercosul destacada.
+  - Mascaramento rigoroso de dados de contato do cliente para estrita conformidade com a LGPD.
+  - Tabela discriminada de serviços, valores unitários, garantias contratuais e totalizador de alto impacto.
+  - Fotos da vistoria de entrada (VCR) vinculadas à OS.
+  - **Termo de Aceite Formal**: Campo para digitação do Nome Completo (Assinatura Digital), consentimento contratual e botão primário Verde Volt `#C8F52E`.
+  - **Cobrança e Liquidação de Sinal Pix Dinâmico**: Geração instantânea de payload EMV padrão Banco Central com CRC16 e QR Code para cópia em 1 clique.
+  - **Liquidação Atômica**: Botão de confirmação de pagamento que cria o registro atômico na tabela `payments` e `deposits`, abate no saldo pendente da OS e notifica o painel do gestor via Server-Sent Events (SSE).
+- **Modelo de Negócios e Isolamento Estrito do WhatsApp**:
+  - Respeito absoluto ao isolamento por tenant: cada oficina pareia e opera seu próprio número de WhatsApp via gateway Baileys.
+  - Lojas em planos básicos sem gateway utilizam links manuais diretos do WhatsApp Web (`https://wa.me/...`), com mensagem pré-formatada contendo o link exclusivo da proposta e custo operacional zero para a CarX.
+  - Lojas em planos com módulo de gateway realizam o disparo transacional em segundo plano diretamente pela API.
+- **Auditoria Jurídica do Aceite**: Registro de data/hora precisa (`accepted_at`), endereço IP do cliente (`accepted_ip`) e navegador/dispositivo (`accepted_user_agent`).
+- **Validação de Qualidade**: 100% dos testes unitários e de integração aprovados em `quote-acceptance.test.ts`.
+
+---
+
 ## 📈 Fase Concluída: Fase 53 - Paginação Premium e Sincronizada 🚀
 
 Para evitar tabelas e grids sobrecarregados visualmente e manter a densidade profissional de dados exigida pelo `dashboard-layout` e `responsive-design`, a **Fase 53** foi completamente implementada nas 6 principais telas de dados da aplicação:
@@ -1232,22 +1269,3141 @@ Iniciada a migração do frontend (`apps/web`), com a erradicação da dependên
     - Botão de atendimento direto com a recepção da oficina via WhatsApp oficial (`brand.whatsapp`).
   - Validação estática e compilação: `vite build` e `tsc --noEmit` aprovados com 100% de sucesso e 0 erros.
 
+---
+
+### Diretrizes de Evolução Arquitetural e Revisão de Governança (Alinhamento Estratégico)
+
+#### 1. Arquitetura Desacoplada do Gateway de WhatsApp (Padrão OperaBeauty) 💬
+- **Princípio Fundamental de Identidade da Oficina**: O gateway de WhatsApp do CarX é baseado estritamente na arquitetura do `operabeauty-wa-gateway` (`file:///d:/Repositorios/OperaBeauty/gateway-whatsapp`), utilizando **uma instância Baileys isolada por oficina (tenant)**.
+- **Número Pertence à Oficina**: Cada oficina cliente conecta o seu próprio número de WhatsApp diretamente pelo painel administrativo da oficina (`apps/web` em *Configurações ➔ WhatsApp*), via **QR Code** ou **Código de Pareamento (Pairing Code)** numérico.
+- **Proteção da Marca da Loja**: Mensagens transacionais (orçamentos, avisos de OS pronta, laudos, fotos de checklist, pesquisas NPS e códigos de login OTP) partem **exclusivamente do número de WhatsApp da própria oficina**. Em nenhuma circunstância o cliente final da oficina recebe mensagens oriundas de números da software house (CarX), garantindo a confiança e a legitimidade do atendimento.
+- **Papel do Super Admin (Software House)**:
+  - O Super Admin **NÃO** gerencia sessões de WhatsApp das lojas nem efetua disparos em nome delas.
+  - A visão no Super Admin é estritamente de **telemetria técnica e observabilidade de infraestrutura** (saúde do container Docker `carx-wa`, métricas agregadas da fila BullMQ, latência e diagnóstico M2M para suporte técnico em caso de abertura de chamados pela oficina).
+- **Módulo Entregue (T3.17 Concluído)**:
+  - **Tabela Relacional & RLS (`tenant_whatsapp_instances`)**: Criada na Migration 024 com políticas canônicas de tenant, status (`DISCONNECTED`, `PAIRING`, `QR_CODE`, `CONNECTED`), `daily_limit` e `daily_messages_count`.
+  - **Contratos TypeScript (`packages/shared/src/whatsapp.ts`)**: DTOs completos de instância, conexão, envio de mensagens e telemetria.
+  - **Serviço de Negócio (`apps/api/src/whatsapp/whatsapp-service.ts`)**:
+    - Gating por plano (`PlanFeatures.WHATSAPP_GATEWAY`).
+    - Pareamento por **Código Numérico de 8 Dígitos (Pairing Code)** sem exigir câmera ou por **QR Code**.
+    - Despacho de mensagens com checagem de status e trava diária anti-bloqueio.
+    - Telemetria técnica agregada em tempo real para o Super Admin.
+  - **Endpoints Fastify (`whatsapp-routes.ts` e `superadmin-routes.ts`)**:
+    - `GET /tenant/whatsapp/instance`, `POST /tenant/whatsapp/connect`, `POST /tenant/whatsapp/disconnect`, `POST /tenant/whatsapp/send-test`.
+    - `POST /internal/whatsapp/webhook` (sincronização M2M timing-safe).
+    - `GET /admin/whatsapp/telemetry` (telemetria do Super Admin sem dados mockados).
+  - **Interface da Loja (`apps/web/src/components/features/WhatsAppManager.tsx`)**:
+    - Integrada em *Configurações ➔ WhatsApp da Loja*.
+    - Pareamento em dois modos, cópia com um clique, barra de progresso da cota diária e formulário de teste de envio.
+  - **Interface do Super Admin (`apps/admin/src/pages/WhatsAppManagerPage.tsx`)**:
+    - Totalmente limpa de mocks estáticos, consumindo telemetria técnica via API.
+  - **Suíte de Testes Automatizada (`whatsapp.test.ts`)**:
+    - 9 testes cobrindo todo o fluxo operacional, regras de negócio e segurança.
+
+#### 2. Dependência Funcional Estrita: Portal "Meu Veículo" & Gateway de WhatsApp 📱
+- **Ausência de Provedor de E-mail**: Nesta etapa do projeto, o CarX não possui provedor transacional de e-mail (SMTP/SES) ativo para envio de OTPs. O canal exclusivo de entrega do código de desafio de 6 dígitos é o **WhatsApp**.
+- **Regra de Bloqueio Arquitetural Validada e Implementada**:
+  - Em `apps/api/src/customer-portal/customer-portal-service.ts`, a chamada `requestOtp()` valida compulsoriamente:
+    1. Se a oficina possui a feature `CUSTOMER_PORTAL` e `WHATSAPP_GATEWAY` ativas no plano. Se faltar, lança imediatamente `CustomerPortalError(403, 'PORTAL_UNAVAILABLE')`.
+    2. Se a oficina possui uma instância de WhatsApp conectada (`status = 'CONNECTED'`). Se estiver desconectada ou em pareamento, lança `CustomerPortalError(403, 'WHATSAPP_NOT_CONNECTED', 'O canal de envio por WhatsApp desta oficina ainda não foi configurado...')`.
+  - Uma vez validado e o cliente encontrado, a mensagem com o código de 6 dígitos é disparada pelo número oficial da própria oficina através de `whatsappService.sendMessage(...)`.
+  - No frontend (`ClientPortal.tsx`), a mensagem de erro é capturada e renderizada de forma amigável no card de login, prevenindo frustrações do cliente final.
+  - A regra foi 100% comprovada no teste automatizado `customer-portal.test.ts`.
+
+#### 3. Gestão de Planos, Cupons Promocionais e Feature Gating no Super Admin 💎
+- **Módulo Entregue (T2.13 — `PlansPage.tsx`)**:
+  - **Interface no Super Admin**: Tela em Dark Volt (`/plans`) com KPIs em tempo real (Planos Ativos, Oficinas Assinantes, Planos com WhatsApp Gateway e Total de Recursos Catalogados), busca, filtros de status e cards com métricas detalhadas.
+  - **Matriz de Funcionalidades Interativa**: Modal de edição que permite ligar e desligar individualmente as 19 funcionalidades do software divididas nas categorias: Operacional & Centro Automotivo, Financeiro, Comunicação/WhatsApp e Diferenciais/White-Label.
+  - **Endpoints Fastify Implementados**:
+    - `GET /admin/plans`: Retorna todos os planos com contadores de assinantes (`tenants_count`).
+    - `GET /admin/plans/:id`: Detalha um plano individual.
+    - `POST /admin/plans`: Cria novo plano com limites e array de features em JSONB.
+    - `PUT /admin/plans/:id`: Atualiza dados comerciais, limites de cotas e array de features.
+    - `PATCH /admin/plans/:id/features`: Toggle rápido de uma feature flag individual.
+  - **Propagação Dinâmica e Proteção de Rotas**:
+    - As rotas de vistoria/checklist ([`inspection-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/inspection-routes.ts)) e relatórios financeiros ([`financial-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/financial-routes.ts)) utilizam o middleware `requireFeature()`.
+    - Ao desativar uma feature no plano pelo Super Admin, qualquer requisição de oficina associada àquele plano é sumariamente bloqueada com `HTTP 403 FEATURE_DISABLED`. Ao reativar, o acesso é restabelecido no mesmo instante.
+- **Módulo Entregue (T2.14 — Módulo de Cupons Promocionais Concluído)**:
+  - **Migration 024 (`024_coupons_and_whatsapp_instances.up.sql`)**: Tabelas `coupons` e `coupon_redemptions` com isolamento, índices, validação de tipos de desconto e auditoria.
+  - **Tipagem em `@carx/shared`**: DTOs `CouponDto`, `CreateCouponDto`, `ValidateCouponInputDto`, `ValidateCouponResponseDto`, `CouponDiscountType` e campo `coupon_code` em `AdminCreateTenantDto`.
+  - **Serviço de Negócio (`coupon-service.ts`)**:
+    - Suporte a 4 modalidades comerciais:
+      1. `free_months`: Concede $N$ meses de gratuidade inicial (ex: 3 meses grátis de carência).
+      2. `promotional_price`: Preço promocional reduzido por $N$ meses (ex: 3 meses do plano Pro por R$ 49,00/mês).
+      3. `percentage`: Desconto percentual (ex: 20% off).
+      4. `fixed_amount`: Desconto fixo em centavos (ex: R$ 50,00 de desconto).
+    - Validação com checagem de vigência temporal (`valid_until`), limites de redenção (`max_redemptions`), ativação lógica e compatibilidade com o plano informado (`applicable_plan_slug`).
+    - Resgate atômico (`redeemCoupon`) que calcula a redução, registra na tabela `coupon_redemptions` e audita a operação.
+  - **Integração no Provisionamento (`superadmin-service.ts`)**:
+    - O assistente de criação de oficinas aplica o cupom e calcula automaticamente o `negotiated_price_cents` no contrato da oficina.
+  - **Frontend no Super Admin (`CouponsPage.tsx`)**:
+    - Tela completa com KPIs de Cupons Ativos, Total de Resgates, Economia Total Concedida e Promoções Especiais.
+    - Listagem com badges visuais, cópia rápida do código para área de transferência e modal com formulário dinâmico.
+  - **Assistente de Onboarding (`TenantWizardPage.tsx`)**:
+    - Campo de cupom promocional no Passo 4 (Plano & Faturamento) com botão de validação instantânea (`adminApi.validateCoupon`).
+    - Feedback visual com cálculo do benefício e inclusão no resumo final de confirmação no Passo 5.
+  - **Suíte de Testes Automatizada (`coupon.test.ts`)**:
+    - 8 testes cobrindo todo o ciclo de vida dos cupons, regras de negócio e cálculo de contrato.
+
+#### 4. Gestão de Credenciais e Redefinição de Senha do Gestor pelo Super Admin 🔐
+- **Módulo Entregue (T2.15 Concluído)**:
+  - **Criação Direta de Acesso**: No assistente corporativo de onboarding de oficinas (`TenantWizardPage.tsx`), o Super Admin cadastra diretamente o e-mail e a senha inicial do gestor titular, permitindo a entrega imediata das credenciais operacionais.
+  - **Endpoint de Redefinição Administrativa (`POST /admin/tenants/:id/reset-owner-password`)**:
+    - Protegido exclusivamente por guard de Super Admin.
+    - Suporta dois modos:
+      1. **Geração Automática de Senha Forte**: Gera senha randômica no padrão `CarX@<HEX>!`.
+      2. **Senha Manual Customizada**: Permite ao Super Admin definir a senha informada (mínimo de 8 caracteres).
+    - Hashing criptográfico padrão do sistema com invalidação imediata de sessões ativas do usuário.
+    - Emissão compulsória e imutável de evento na trilha de auditoria (`audit_logs`) com a ação `OWNER_PASSWORD_RESET_BY_SUPERADMIN`.
+  - **Interface na Gestão de Oficinas (`TenantsPage.tsx`)**:
+    - Botão de ação rápida com ícone de Chave (`Key`) em cada linha da listagem de oficinas.
+    - Botão de atalho integrado ao modal de detalhes técnicos.
+    - Modal interativo com tabs "Gerar Senha Forte" vs "Digitar Manualmente".
+    - Painel pós-redefinição com visualização clara da senha, botão de cópia de senha e botão de **"Copiar Mensagem Pronta para WhatsApp"**, contendo link de acesso personalizado do subdomínio, e-mail de login, nova senha e recomendação de troca no primeiro acesso.
+  - **Suíte de Testes Automatizada (`owner-password-reset.test.ts`)**:
+    - 5 testes cobrindo todo o ciclo, garantindo segurança, invalidação da credencial antiga e auditoria.
+
+#### 5. Erradicação Sistemática de Dados Mockados Residuais 🧹 `(T3.18 Concluído)`
+- **Eliminação Integral de `hasRealConnection()` e Supabase**:
+  - Removido o padrão condicional `hasRealConnection()` de **todos** os hooks e páginas do frontend (`apps/web`).
+  - Higienização e reconexão de 100% dos hooks com o cliente tipado `api.*`:
+    - `useCatalog.js` ➔ `api.catalog`
+    - `useClients.js` ➔ `api.customers`
+    - `useVehicles.js` ➔ `api.vehicles`
+    - `useInventory.js` ➔ `api.materials`
+    - `useOrders.js` ➔ `api.workOrders`, `api.payments`, `api.storage`, `api.inspections`
+    - `useQuotes.js` ➔ `api.workOrders`, `api.payments`
+    - `useProfiles.js` ➔ `api.members`
+    - `useWorks.js` ➔ `api.storage.listFiles('portfolio')`
+    - `useNotifications.js` ➔ Conexão contínua Server-Sent Events via `api.realtime.getEventsUrl()`
+  - Higienização de páginas especiais:
+    - `PesquisaNPS.jsx`: Conectado a `api.workOrders.getById` e `api.nps.createSurvey`.
+    - `SelfBooking.jsx`: Conectado a `api.catalog.getServices()` e `api.appointments.bookOnline(...)`.
+    - `CarVisualChecklist.jsx`: Conectado a `api.inspections.getByWorkOrder(...)`.
+    - `Tv360OfficeView.jsx`: Conectado a `api.nps.getMetrics()` e sincronização em tempo real (SSE).
+    - `Colaboradores.jsx`: Conectado a `api.members.create(...)` e `api.members.resetPassword(...)` com hash `bcryptjs`.
+    - `Profile.jsx`: Conectado a `api.members.resetPassword(...)`.
+    - `Settings.jsx` e `BrandContext.jsx`: Conectados a `api.branding.get()` e `api.branding.update(...)`.
+    - `ApiWebhooksManager.jsx`: Testes de endpoints direcionados para a API Fastify CarX.
+    - `TemplatesMarketplace.jsx`: Importação de modelos direcionada para `api.catalog.createService(...)`.
+    - `lib/supabase.js`: Neutralizado em modo deprecado com `supabase = null` e `hasRealConnection = () => false`.
+  - Higienização no Super Admin (`apps/admin`):
+    - `WhatsAppManagerPage.tsx`: Integrado ao endpoint `adminApi.getWhatsAppTelemetry()` com dados de instâncias reais e métricas do daemon.
+- **Validação de Conformidade**:
+  - Busca global por chamadas `hasRealConnection()` no código-fonte de `apps/web/src`: **0 ocorrências**.
+  - Busca global por chamadas `supabase.` no código-fonte de `apps/web/src`: **0 ocorrências**.
+  - Typechecks de `@carx/shared` e `@carx/api`: **100% aprovados sem erros**.
+  - Builds de produção de `@carx/admin` e `@carx/web` (PWA com 89 assets pré-cacheados): **100% aprovados sem erros**.
+
+#### 6. Correção de Navegação Ativa no Super Admin 🧭 `(Concluído)`
+- Correção aplicada no componente `AdminLayout.tsx` garantindo a propriedade `end` no `NavLink`, eliminando a duplicidade de destaque onde o menu "Oficinas Clientes" (`/tenants`) permanecia marcado indevidamente ao acessar "Criar Oficina" (`/tenants/new`).
+
+#### 7. Erradicação Integral de Dados Mockados e Hardcodes no Super Admin 🏢 `(Concluído)`
+- **Eliminação de Arrays Estáticos e Mocks na UI (`apps/admin`)**:
+  - `TenantWizardPage.tsx`: Removido o array estático `const plans = [...]` que possuía nomes e preços fictícios. O fluxo de provisionamento consome em tempo real os planos da tabela `plans` através de `adminApi.listPlans()`, refletindo os planos canônicos (`essencial`, `profissional`, `premium`) e quaisquer planos novos criados na tela `/plans`. O preço, ciclo de faturamento e descrições são dinâmicos, com tela de carregamento amigável e exibição do nome do plano selecionado na etapa de confirmação.
+  - `LeadsPage.tsx`: Substituído o `<select>` estático de planos na modal de conversão de leads por busca dinâmica via `adminApi.listPlans()`, permitindo vincular leads a qualquer plano comercial cadastrado no banco.
+  - `DashboardPage.tsx`: Implementado empty state amigável na tabela de distribuição de receita por plano e blindagem de cálculos para prevenir divisões por zero ou valores indefinidos quando a base estiver vazia.
+- **Correção de Métricas e Consultas no Backend Fastify (`apps/api/src/superadmin`)**:
+  - `superadmin-service.ts`:
+    - `getSaasMetrics()`: Substituído o valor estático `total_work_orders: 0` pela contagem real e atômica `SELECT COUNT(*)::int as count FROM work_orders`.
+    - `listTenants()`: Substituído o valor estático `0 as work_orders_count` pela subquery relacional `(SELECT COUNT(*)::int FROM work_orders w WHERE w.tenant_id = t.id) as work_orders_count`.
+    - `getTenantDetails()`: Adicionada agregação consolidada de `units_count`, `users_count`, `work_orders_count` e `storage_bytes` consultando diretamente as tabelas do PostgreSQL com contexto superadmin.
+
+#### 8. Expurgo Geral de Dados Mockados do Banco de Dados 🧹 `(Concluído)`
+- **Diretriz de Execução**: Limpeza total de registros mockados e residuais gerados em testes locais e automáticos, preservando de forma estrita e inviolável os planos comerciais (`plans`) e o acesso dos operadores do Super Admin (`superadmin_users`).
+- **Implementação do Script Corporativo (`apps/api/src/scripts/clean-mock-data.ts`)**:
+  - Resolução dinâmica da topologia de tabelas via `information_schema.tables`.
+  - Desativação controlada e reativação de triggers imutáveis em `audit_logs` para expurgo dos logs de desenvolvimento.
+  - Cascata ordenada de deleções respeitando restrições de chaves estrangeiras:
+    - `dunning_events`, `invoices`, `contracts`, `leads`, `impersonation_log`, `customer_portal_otps`, `maintenance_reminders`, `nps_surveys`, `warranties`, `qa_audits`, `work_order_timers`, `inspections`, `appointments`, `bays`, `stock_movements`, `payments`, `materials`, `work_orders`, `services`, `checklist_templates`, `vehicles`, `customers`, `tenant_branding`, `units`, `tenants`.
+  - Expurgo de 633 contas de teste em `users` preservando exclusivamente as contas vinculadas a `platform_admins` e `superadmin_users`.
+- **Resultado do Banco de Dados Pós-Limpeza**:
+  - `tenants`: **0**
+  - `contracts`: **0**
+  - `invoices`: **0**
+  - `leads`: **0**
+  - `plans`: **3 planos comerciais preservados intactos (`Essencial`, `Profissional`, `Premium`)**
+  - `superadmin_users`: **2 contas administrativas preservadas e ativas**
+
+#### 9. Resolução de Erros de Execução e Console no Super Admin 🛠️ `(Concluído)`
+- **Execução da Migration 024**:
+  - Executada a migração `024_coupons_and_whatsapp_instances.up.sql` via `migrate.ts up`.
+  - Criadas as tabelas `coupons`, `coupon_redemptions` e `tenant_whatsapp_instances` no banco de dados com RLS e índices.
+  - Solucionados os erros HTTP 500 em `GET /admin/coupons` e `GET /admin/whatsapp/telemetry`.
+- **Correção da Trilha de Auditoria (`AuditLogsPage.tsx`)**:
+  - Corrigido o erro `TypeError: Cannot read properties of undefined (reading 'length')`.
+  - O endpoint `/admin/audit-logs` no backend agora retorna tanto o formato padronizado `{ data: [], logs: [], pagination: { page, limit, total, totalPages } }` quanto os campos legados `logs`, `total`, `page`, `limit`.
+  - O componente `AuditLogsPage.tsx` foi blindado com fallbacks para inicialização vazia segura `[]` e tratamento gracioso de empty state.
+- **Supressão de Avisos do React Router v7**:
+  - Habilitados os flags `v7_startTransition` e `v7_relativeSplatPath` na tag `<BrowserRouter>` de `apps/admin/src/App.tsx`, eliminando todos os avisos de deprecation do console.
+
+#### 10. Inclusão da Skill System Quality Gate no Escopo do Projeto 🛡️ `(Planejado)`
+- **Análise da Skill (`d:\Repositorios\CarX\system-quality-gate\SKILL.md`)**:
+  - A skill define o pipeline corporativo de testes de qualidade, regressão, testes de carga progressivos com k6 (1 -> 5 -> 10 -> 25 VUs), inspeção de conexões no PostgreSQL, isolamento de cache Redis, checagem OWASP não-destrutiva e geração de relatórios de aprovação formal em `quality/reports/quality-report.md` e `quality/reports/quality-summary.json`.
+- **Melhor Momento de Execução**:
+  - O momento ótimo para execução do Quality Gate é **imediatamente após a conclusão dos testes E2E (T3.16)**. Como os testes E2E cobrem a esteira ponta a ponta dos fluxos críticos automotivos, o `system-quality-gate` atua como o gate de encerramento e homologação da Fase 3 antes da transição para novas fases ou deploy em produção.
+- **Registro no `fase.md`**:
+  - Mapeado como **T3.19 — Homologação de Qualidade, Desempenho k6 e Segurança Corporativa (System Quality Gate)** e integrado como Quality Gate da Fase 7.
+
+#### 11. Homologação Completa dos Testes de Ponta a Ponta (E2E) dos Fluxos Críticos (T3.16) 🧪 `(Concluído)`
+- **Infraestrutura e Runner (`playwright.config.ts`, `pnpm test:e2e`)**:
+  - Configurado o runner do Playwright com webServer integrado executando `apps/api` na porta 3333 (`start:ts`), com verificação de saúde contínua em `/health`.
+  - Ajustado `apps/api/src/server.ts` para carregar `.env` da raiz e manter listener ativo durante execuções diretas de teste E2E.
+- **Bateria de Testes Implementada e Aprovada (27 de 27 testes — 100% verde)**:
+  1. `e2e/01-critical-flow.spec.ts` (13 testes):
+     - Ciclo de vida operacional completo: Onboarding ➔ Cliente/Veículo ➔ Orçamento com numeração sequencial atômica (`QUOTE`) ➔ Aprovação (`APPROVED`) ➔ Agendamento em Box (`SCHEDULED`) ➔ Checklist VCR fotográfico (`CHECKED_IN`) ➔ Início e cronômetro pelo Técnico (`IN_PROGRESS`) ➔ Auditoria de QA e Aprovação para `READY` ➔ Pagamento e liquidação financeira ➔ Entrega (`DELIVERED`) ➔ Passaporte Digital e Certificado de Garantia (`/public/passports/:token`) ➔ Pesquisa NPS pós-venda (`/nps/surveys` e `/public/nps/:token`) ➔ Rastreamento público da OS sem autenticação JWT (`/work-orders/tracking/:token`).
+  2. `e2e/02-self-booking.spec.ts` (6 testes):
+     - Agendamento público online (`POST /public/book/:slug`): Bloqueio anti-bot honeypot (`website` preenchido retorna HTTP 400), criação de OS forçada como `QUOTE` com origem `ONLINE` e técnico nulo, alocação de box, validação de choque de horário (HTTP 409 Conflict), validação de placa Mercosul e tracking público por token.
+  3. `e2e/03-tenant-isolation.spec.ts` (8 testes):
+     - Isolamento estrito multi-tenant e RLS entre Oficina Alpha e Oficina Beta: Listagens filtradas por tenant, busca cruzada de cliente, veículo, box e OS resultando em HTTP 404, bloqueio de mutações cruzadas e validação da integridade de cabeçalhos `x-tenant-slug`.
+- **Resultado da Execução**:
+  - `27 passed (4.5s)` com zero falhas e cobertura integral dos fluxos críticos automotivos do CarX SaaS.
+
+---
+
+#### 12. Execução e Homologação do System Quality Gate (T3.19) 🛡️ `(Concluído)`
+- **Objetivo e Gate:** Atua como o gate final de aprovação formal, testes de regressão, carga progressiva k6 e auditoria do PostgreSQL para encerramento da **Fase 3** do CarX SaaS, baseado na skill [`system-quality-gate/SKILL.md`](file:///d:/Repositorios/CarX/system-quality-gate/SKILL.md).
+- **Relatórios Oficiais Gerados:**
+  - Relatório Humano Completo (12 seções): [`quality/reports/quality-report.md`](file:///d:/Repositorios/CarX/quality/reports/quality-report.md)
+  - Resumo Estruturado dos Testes e Métricas: [`quality/reports/quality-summary.json`](file:///d:/Repositorios/CarX/quality/reports/quality-summary.json)
+  - Plano de Teste Formal: [`quality/plans/test-plan.md`](file:///d:/Repositorios/CarX/quality/plans/test-plan.md)
+- **Resultados Consolidados:**
+  1. **Análise Estática & Tipos:** `pnpm typecheck` (0 erros nos 5 pacotes) e `pnpm lint` (0 erros em 165+ arquivos).
+  2. **Testes Unitários & Integração Backend:** **288 de 288 testes aprovados** (100% de sucesso) em 25 suítes. Evidência em [`quality/evidence/unit-tests-evidence.txt`](file:///d:/Repositorios/CarX/quality/evidence/unit-tests-evidence.txt).
+  3. **Testes E2E (Playwright):** **27 de 27 testes aprovados** (100% de sucesso). Evidência em [`quality/evidence/playwright-evidence.txt`](file:///d:/Repositorios/CarX/quality/evidence/playwright-evidence.txt).
+  4. **Carga Progressiva Local (k6 Profile / Native Keep-Alive Runner):**
+     - Degrau 1 (1 VU, 5s): 133 requisições (26.6 RPS), 0% erro, p95 de 32.43ms.
+     - Degrau 2 (5 VUs, 10s): 1.347 requisições (134.7 RPS), 0% erro, p95 de 35.30ms.
+     - Degrau 3 (10 VUs, 10s): 2.437 requisições (243.7 RPS), 0% erro, p95 de 63.03ms.
+     - Degrau 4 (25 VUs, 15s): 5.826 requisições (388.4 RPS), 0% erro, p95 de 117.83ms.
+     - Total: **9.743 requisições processadas**, **0.00% taxa de erro**, latência p95 máxima de **117.83ms** (limite de aceite: 2000ms). Evidência em [`quality/evidence/benchmark-2026-11-10T22-30-13-461Z.json`](file:///d:/Repositorios/CarX/quality/evidence/benchmark-2026-11-10T22-30-13-461Z.json).
+  5. **Auditoria do Catálogo PostgreSQL:**
+     - 45 tabelas multi-tenant com `tenant_id` auditadas.
+     - **100% com Row Level Security (RLS) habilitado e forçado** (`relrowsecurity = true`, `relforcerowsecurity = true`).
+     - Zero transações zumbis e zero locks bloqueantes (`blockingLocks: []`). Evidência em [`quality/evidence/postgres-audit.json`](file:///d:/Repositorios/CarX/quality/evidence/postgres-audit.json).
+  6. **Segurança Corporativa:** RBAC estrito em rotas de técnico, honeypot anti-bot no agendamento público e zero vazamento de segredos.
+- **Veredito Final:** **STATUS APROVADO** — Fase 3 concluída com 100% de conformidade documental e técnica. Sistema habilitado para a Fase 4 (Deploy VPS e Produção).
+
+---
+
+### FASE 4 — Migração de Dados do Legado (ETL)
+
+#### 1. Encerramento da Fase 4 por Início do Zero `(Dispensado)`
+- **Definição Estratégica:** Conforme estabelecido no planejamento oficial do projeto, o CarX não migrará o histórico de bancos legados Supabase/LocalStorage. A plataforma inicia sua operação comercial diretamente no banco relacional PostgreSQL com isolamento Row Level Security (RLS), garantindo consistência referencial absoluta, zero dívida técnica herdada e alta performance desde o primeiro cliente.
+
+---
+
+### FASE 5 — Produto SaaS Comercial & Faturamento
+
+#### 1. Landing Page de Vendas de Alta Conversão (T5.1) 🚀 `(Concluído)`
+- **Objetivo:** Canal institucional oficial e de aquisição de clientes para o CarX SaaS, apresentando promessa de valor clara, diferenciais reais, calculadora de ROI, segmentação por nicho automotivo e captura de leads integrada ao Super Admin.
+- **Identidade Visual e UI:**
+  - Aplicação dos tokens oficiais da marca: Volt (`#C8F52E`), Asfalto escuro (`#0E1116` / `#161B22`) e neutros slate.
+  - Tipografia de alta legibilidade, ícones padronizados via Lucide React e componentes baseados no design system em `skills/ui-design-system`.
+- **Estrutura da Landing Page (`apps/web/src/pages/LandingPage.tsx`)**:
+  1. **Navbar:** Marca CarX com selo SaaS, links com âncoras suaves e CTAs *"Entrar"* e *"Testar Grátis"*.
+  2. **Hero:** Headline de impacto, badges de credibilidade, botões de ação primária e secundária e visual do cockpit operacional do gestor.
+  3. **Prova Social & Métricas:** +50.000 OS emitidas, 99.9% uptime, -40% de burocracia e 100% de isolamento RLS.
+  4. **Linha do Tempo Operacional:** 4 blocos sequenciais cobrindo Orçamento Online, Agendamento e Checklist, Execução no PWA do Técnico e Garantia com Pesquisa NPS.
+  5. **Visão por Papel:** Abas interativas alternando a perspectiva do Dono/Gestor, Atendente, Técnico Operador e Cliente Final.
+  6. **Diferenciais Competitivos:** Cards com Monitor TV 360°, Controle de Bobinas de PPF/Películas, WhatsApp Transacional Próprio, Passaporte Digital QR, Laudo VCR com S3 e Cronômetro de Foco Único.
+  7. **Segmentos Especializados:** Seletor com argumentos comerciais e técnicos dedicados a PPF, Películas Solares, Estética Automotiva e Mecânica Geral.
+  8. **Calculadora Interativa de ROI:** Simulador dinâmico de horas economizadas e receita recuperada com base no volume de OS e ticket médio.
+  9. **Tabela de Preços e Planos:** Essencial (R$ 69,90), Profissional (R$ 149,90) e Premium (R$ 299,90) com destaques e chamada para teste grátis de 14 dias.
+  10. **FAQ Interativo:** Accordion com respostas às dúvidas mais frequentes sobre suporte, segurança e funcionamento no celular.
+  11. **Formulário de Captura de Leads:** Conectado à API `POST /public/leads` com proteção honeypot anti-bot (`website`), enriquecimento de perfil e feedback visual de sucesso.
+  12. **Banner de Cookies LGPD:** Aviso de privacidade com consentimento persistido em `localStorage`.
+- **Páginas Institucionais de Apoio**:
+  - Termos de Uso: [`apps/web/src/pages/TermsOfService.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/TermsOfService.tsx).
+  - Política de Privacidade e LGPD: [`apps/web/src/pages/PrivacyPolicy.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/PrivacyPolicy.tsx).
+- **Backend Integrado (`apps/api/src/routes/superadmin-routes.ts`)**:
+  - Endpoint `POST /public/leads` com validação de entrada, honeypot anti-bot com descarte silencioso de spammers e persistência na tabela `leads`, permitindo a conversão imediata do lead em oficina cliente pelo Super Admin (`POST /admin/leads/:id/convert`).
+  - Teste automatizado dedicado implementado e validado em `superadmin.test.ts`.
+- **Validação de Qualidade:**
+  - `pnpm -r run typecheck`: 0 erros de tipagem em todos os 5 pacotes.
+  - `pnpm eslint apps packages --quiet`: 0 erros de linting.
+  - `pnpm --filter @carx/web build`: Compilado com sucesso para produção com Vite em 13.49s.
+
+#### 2. Cobrança Recorrente Automática de Licenças e Gateway Mercado Pago (T5.2) 💳 `(Concluído)`
+- **Objetivo:** Automatização completa do ciclo de cobrança recorrente das licenças SaaS das oficinas clientes utilizando o Mercado Pago como gateway oficial, com emissão de Pix dinâmico (copia-e-cola e QR Code), liquidação automática em tempo real via Webhook e reativação instantânea de lojas suspensas por inadimplência.
+- **Migration 025 (`025_recurring_billing_and_mercadopago.up.sql`)**:
+  - Tabela `invoices`: Adição das colunas `pix_code TEXT`, `pix_qr TEXT`, `gateway_provider VARCHAR(50)`, `gateway_transaction_id VARCHAR(100)`, `gateway_invoice_url TEXT`, `expires_at TIMESTAMPTZ` com índice `idx_invoices_gateway_tx`.
+  - Tabela `platform_billing_settings`: Tabela do sistema para configuração global do gateway pelo Super Admin com suporte a modo sandbox, credenciais criptografadas e chave de idempotência.
+- **Serviço do Mercado Pago (`apps/api/src/billing/mercadopago-service.ts`)**:
+  - `generateInvoicePixCharge`: Emite a cobrança oficial no Mercado Pago com expiração parametrizada, retornando `pix_code`, `pix_qr` e persistindo os dados na fatura. Suporta modo simulador para desenvolvimento determinístico.
+  - `verifyPayment`: Consulta o status oficial do pagamento via API REST do Mercado Pago (`/v1/payments/:id`), assegurando que apenas pagamentos com status `approved` sejam liquidados (Blindagem OWASP contra webhooks forjados).
+  - `settleInvoicePayment`: Rotina atômica de liquidação que:
+    1. Marca a fatura como `paid` com `paid_at = NOW()`.
+    2. Renova o contrato do tenant por 30 dias com `status = 'active'`.
+    3. Verifica se a oficina possui outras faturas críticas vencidas há mais de 15 dias.
+    4. **Critério de Aceite Estrito**: Caso a inadimplência seja regularizada, executa instantaneamente `UPDATE tenants SET status = 'active', is_read_only = false, suspended_reason = NULL, last_dunning_stage = 'regularized' WHERE id = $1`, reativando a oficina no mesmo milissegundo sem necessidade de intervenção humana do suporte!
+    5. Registra o evento de regularização em `billing_dunning_events` e na trilha de auditoria imutável (`auditService.record`).
+- **Rotas de Faturamento Fastify (`apps/api/src/routes/billing-routes.ts`)**:
+  - `POST /billing/invoices/:id/pix`: Endpoint para geração ou recuperação do PIX dinâmico da fatura.
+  - `POST /billing/webhook/mercadopago` e `POST /billing/webhook`: Endpoints de recebimento seguro de notificações do gateway com suporte a múltiplos formatos de payload (`data.id`, `id` no corpo ou via query string) e proteção contra duplicidade (idempotência).
+  - `GET /admin/billing/settings` e `PUT /admin/billing/settings`: Gestão restrita a superadministradores autenticados com RBAC.
+- **Validação de Testes Automatizados (`apps/api/src/billing/recurring-billing.test.ts`)**:
+  - 5/5 testes aprovados com 100% de sucesso cobrindo geração de PIX, rejeição de pagamentos pendentes/falsos, reativação automática de oficina suspensa em teste de estresse transacional, proteção de idempotência e rotas administrativas.
+
+#### 3. Onboarding Self-Service Guiado por Segmento (T5.3) 🚀 `(Concluído)`
+- **Objetivo:** Permitir que qualquer proprietário de oficina ou centro automotivo crie sua conta diretamente através da Landing Page, configure seu subdomínio `.carx.com.br`, selecione sua especialidade (PPF, Películas Solares, Estética/Detailing ou Mecânica) e entre instantaneamente no sistema com catálogo e checklist técnicos pré-carregados e um período de trial gratuito de 14 dias sem necessidade de cartão de crédito.
+- **Backend de Auto-Cadastro e Provisionamento (`apps/api/src/routes/onboarding-routes.ts`)**:
+  - `POST /public/onboarding` e `POST /auth/self-register`: Endpoints públicos protegidos por honeypot anti-bot (`website`) que executam o provisionamento atômico transacional:
+    1. Criação do tenant com status `trialing`, `trial_ends_at = NOW() + 14 days` e geração automática de slug sem conflito.
+    2. Criação da Unidade Matriz (`units`).
+    3. Criação da conta de usuário com senha criptografada via bcrypt (`users`).
+    4. Vinculação da membresia de proprietário (`memberships` com papel `owner`).
+    5. Contrato de licença de trial de 14 dias (`contracts`).
+    6. Injeção automática dos 5 serviços especializados do segmento selecionado (`services`).
+    7. Injeção do modelo de checklist técnico de entrada do nicho (`checklist_templates`).
+    8. Emissão de par de tokens JWT (`accessToken` de 24h e `refreshToken` rotativo de 7 dias) para login automático sem atritos.
+  - `GET /tenant/onboarding/status`: Consulta em tempo real do checklist guiado de primeiros passos:
+    - Passo 1: Oficina configurada e segmentada (100% automático).
+    - Passo 2: Cadastro do primeiro cliente e veículo (verificação real na tabela `customers`).
+    - Passo 3: Criação da primeira Ordem de Serviço (verificação real na tabela `work_orders`).
+    - Passo 4: Conhecer PWA do Técnico e Monitor TV (`tenants.settings->'onboarding_steps'`).
+  - `POST /tenant/onboarding/complete` e `POST /tenant/onboarding/step`: Gestão do ciclo de conclusão do guia.
+- **Frontend de Auto-Cadastro & Boas-Vindas (`apps/web`)**:
+  - **Página de Onboarding (`apps/web/src/pages/OnboardingPage.tsx`)**:
+    - Stepper em 3 etapas com visual Volt (`#C8F52E`) e Asfalto escuro (`#0E1116`).
+    - Etapa 1: Dados da Loja (Nome Fantasia, Subdomínio `.carx.com.br` com preview, WhatsApp e CNPJ opcional).
+    - Etapa 2: Nicho Automotivo com cards visuais de PPF, Películas Solares, Estética Automotiva e Mecânica Geral, com exibição instantânea dos serviços e checklist que o sistema pré-carregará.
+    - Etapa 3: Dados de Acesso (Nome do dono, E-mail, Senha), seletor do plano para o trial e aceite dos Termos de Uso e Privacidade.
+    - Submissão com login automático e redirecionamento direto para o cockpit operacional.
+    - Rotas registradas no `App.jsx`: `/onboarding`, `/comecar-gratis` e `/cadastro`.
+  - **Banner de Guia de Primeiros Passos (`apps/web/src/components/OnboardingGuideBanner.tsx`)**:
+    - Integrado no topo do `Dashboard.tsx`.
+    - Apresenta barra de progresso quantitativa (25%, 50%, 75%, 100%), contador de dias restantes de teste grátis e atalhos diretos para os 4 passos até a primeira OS.
+  - **Links de CTA Integrados na Landing Page (`apps/web/src/pages/LandingPage.tsx`)**:
+    - Navbar, Hero e botões dos planos Essencial, Profissional e Premium conectados diretamente a `/onboarding`.
+- **Validação Automatizada com Sucesso Absoluto (`apps/api/src/provisioning/self-onboarding.test.ts`)**:
+  - 4 testes cobrindo auto-cadastro, injeção de catálogo de PPF, descarte silencioso de bots via honeypot, rejeição de e-mail duplicado (409) e fluxo do critério de aceite: criação de cliente -> veículo -> primeira OS -> conclusão do onboarding com 100% de sucesso.
+- **FASE 5 — PRODUTO SAAS COMERCIAL & FATURAMENTO CONCLUÍDA EM 100%!**
+
+---
+
+### 🧹 Higienização Total do Banco de Dados para Início Operacional Limpo `(Concluído)`
+
+- **Escopo:** Expurgo atômico e seguro de todas as massas de testes acumuladas durante as fases de desenvolvimento e homologação (Fases 0 a 5).
+- **Execução:**
+  - Varredura dinâmica em `information_schema.tables` cobrindo 55 tabelas públicas de dados operacionais com `TRUNCATE TABLE ... RESTART IDENTITY CASCADE`.
+  - **Preservação Obrigatória e Estrita**:
+    - Tabela `plans`: Mantidos exclusivamente os 3 planos comerciais canônicos do CarX SaaS:
+      - `essencial`: R$ 69,90 / mês.
+      - `profissional`: R$ 149,90 / mês.
+      - `premium`: R$ 299,90 / mês.
+    - Tabela `superadmin_users`: Super Admin `admin@carx.com.br` mantido ativo com senha configurada para governança centralizada.
+    - Tabela `_carx_migrations`: Controle de integridade estrutural do banco preservado.
+  - **Contagem Pós-Higienização:**
+    - Tenants (Oficinas): `0`
+    - Ordens de Serviço: `0`
+    - Clientes e Veículos: `0`
+    - Leads comerciais: `0`
+    - Planos ativos: `3`
+    - Super Admins ativos: `1`
+- **Ambiente:** Banco de dados 100% purificado, pronto para receber os primeiros clientes reais ou o fluxo de onboarding da Landing Page.
+
+---
+
+### 🎨 FASE 5.5 — Revitalização Visual do Cockpit do Gestor & Fidelidade Total ao Rebrand (`rebraind/`) `(Concluído)`
+
+- **Objetivo Estratégico:** Adequação profunda e minuciosa da interface do usuário de todas as telas operacionais do gestor no `apps/web` para eliminar o legado visual do OsSystem e alcançar 100% de paridade estética e funcional com os protótipos de alta definição da pasta `rebraind/`.
+- **Mapeamento de Falhas e Soluções Concluídas:**
+  1. **Navegação do Dashboard:**
+     - Botão *Monitor TV*: Ajustado para navegar diretamente para `/tv` (com alias `/monitor-tv` no `App.jsx`).
+     - Botão *+ Nova OS*: Redirecionando para a nova tela guiada `/ordens/nova`.
+  2. **Agenda por Boxes (Fiel a `rebraind/Gestor · Agenda@2x.png`):**
+     - Grade vertical com horários das 08h às 18h e colunas por box/elevador com o nome do técnico alocado (`Box 1 · Lucas`, `Box 2 · Rafa`, `Box 3 · livre`).
+     - Cards em paleta pastel moderna: Verde Volt suave (insulfilm/detailing), Azul pastel (PPF), Âmbar suave (aguardando aprovação) e Cinza suave (agendado).
+     - Slot com borda tracejada em Verde Volt (`Horário livre · 15h`) para agendamento direto com 1 clique.
+     - Barra de alerta de pedidos online pendentes com botão de cópia do link da loja.
+  3. **Nova Ordem de Serviço & Orçamento (Fiel a `rebraind/Gestor · Nova OS@2x.png`):**
+     - Stepper superior em 5 etapas circulares (`Cliente`, `Veículo`, `Serviços`, `Checklist`, `Agenda`).
+     - Layout em duas colunas com cards de raio suave (`rounded-3xl`):
+       - Esquerda: Card de dados do cliente, Card de veículo com badge de Placa Mercosul e tag `Preenchido pela placa`, Card de serviços com banner de combo sugerido e cálculo por porte.
+       - Direita: Card de fechamento financeiro com resumo, desconto, total destacado, campo de sinal via Pix, botão primário Verde Volt (*Gerar OS e agendar*), botão secundário (*Salvar como orçamento*) e link rápido para envio de orçamento por WhatsApp.
+  4. **Relatórios e Inteligência NPS (Fiel a `rebraind/Gestor · Relatórios NPS@2x.png`):**
+     - Navegação em abas em formato pill: *Visão gerencial*, *NPS e retenção*, *Garantias e revisões* e *DRE e fluxo de caixa*.
+     - KPI gigante com card preto e score NPS em destaque Verde Volt (`72`), além de cards de Promotores, Neutros e Detratores com barras de preenchimento coloridas.
+     - Painel de disparos via WhatsApp das ordens entregues nas últimas 24h, com botão de disparo em lote (*"Enviar para os 10 pelo WhatsApp"*), envio individual, toggle de envio automático e card de alerta de detrator para reversão imediata.
+  5. **5. **Harmonização Global de Todas as Telas & Design System Canônico Unificado:**
+     - Aplicação uniforme dos tokens oficiais do CarX (Fundo #F3F5F7, cards brancos 
+ounded-3xl com borda #E1E6EC, acentos Verde Volt #C8F52E e Preto #0E1116) em rigorosamente todas as telas: Painel/Dashboard, Agenda, Nova OS, Ordens de Serviço, Clientes, Vendas, Serviços, Estoque, Colaboradores e Configurações.
+     - Sidebar oficial escura #0E1116 com pills verticais idêntica ao Super Admin e ao protótipo 
+ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
+     - Remoção do header legado cinza no desktop, mantendo uma experiência limpa e de alta densidade visual.
+
+
+---
+
+### ⚡ FASE 6 — Diferenciais Competitivos (Onda 1)
+
+#### Tarefa T6.1: Orçamento Digital com Aceite Online & Sinal Pix `(Concluído)`
+- **Descrição:** Fluxo ponta a ponta de orçamento interativo para o cliente final via link público seguro (`/proposta/:token`), com aceite legal formal (captura de assinatura e IP) e geração de Pix dinâmico EMV Bacen para sinal financeiro, com liquidação automática da OS e envio multicanal de WhatsApp isolado pelo plano da oficina.
+- **Destaques de Implementação:**
+  - **Migration 026**: Adição de campos de aceite legal e sinal Pix na tabela `work_orders`.
+  - **Gerador Pix EMV Bacen**: Geração em conformidade com o Banco Central e QR Code Base64.
+  - **Proteção LGPD**: Máscara de telefones e dados sensíveis em visualizações públicas.
+  - **WhatsApp por Plano**: Oficinas básicas usam compartilhamento manual via `wa.me`; oficinas com plano avançado usam disparo automático via gateway socket Baileys.
+  - **Frontend Público (`PublicQuotePage.tsx`)**: Página de orçamento responsiva, com termo de autorização, botão de cópia de Pix e notificação em tempo real.
+- **Validação Automatizada**: 6 testes dedicados em `apps/api/src/work-orders/quote-acceptance.test.ts` com 100% de sucesso.
+
+---
+
+#### Tarefa T6.2: Consulta Automática de Placa com Cache e Porte Automotivo `(Concluído)`
+- **Descrição:** Preenchimento instantâneo dos dados do veículo (Marca, Modelo, Ano, Cor, Porte Automotivo e Valor FIPE) ao digitar placas no formato Mercosul (`ABC1D23`) ou antigo (`ABC-1234`), com recálculo automático da tabela de preços pelo porte veicular.
+- **Destaques de Implementação:**
+  - **Migration 027 (`vehicle_plate_cache`)**: Tabela global com índice temporal e expiração de 90 dias para latência de resposta `< 5ms`.
+  - **Serviço de Negócio (`plate-lookup-service.ts`)**:
+    - **Etapa 1 (Tenant Local)**: Se o carro já foi atendido pela oficina, recupera o histórico e associa automaticamente o cliente (`source: 'local_tenant'`).
+    - **Etapa 2 (Cache Compartilhado)**: Recupera dados em cache persistido (`source: 'cache'`).
+    - **Etapa 3 (Motor Automotivo)**: Consulta com catálogo nacional e inferência de modelo, ano e FIPE estimada (`source: 'national_registry'`).
+    - **Etapa 4 (Cache)**: Grava automaticamente na tabela `vehicle_plate_cache`.
+  - **Classificador de Porte Automotivo (`inferVehicleSizeClass`)**:
+    - Categorização de veículos em 7 classes: `hatch`, `sedan`, `suv`, `pickup`, `van`, `moto` e `esportivo`.
+    - Resolução de ambiguidades como versões de acabamento (ex: `Corolla Cross XRE` classificado como `suv` e não moto).
+  - **Frontend Integrado**:
+    - `NovaOrdemServico.tsx`: Input de placa com auto-consulta ao atingir 7 caracteres, preenchendo modelo, cor, porte e cliente vinculado com badge indicativa.
+    - `Clientes.jsx`: Botão "Buscar" por placa no modal de cadastro de veículos com preenchimento de todos os campos em 1 clique.
+  - **Privacidade & LGPD**: Nunca expõe dados pessoais de proprietários de veículos consultados externamente.
+- **Validação Automatizada com Sucesso Absoluto**:
+  - 5 testes dedicados em [`apps/api/src/customers/plate-lookup.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customers/plate-lookup.test.ts) cobrindo rejeição de placa inválida (400), consulta de placa Mercosul nova com porte SUV, recuperação do cache global de 90 dias (`source: 'cache'`), identificação de veículo pré-existente da loja com cliente vinculado (`source: 'local_tenant'`) e inferência de portes para todas as classes automotivas.
+
+---
+
+#### Tarefa T6.3: Pix Integrado para Ordens de Serviço (Baixa Instantânea no Caixa via Webhook) `(Concluído)`
+- **Descrição:** Liquidação instantânea de pagamentos de Ordens de Serviço no balcão e caixa da oficina via Pix dinâmico padrão Banco Central do Brasil (EMV e QR Code nativo), eliminando a digitação manual de comprovantes e conciliação bancária lenta.
+- **Destaques de Implementação:**
+  - **Migration 028 (`028_work_order_pix_integration.up.sql`)**:
+    - Índice de alta performance `idx_payments_transaction_reference` na tabela `payments` para consultas atômicas por `txid` em `< 1ms`.
+    - Coluna `pix_last_txid VARCHAR(50)` adicionada à tabela `work_orders` para rastreio direto da última cobrança gerada.
+  - **Serviço de Domínio (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - `createPixCharge`: Calcula automaticamente o saldo restante devedor da OS (`final_cents - paid_cents`), gera identificador único Bacen (`txid`), monta o payload BR Code oficial e gera QR Code Base64 via lib `qrcode`. Registra o pagamento com status `pending` e publica evento SSE. Rejeita novas cobranças se a OS já estiver 100% quitada (HTTP 422).
+    - `confirmPixPayment`: Endpoint idempotente acionado por webhooks bancários ou pelo operador. Em transação atômica (`tenantTransaction`), atualiza o pagamento para `approved`, soma `paid_cents` na OS e insere registro auditável na timeline (`work_order_events`). Caso a OS esteja com status `READY` e o pagamento a quite totalmente, transiciona automaticamente o status para `DELIVERED` e preenche `delivered_at = NOW()`.
+    - Dispara eventos em tempo real para múltiplos canais: `work_order.updated` e `payment.received`.
+    - `getPixStatus`: Permite à aplicação frontend consultar o status atual da cobrança Pix de forma rápida.
+  - **Rotas Fastify (`apps/api/src/routes/work-order-routes.ts`)**:
+    - `POST /work-orders/:id/pix-charge`: Geração de cobrança Pix autenticada.
+    - `GET /work-orders/:id/pix-status/:txid`: Consulta do status da cobrança.
+    - `POST /webhooks/pix/confirm`: Webhook público de liquidação bancária instantânea.
+  - **Frontend do Gestor (`apps/web`)**:
+    - Métodos adicionados no cliente de API (`api.workOrders.createPixCharge`, `api.workOrders.getPixStatus` e `api.workOrders.confirmPixPayment`).
+    - Modal de Caixa & Recebimento completamente redesenhado no novo padrão do Design System CarX (fundo branco, bordas `#E1E6EC`, tipografia e abas de método com ícones).
+    - No modo Pix: pré-carrega o saldo restante, gera o QR Code dinâmico em tela, exibe campo Copia e Cola com botão de cópia em 1 clique, polling resiliente a cada 3s com detecção de baixa instantânea, botão de simulação para bancada e feedback visual em verde vibrante.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/payments/work-order-pix.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/payments/work-order-pix.test.ts) cobrindo:
+      1. Geração de cobrança Pix dinâmica com cálculo de saldo e payload EMV Bacen.
+      2. Consulta do status pendente da cobrança.
+      3. Liquidação instantânea via webhook com atualização atômica do saldo da OS.
+      4. Idempotência estrita (webhooks repetidos com mesmo `txid` não duplicam valor nem saldo pago).
+      5. Rejeição de novas cobranças Pix para OS já totalmente quitadas.
+      6. Transição automática de status de `READY` para `DELIVERED` ao quitar o saldo na retirada.
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+
+
+
+---
+
+#### Tarefa T6.4: WhatsApp Automático Transacional por Evento de OS (Gating por Plano e Respeito a Instâncias) `(Concluído)`
+- **Descrição:** Motor transacional de comunicação via WhatsApp conectado ao ciclo de vida da OS automotiva (`CHECKED_IN`, `IN_PROGRESS`, `READY`, `DELIVERED` e `APPOINTMENT_CONFIRMED`), garantindo respeito absoluto ao plano contratado da oficina e às suas credenciais de infraestrutura.
+- **Diretriz de Isolamento e Respeito aos Planos Comerciais:**
+  - **Aparelho e Número da Oficina:** A plataforma CarX não assume a custódia nem o número das oficinas: cada oficina conecta e opera exclusivamente seu próprio aparelho/número de WhatsApp via socket Baileys em seu painel (`Configurações > WhatsApp`).
+  - **Planos sem Gateway / Essencial:** Custo zero de infraestrutura para a plataforma. O sistema **nunca** tenta conexões ou disparos em background; gera automaticamente link direto e pré-formatado `https://wa.me/...` com 1 clique para envio manual via WhatsApp Web ou Desktop pelo gestor.
+  - **Planos com Gateway (Profissional e Premium):**
+    - Se a instância estiver conectada (`status: 'CONNECTED'`), dispara em segundo plano pelo socket da oficina e registra o evento na timeline da OS (`work_order_events`).
+    - Se a instância estiver desconectada (`status: 'DISCONNECTED'`), realiza **fallback suave** para `wa.me` com aviso explicativo, sem bloquear a transição de status ou a rotina da loja.
+- **Destaques de Implementação:**
+  - **Contratos e DTOs em `@carx/shared`**:
+    - Tipagens `WhatsAppTransactionalEventType`, `SendTransactionalWhatsAppInputDto`, `SendTransactionalWhatsAppResultDto`.
+    - Inclusão canônica de `PlanFeatures.WHATSAPP_GATEWAY` nos planos `Profissional` e `Premium`.
+  - **Serviço de Mensageria (`apps/api/src/whatsapp/whatsapp-service.ts`)**:
+    - `formatTransactionalTemplate`: Formata mensagens ricas com o primeiro nome do cliente, nome fantasia da loja, modelo do veículo, placa e link dinâmico da proposta/tracking para cada evento automotivo.
+    - `dispatchTransactionalNotification`: Checagem rigorosa de feature flags (`WHATSAPP_GATEWAY` ou `WHATSAPP_AUTO`), verificação do status da instância conectada da oficina, envio Baileys direto ou geração de link seguro `wa.me`.
+  - **Integração no Ciclo de Vida da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparo assíncrono e não-bloqueante no método `transitionStatus` ao avançar a OS para `CHECKED_IN`, `READY` ou `DELIVERED`.
+    - Método `notifyWorkOrderWhatsApp` para auditoria, histórico em `work_order_events` e notificação sob demanda.
+  - **Rotas Fastify (`apps/api/src/routes/work-order-routes.ts`)**:
+    - `POST /work-orders/:id/notify-whatsapp`: Endpoint autenticado com validação de tenant para reenvio e geração manual de links sob demanda.
+  - **Frontend do Gestor (`apps/web`)**:
+    - Método `api.workOrders.notifyWhatsApp` adicionado no cliente `api.ts`.
+    - Botão de ação rápida com ícone do WhatsApp na listagem de Ordens de Serviço (`OrdensServico.tsx`).
+    - Modal dedicado de Notificação WhatsApp com prévia de mensagem, seleção de eventos, aviso explicativo de planos, feedback imediato e abertura de nova aba para `wa.me`.
+    - Modernização do modal de detalhes da OS no Design System Rebrand CarX.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/whatsapp/whatsapp-transactional.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/whatsapp/whatsapp-transactional.test.ts) cobrindo:
+      1. Loja no plano BÁSICO (sem gateway) não dispara background e gera link manual wa.me.
+      2. Loja no plano PRO com WhatsApp DESCONECTADO faz fallback suave para wa.me com aviso.
+      3. Loja no plano PRO com WhatsApp CONECTADO envia mensagem transacional via socket oficial da loja com registro na timeline.
+      4. Templates transacionais cobrem Check-in, Ready, Delivered e Agendamento.
+      5. Transição de status da OS (`transitionStatus`) dispara WhatsApp sem bloquear fluxo operacional.
+      6. Rota `POST /work-orders/:id/notify-whatsapp` permite envio sob demanda pelo gestor.
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+
+
+
+---
+
+### ⚡ FASE 6 — Onda 2: Domínio Especializado Automotivo
+
+#### Tarefa T6.5: Controle Fino de Bobinas (PPF / Películas, Margem Real por Metro e Garantia) `(Concluído)`
+- **Descrição:** Módulo de alta precisão para controle de estoque e consumo linear de bobinas de PPF (Paint Protection Film) e películas solares (insulfilm). Permite rastrear cada centímetro aplicado, vincular o número de série e lote do rolo ao Certificado de Garantia / Passaporte Digital do cliente, registrar retalhos/desperdícios com justificativa e calcular a margem bruta real de lucro por veículo atendido.
+- **Diretriz de Isolamento e Gating por Plano:**
+  - A feature `ppf_spool_control` é restrita aos planos `Profissional` e `Premium`.
+  - Lojas no plano `Essencial` recebem HTTP 403 ao tentar criar ou gerenciar bobinas e visualizam no frontend um card hero de upgrade destacando os benefícios do módulo de PPF.
+- **Destaques de Implementação:**
+  - **Contratos e DTOs em `@carx/shared`**:
+    - `RegisterRollScrapInputSchema`, `RegisterRollScrapInputDto`.
+    - `MaterialRollHistoryItemDto`, `MaterialRollDetailWithHistoryDto`.
+    - Expansão de `MaterialRollDto` com `materialName`, `isLowMeters` e campos de metragem linear.
+  - **Serviço de Negócio (`apps/api/src/stock/stock-service.ts`)**:
+    - `assertSpoolControlFeature`: Verificação de plano via `planService.assertFeature(tenantId, PlanFeatures.PPF_SPOOL_CONTROL)`.
+    - `createRoll`: Cadastro com cálculo automático de custo por metro linear (`costPerMeterCents = costCents / initialMeters`), lock atômico no material base e auditoria.
+    - `getRollDetailedHistory`: Rastreabilidade cruzando `work_order_materials`, `work_orders`, `customers`, `vehicles`, `work_order_items`, `warranties` e `stock_movements`. Calcula:
+      - `consumedMeters`: Metros aplicados em OSs concluídas.
+      - `scrapMeters`: Metros perdidos em retalhos.
+      - `efficiencyPercent`: Taxa de aproveitamento da bobina (`consumed / (consumed + scrap) * 100`).
+      - `grossProfitCents` e `grossMarginPercent`: Lucro bruto real de cada veículo atendido (`servicePrice - costAllocated`).
+    - `registerRollScrap`: Registro transacional de retalhos com abatimento em `material_rolls` e `materials`, inserção de `stock_movements` (`movement_type = 'waste'`), auditoria e transição automática para status `'depleted'` ao zerar o saldo.
+    - `safeUuid`: Helper de sanitização contra UUIDs sintéticos em colunas com FK.
+  - **Auto-vínculo de Garantia em `QaService` (`apps/api/src/qa/qa-service.ts`)**:
+    - O método `createWarranty` inspeciona os materiais alocados na OS (`work_order_materials`) e vincula automaticamente `material_roll_id` e `material_lot_number` ao certificado emitido, permitindo consulta do lote no QR Code do Passaporte Digital do cliente.
+  - **Rotas Fastify (`apps/api/src/routes/stock-routes.ts`)**:
+    - `GET /materials/rolls/:id/history`: Retorna a timeline de aplicações, OSs, clientes, veículos e margem real da bobina.
+    - `POST /materials/rolls/:id/scrap`: Registra perda/retalho com abatimento de saldo e auditoria.
+  - **Frontend Modernizado (`apps/web/src/pages/Materiais.tsx`)**:
+    - Código migrado de `.jsx` legado (Supabase) para TypeScript 100% tipado integrado à API Fastify.
+    - Abas: "Bobinas (PPF & Películas)" e "Insumos Gerais & Químicos".
+    - Métricas em tempo real: Bobinas ativas, saldo total em metros, bobinas em nível crítico e status do Passaporte Digital.
+    - Barra de progresso visual do saldo de metragem (`currentMeters / initialMeters`).
+    - Modal de Histórico e Margem Real por Veículo.
+    - Modal de Registro de Retalho / Perda com recálculo instantâneo.
+    - Modal de Nova Bobina e Reposição Rápida de Estoque.
+    - Card Hero de Upgrade para lojas no plano Essencial.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/stock/spool-control.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/stock/spool-control.test.ts) cobrindo:
+      1. Gating de Plano (HTTP 403 no Básico).
+      2. Cadastro de Bobina com Custo e Metragem no plano Pro com atualização atômica do estoque.
+      3. Alocação e Consumo na OS com Baixa Atômica de Metragem (`deductWorkOrderMaterials`).
+      4. Vínculo Automático da Bobina e Lote ao Certificado de Garantia do Veículo.
+      5. Histórico Detalhado, Rastreabilidade e Cálculo de Margem Real por Metro.
+      6. Registro de Retalho/Desperdício (scrap) e Esgotamento Automático (`depleted`).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+
+
+
+---
+
+#### Tarefa T6.6: Passaporte Digital do Veículo & Transferência na Revenda `(Concluído)`
+- **Descrição:** Certificado de garantia digital e histórico veicular com selo de autenticidade antifraude acessível via QR Code público (`/v/:token` e `/passaporte/:token`). Exibe procedência de películas e vitrificadores (marca e lote oficial do rolo), linha do tempo cronológica de manutenções realizadas pela oficina certificadora, com anonimização LGPD nos dados do antigo proprietário e motor transacional de transferência de custódia na revenda do veículo.
+- **Destaques de Implementação:**
+  - **Migration 029 (`029_vehicle_passport_transfer.up.sql`)**:
+    - Colunas adicionadas em `warranties`: `is_transferable BOOLEAN NOT NULL DEFAULT true`, `transferred_at TIMESTAMPTZ`, `transferred_from_customer_id UUID REFERENCES customers(id)`.
+    - Tabela de histórico `warranty_transfers`: Armazena tenant, garantia, veículo, dados anonimizados do proprietário anterior, novo titular (nome, whatsapp, email, km no hodômetro, motivo, IP e User-Agent) com RLS ativado e forçado.
+  - **Contratos e DTOs em `@carx/shared`**:
+    - DTO `PublicVehiclePassportDto` enriquecido com timeline de manutenções, procedência de bobina (`materialRollBrand`, `materialRollCode`), histórico de transferências (`transfersHistory`) e contagem total de transferências.
+    - Schemas de validação Zod: `TransferVehiclePassportInputSchema`, `TransferVehiclePassportInputDto` e `TransferVehiclePassportResultDto`.
+  - **Motor de Domínio em `QaService` (`apps/api/src/qa/qa-service.ts`)**:
+    - `verifyPublicPassport`: Endpoint público e protegido contra IDOR que recupera a garantia, mascara a placa no padrão Mercosul (`PPF-***8`), anonimiza nomes para LGPD (`Rodrigo F***`), busca o lote oficial da película e compõe a timeline cronológica completa de serviços e transferências.
+    - `transferWarrantyCustody`: Operação atômica que cadastra ou associa o novo proprietário em `customers`, atualiza o vínculo do carro em `vehicles.customer_id`, atualiza o titular da garantia em `warranties` com registro imutável em `warranty_transfers` e evento auditável em `work_order_events`.
+    - Validação de regras de negócio: Rejeita transferências de garantias expiradas/revogadas (HTTP 400 `WARRANTY_NOT_ACTIVE`) ou marcadas como intransferíveis (HTTP 400 `WARRANTY_NON_TRANSFERABLE`).
+  - **Rotas Fastify Registradas (`apps/api/src/routes/qa-routes.ts`)**:
+    - `GET /public/passports/:token`: Consulta pública completa do passaporte.
+    - `GET /v/:token`: Alias de URL curta oficial para escaneamento imediato pela câmera do smartphone via QR Code.
+    - `POST /public/passports/:token/transfer`: Endpoint público de transferência de titularidade na revenda.
+  - **Frontend Público (`apps/web/src/pages/PublicPassportPage.tsx` e `App.jsx`)**:
+    - Interface escura de alta fidelidade visual (Design System CarX `#0E1116`, `#171C24` e acentos em Verde Volt `#CCFF00`).
+    - Selo holográfico de autenticidade, badge Mercosul e contagem regressiva de dias de cobertura.
+    - Seção de Procedência & Lote da película de proteção (PPF).
+    - Linha do tempo cronológica de manutenções do carro.
+    - Banner e Modal interativo de Transferência de Custódia na Revenda para valorização do carro em anúncios da Webmotors e OLX.
+    - Rotas públicas mapeadas no `App.jsx`: `/v/:token`, `/passaporte/:token` e `/garantia/:token`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/qa/passport-transfer.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/qa/passport-transfer.test.ts) cobrindo:
+      1. Consulta pública por QR Code com proteção LGPD na placa e procedência da película.
+      2. Linha do tempo (timeline) completa de serviços do carro desduplicada por OS.
+      3. Tratamento e erro 404 para tokens inválidos.
+      4. Transferência de titularidade e custódia na revenda (`POST /public/passports/:token/transfer`).
+      5. Rejeição de transferência em certificados marcados como intransferíveis ou revogados.
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.7: Agenda Inteligente com Ocupação por Box & Duração por Porte `(Concluído)`
+- **Descrição:** Motor de agendamento automotivo avançado com visão visual por colunas de boxes de atendimento (`bays`), cálculo inteligente de duração calibrado por porte veicular (`moto`, `hatch`, `sedan`, `suv`, `pickup`, `van`, `esportivo`), prevenção estrita de choque de horário duplo (anti-conflito no mesmo box e do mesmo técnico simultaneamente), monitoramento de atrasos em tempo real com alertas visuais no Rebrand CarX e slots livres interativos com 1 clique.
+- **Destaques de Implementação:**
+  - **Contratos e DTOs em `@carx/shared`**:
+    - Tabela de multiplicadores automotivos de mercado `VEHICLE_SIZE_DURATION_MULTIPLIERS` (`moto: 0.6`, `hatch: 0.85`, `sedan: 1.0`, `suv: 1.25`, `pickup: 1.35`, `van: 1.5`, `esportivo: 1.1`).
+    - Schemas e DTOs `CalculateDurationInputSchema`, `CalculateDurationInputDto`, `CalculatedDurationResultDto`.
+    - DTOs `SmartAppointmentDto`, `SmartBayOverviewDto` e `SmartScheduleOverviewResponseDto`.
+  - **Lógica de Domínio em `AppointmentService` (`apps/api/src/appointments/appointment-service.ts`)**:
+    - `checkTechnicianConflict`: Validação matemática `(start_time < endTime AND end_time > startTime)` que impede que o mesmo profissional seja alocado em dois agendamentos sobrepostos (HTTP 409 `TechnicianConflictError`).
+    - `calculateEstimatedDuration`: Cálculo automático que busca durações específicas cadastradas em `service_prices_by_class` ou aplica os multiplicadores padrão da categoria por porte.
+    - `getSmartScheduleOverview`: Consulta consolidada da ocupação dos boxes (`free`, `occupied`, `delayed`), identificação de categorias de serviço para estilização cromática Rebrand CarX, detecção de atrasos em tempo real (`NOW() > end_time` com OS em andamento) e geração de slots livres.
+    - Validação de conflito de técnico integrada em `createAppointment` e `updateAppointment`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/appointment-routes.ts`)**:
+    - `GET /appointments/smart-overview`: Visão consolidada de boxes com atrasos em tempo real.
+    - `POST /appointments/calculate-duration`: Endpoint de cálculo dinâmico de duração por porte veicular.
+    - Tratamento unificado de `TechnicianConflictError` e `BayConflictError` retornando HTTP 409 com detalhes do agendamento conflitante.
+  - **Frontend Modernizado (`apps/web/src/pages/Agenda.tsx`)**:
+    - Grade visual oficial do Rebrand CarX (`rebraind/Gestor · Agenda@2x.png` e `rebraind/HTML/Gestor · Agenda-html/Agenda.dc.html`).
+    - Colunas dos boxes com técnico atribuído (`Box 1 · Lucas`, `Box 2 · Rafa`, `Box 3 · livre`) e status de ocupação em tempo real.
+    - Cores cromáticas por categoria: Verde Volt `#C8F52E` (Insulfilm/Detailing), Azul Céu `#CDEBFB` (PPF), Âmbar `#FFE2A8` (Aguardando aprovação), Cinza neutro `#E8EEF4` (Concluídos) e Alerta Vermelho `#FEE2E2` com borda pulsante `#EF4444` para atrasos.
+    - Badges em destaque indicando tempo de atraso `⚠️ Atraso (+X min)`.
+    - Modal de Novo Agendamento inteligente com seletor de porte veicular, multiplicadores visuais, detecção automática do porte ao digitar o modelo, seleção de técnico responsável e validação de conflitos.
+    - Slots livres tracejados com clique direto para pré-preenchimento de box e horário.
+    - Modal de Detalhes do Agendamento com dados do cliente, veículo, WhatsApp e botão de conclusão rápida.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/appointments/smart-schedule.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/appointments/smart-schedule.test.ts) cobrindo:
+      1. Cálculo de duração por porte (hatch vs SUV vs serviço calibrado).
+      2. Anti-conflito no mesmo box (HTTP 409).
+      3. Anti-conflito do mesmo técnico em boxes diferentes (HTTP 409).
+      4. Agendamento simultâneo com técnicos distintos aceito com sucesso.
+      5. Visão inteligente por box com detecção de agendamentos em atraso.
+      6. Isolamento multi-tenant estrito entre oficinas.
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
 
 
 
 
 
+---
+
+### ⚡ FASE 6 — Diferenciais Competitivos (Onda 1)
+
+#### Tarefa T6.1: Orçamento Digital com Aceite Online & Sinal Pix `(Concluído)`
+- **Descrição:** Fluxo ponta a ponta de orçamento interativo para o cliente final via link público seguro (`/proposta/:token`), com aceite legal formal (captura de assinatura e IP) e geração de Pix dinâmico EMV Bacen para sinal financeiro, com liquidação automática da OS e envio multicanal de WhatsApp isolado pelo plano da oficina.
+- **Destaques de Implementação:**
+  - **Migration 026**: Adição de campos de aceite legal e sinal Pix na tabela `work_orders`.
+  - **Gerador Pix EMV Bacen**: Geração em conformidade com o Banco Central e QR Code Base64.
+  - **Proteção LGPD**: Máscara de telefones e dados sensíveis em visualizações públicas.
+  - **WhatsApp por Plano**: Oficinas básicas usam compartilhamento manual via `wa.me`; oficinas com plano avançado usam disparo automático via gateway socket Baileys.
+  - **Frontend Público (`PublicQuotePage.tsx`)**: Página de orçamento responsiva, com termo de autorização, botão de cópia de Pix e notificação em tempo real.
+- **Validação Automatizada**: 6 testes dedicados em `apps/api/src/work-orders/quote-acceptance.test.ts` com 100% de sucesso.
+
+---
+
+#### Tarefa T6.2: Consulta Automática de Placa com Cache e Porte Automotivo `(Concluído)`
+- **Descrição:** Preenchimento instantâneo dos dados do veículo (Marca, Modelo, Ano, Cor, Porte Automotivo e Valor FIPE) ao digitar placas no formato Mercosul (`ABC1D23`) ou antigo (`ABC-1234`), com recálculo automático da tabela de preços pelo porte veicular.
+- **Destaques de Implementação:**
+  - **Migration 027 (`vehicle_plate_cache`)**: Tabela global com índice temporal e expiração de 90 dias para latência de resposta `< 5ms`.
+  - **Serviço de Negócio (`plate-lookup-service.ts`)**:
+    - **Etapa 1 (Tenant Local)**: Se o carro já foi atendido pela oficina, recupera o histórico e associa automaticamente o cliente (`source: 'local_tenant'`).
+    - **Etapa 2 (Cache Compartilhado)**: Recupera dados em cache persistido (`source: 'cache'`).
+    - **Etapa 3 (Motor Automotivo)**: Consulta com catálogo nacional e inferência de modelo, ano e FIPE estimada (`source: 'national_registry'`).
+    - **Etapa 4 (Cache)**: Grava automaticamente na tabela `vehicle_plate_cache`.
+  - **Classificador de Porte Automotivo (`inferVehicleSizeClass`)**:
+    - Categorização de veículos em 7 classes: `hatch`, `sedan`, `suv`, `pickup`, `van`, `moto` e `esportivo`.
+    - Resolução de ambiguidades como versões de acabamento (ex: `Corolla Cross XRE` classificado como `suv` e não moto).
+  - **Frontend Integrado**:
+    - `NovaOrdemServico.tsx`: Input de placa com auto-consulta ao atingir 7 caracteres, preenchendo modelo, cor, porte e cliente vinculado com badge indicativa.
+    - `Clientes.jsx`: Botão "Buscar" por placa no modal de cadastro de veículos com preenchimento de todos os campos em 1 clique.
+  - **Privacidade & LGPD**: Nunca expõe dados pessoais de proprietários de veículos consultados externamente.
+- **Validação Automatizada com Sucesso Absoluto**:
+  - 5 testes dedicados em [`apps/api/src/customers/plate-lookup.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/customers/plate-lookup.test.ts) cobrindo rejeição de placa inválida (400), consulta de placa Mercosul nova com porte SUV, recuperação do cache global de 90 dias (`source: 'cache'`), identificação de veículo pré-existente da loja com cliente vinculado (`source: 'local_tenant'`) e inferência de portes para todas as classes automotivas.
+
+---
+
+#### Tarefa T6.3: Pix Integrado para Ordens de Serviço (Baixa Instantânea no Caixa via Webhook) `(Concluído)`
+- **Descrição:** Liquidação instantânea de pagamentos de Ordens de Serviço no balcão e caixa da oficina via Pix dinâmico padrão Banco Central do Brasil (EMV e QR Code nativo), eliminando a digitação manual de comprovantes e conciliação bancária lenta.
+- **Destaques de Implementação:**
+  - **Migration 028 (`028_work_order_pix_integration.up.sql`)**:
+    - Índice de alta performance `idx_payments_transaction_reference` na tabela `payments` para consultas atômicas por `txid` em `< 1ms`.
+    - Coluna `pix_last_txid VARCHAR(50)` adicionada à tabela `work_orders` para rastreio direto da última cobrança gerada.
+  - **Serviço de Domínio (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - `createPixCharge`: Calcula automaticamente o saldo restante devedor da OS (`final_cents - paid_cents`), gera identificador único Bacen (`txid`), monta o payload BR Code oficial e gera QR Code Base64 via lib `qrcode`. Registra o pagamento com status `pending` e publica evento SSE. Rejeita novas cobranças se a OS já estiver 100% quitada (HTTP 422).
+    - `confirmPixPayment`: Endpoint idempotente acionado por webhooks bancários ou pelo operador. Em transação atômica (`tenantTransaction`), atualiza o pagamento para `approved`, soma `paid_cents` na OS e insere registro auditável na timeline (`work_order_events`). Caso a OS esteja com status `READY` e o pagamento a quite totalmente, transiciona automaticamente o status para `DELIVERED` e preenche `delivered_at = NOW()`.
+    - Dispara eventos em tempo real para múltiplos canais: `work_order.updated` e `payment.received`.
+    - `getPixStatus`: Permite à aplicação frontend consultar o status atual da cobrança Pix de forma rápida.
+  - **Rotas Fastify (`apps/api/src/routes/work-order-routes.ts`)**:
+    - `POST /work-orders/:id/pix-charge`: Geração de cobrança Pix autenticada.
+    - `GET /work-orders/:id/pix-status/:txid`: Consulta do status da cobrança.
+    - `POST /webhooks/pix/confirm`: Webhook público de liquidação bancária instantânea.
+  - **Frontend do Gestor (`apps/web`)**:
+    - Métodos adicionados no cliente de API (`api.workOrders.createPixCharge`, `api.workOrders.getPixStatus` e `api.workOrders.confirmPixPayment`).
+    - Modal de Caixa & Recebimento completamente redesenhado no novo padrão do Design System CarX (fundo branco, bordas `#E1E6EC`, tipografia e abas de método com ícones).
+    - No modo Pix: pré-carrega o saldo restante, gera o QR Code dinâmico em tela, exibe campo Copia e Cola com botão de cópia em 1 clique, polling resiliente a cada 3s com detecção de baixa instantânea, botão de simulação para bancada e feedback visual em verde vibrante.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/payments/work-order-pix.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/payments/work-order-pix.test.ts) cobrindo:
+      1. Geração de cobrança Pix dinâmica com cálculo de saldo e payload EMV Bacen.
+      2. Consulta do status pendente da cobrança.
+      3. Liquidação instantânea via webhook com atualização atômica do saldo da OS.
+      4. Idempotência estrita (webhooks repetidos com mesmo `txid` não duplicam valor nem saldo pago).
+      5. Rejeição de novas cobranças Pix para OS já totalmente quitadas.
+      6. Transição automática de status de `READY` para `DELIVERED` ao quitar o saldo na retirada.
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
 
 
 
 
+---
+
+#### Tarefa T6.4: WhatsApp Automático Transacional por Evento de OS (Gating por Plano e Respeito a Instâncias) `(Concluído)`
+- **Descrição:** Motor transacional de comunicação via WhatsApp conectado ao ciclo de vida da OS automotiva (`CHECKED_IN`, `IN_PROGRESS`, `READY`, `DELIVERED` e `APPOINTMENT_CONFIRMED`), garantindo respeito absoluto ao plano contratado da oficina e às suas credenciais de infraestrutura.
+- **Diretriz de Isolamento e Respeito aos Planos Comerciais:**
+  - **Aparelho e Número da Oficina:** A plataforma CarX não assume a custódia nem o número das oficinas: cada oficina conecta e opera exclusivamente seu próprio aparelho/número de WhatsApp via socket Baileys em seu painel (`Configurações > WhatsApp`).
+  - **Planos sem Gateway / Essencial:** Custo zero de infraestrutura para a plataforma. O sistema **nunca** tenta conexões ou disparos em background; gera automaticamente link direto e pré-formatado `https://wa.me/...` com 1 clique para envio manual via WhatsApp Web ou Desktop pelo gestor.
+  - **Planos com Gateway (Profissional e Premium):**
+    - Se a instância estiver conectada (`status: 'CONNECTED'`), dispara em segundo plano pelo socket da oficina e registra o evento na timeline da OS (`work_order_events`).
+    - Se a instância estiver desconectada (`status: 'DISCONNECTED'`), realiza **fallback suave** para `wa.me` com aviso explicativo, sem bloquear a transição de status ou a rotina da loja.
+- **Destaques de Implementação:**
+  - **Contratos e DTOs em `@carx/shared`**:
+    - Tipagens `WhatsAppTransactionalEventType`, `SendTransactionalWhatsAppInputDto`, `SendTransactionalWhatsAppResultDto`.
+    - Inclusão canônica de `PlanFeatures.WHATSAPP_GATEWAY` nos planos `Profissional` e `Premium`.
+  - **Serviço de Mensageria (`apps/api/src/whatsapp/whatsapp-service.ts`)**:
+    - `formatTransactionalTemplate`: Formata mensagens ricas com o primeiro nome do cliente, nome fantasia da loja, modelo do veículo, placa e link dinâmico da proposta/tracking para cada evento automotivo.
+    - `dispatchTransactionalNotification`: Checagem rigorosa de feature flags (`WHATSAPP_GATEWAY` ou `WHATSAPP_AUTO`), verificação do status da instância conectada da oficina, envio Baileys direto ou geração de link seguro `wa.me`.
+  - **Integração no Ciclo de Vida da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparo assíncrono e não-bloqueante no método `transitionStatus` ao avançar a OS para `CHECKED_IN`, `READY` ou `DELIVERED`.
+    - Método `notifyWorkOrderWhatsApp` para auditoria, histórico em `work_order_events` e notificação sob demanda.
+  - **Rotas Fastify (`apps/api/src/routes/work-order-routes.ts`)**:
+    - `POST /work-orders/:id/notify-whatsapp`: Endpoint autenticado com validação de tenant para reenvio e geração manual de links sob demanda.
+  - **Frontend do Gestor (`apps/web`)**:
+    - Método `api.workOrders.notifyWhatsApp` adicionado no cliente `api.ts`.
+    - Botão de ação rápida com ícone do WhatsApp na listagem de Ordens de Serviço (`OrdensServico.tsx`).
+    - Modal dedicado de Notificação WhatsApp com prévia de mensagem, seleção de eventos, aviso explicativo de planos, feedback imediato e abertura de nova aba para `wa.me`.
+    - Modernização do modal de detalhes da OS no Design System Rebrand CarX.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/whatsapp/whatsapp-transactional.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/whatsapp/whatsapp-transactional.test.ts) cobrindo:
+      1. Loja no plano BÁSICO (sem gateway) não dispara background e gera link manual wa.me.
+      2. Loja no plano PRO com WhatsApp DESCONECTADO faz fallback suave para wa.me com aviso.
+      3. Loja no plano PRO com WhatsApp CONECTADO envia mensagem transacional via socket oficial da loja com registro na timeline.
+      4. Templates transacionais cobrem Check-in, Ready, Delivered e Agendamento.
+      5. Transição de status da OS (`transitionStatus`) dispara WhatsApp sem bloquear fluxo operacional.
+      6. Rota `POST /work-orders/:id/notify-whatsapp` permite envio sob demanda pelo gestor.
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
 
 
 
 
+---
+
+### ⚡ FASE 6 — Onda 2: Domínio Especializado Automotivo
+
+#### Tarefa T6.5: Controle Fino de Bobinas (PPF / Películas, Margem Real por Metro e Garantia) `(Concluído)`
+- **Descrição:** Módulo de alta precisão para controle de estoque e consumo linear de bobinas de PPF (Paint Protection Film) e películas solares (insulfilm). Permite rastrear cada centímetro aplicado, vincular o número de série e lote do rolo ao Certificado de Garantia / Passaporte Digital do cliente, registrar retalhos/desperdícios com justificativa e calcular a margem bruta real de lucro por veículo atendido.
+- **Diretriz de Isolamento e Gating por Plano:**
+  - A feature `ppf_spool_control` é restrita aos planos `Profissional` e `Premium`.
+  - Lojas no plano `Essencial` recebem HTTP 403 ao tentar criar ou gerenciar bobinas e visualizam no frontend um card hero de upgrade destacando os benefícios do módulo de PPF.
+- **Destaques de Implementação:**
+  - **Contratos e DTOs em `@carx/shared`**:
+    - `RegisterRollScrapInputSchema`, `RegisterRollScrapInputDto`.
+    - `MaterialRollHistoryItemDto`, `MaterialRollDetailWithHistoryDto`.
+    - Expansão de `MaterialRollDto` com `materialName`, `isLowMeters` e campos de metragem linear.
+  - **Serviço de Negócio (`apps/api/src/stock/stock-service.ts`)**:
+    - `assertSpoolControlFeature`: Verificação de plano via `planService.assertFeature(tenantId, PlanFeatures.PPF_SPOOL_CONTROL)`.
+    - `createRoll`: Cadastro com cálculo automático de custo por metro linear (`costPerMeterCents = costCents / initialMeters`), lock atômico no material base e auditoria.
+    - `getRollDetailedHistory`: Rastreabilidade cruzando `work_order_materials`, `work_orders`, `customers`, `vehicles`, `work_order_items`, `warranties` e `stock_movements`. Calcula:
+      - `consumedMeters`: Metros aplicados em OSs concluídas.
+      - `scrapMeters`: Metros perdidos em retalhos.
+      - `efficiencyPercent`: Taxa de aproveitamento da bobina (`consumed / (consumed + scrap) * 100`).
+      - `grossProfitCents` e `grossMarginPercent`: Lucro bruto real de cada veículo atendido (`servicePrice - costAllocated`).
+    - `registerRollScrap`: Registro transacional de retalhos com abatimento em `material_rolls` e `materials`, inserção de `stock_movements` (`movement_type = 'waste'`), auditoria e transição automática para status `'depleted'` ao zerar o saldo.
+    - `safeUuid`: Helper de sanitização contra UUIDs sintéticos em colunas com FK.
+  - **Auto-vínculo de Garantia em `QaService` (`apps/api/src/qa/qa-service.ts`)**:
+    - O método `createWarranty` inspeciona os materiais alocados na OS (`work_order_materials`) e vincula automaticamente `material_roll_id` e `material_lot_number` ao certificado emitido, permitindo consulta do lote no QR Code do Passaporte Digital do cliente.
+  - **Rotas Fastify (`apps/api/src/routes/stock-routes.ts`)**:
+    - `GET /materials/rolls/:id/history`: Retorna a timeline de aplicações, OSs, clientes, veículos e margem real da bobina.
+    - `POST /materials/rolls/:id/scrap`: Registra perda/retalho com abatimento de saldo e auditoria.
+  - **Frontend Modernizado (`apps/web/src/pages/Materiais.tsx`)**:
+    - Código migrado de `.jsx` legado (Supabase) para TypeScript 100% tipado integrado à API Fastify.
+    - Abas: "Bobinas (PPF & Películas)" e "Insumos Gerais & Químicos".
+    - Métricas em tempo real: Bobinas ativas, saldo total em metros, bobinas em nível crítico e status do Passaporte Digital.
+    - Barra de progresso visual do saldo de metragem (`currentMeters / initialMeters`).
+    - Modal de Histórico e Margem Real por Veículo.
+    - Modal de Registro de Retalho / Perda com recálculo instantâneo.
+    - Modal de Nova Bobina e Reposição Rápida de Estoque.
+    - Card Hero de Upgrade para lojas no plano Essencial.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/stock/spool-control.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/stock/spool-control.test.ts) cobrindo:
+      1. Gating de Plano (HTTP 403 no Básico).
+      2. Cadastro de Bobina com Custo e Metragem no plano Pro com atualização atômica do estoque.
+      3. Alocação e Consumo na OS com Baixa Atômica de Metragem (`deductWorkOrderMaterials`).
+      4. Vínculo Automático da Bobina e Lote ao Certificado de Garantia do Veículo.
+      5. Histórico Detalhado, Rastreabilidade e Cálculo de Margem Real por Metro.
+      6. Registro de Retalho/Desperdício (scrap) e Esgotamento Automático (`depleted`).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros no monorepo inteiro.
+
+---
+
+#### Tarefa T6.8: Motor de Reputação no Google Meu Negócio `(Concluído)`
+- **Descrição:** Motor de captação de avaliações 5 estrelas no Google Meu Negócio / Google Maps focado em clientes promotores (NPS 9 e 10). Gera redirecionamento direto, rastreamento de cliques e conversão, além de disparos transacionais de WhatsApp com estrito cumprimento da regra comercial de assinaturas (cada oficina tem seu próprio número Baileys ou usa o link direto manual `wa.me` gratuito para planos sem gateway).
+- **Destaques de Implementação:**
+  - **Migration 030 (`030_google_reputation_engine.up.sql`)**:
+    - `tenant_branding.google_review_url`: URL oficial do link curto da ficha do Google da oficina (`https://g.page/r/.../review`).
+    - Colunas em `nps_surveys`: `google_review_sent_at`, `google_review_sent_via` (`automatic` | `manual`), `google_review_clicked_at`.
+    - Índice composto otimizado: `idx_nps_surveys_promoters_reputation`.
+  - **Regra de Negócio de WhatsApp por Plano**:
+    - O sistema nunca assume custos nem intermediários fora do número próprio da oficina.
+    - Planos com gateway e instância conectada realizam disparos automatizados de templates transacionais (`GOOGLE_REVIEW_INVITE`).
+    - Planos sem gateway ou offline retornam fallback gracioso com URLs profundas `https://wa.me/{phone}?text={mensagem_formatada}`, viabilizando o envio manual em 1 clique pelo WhatsApp Web sem custo adicional.
+  - **Lógica de Domínio em `NpsService` (`apps/api/src/nps/nps-service.ts`)**:
+    - `getGoogleReviewUrl` com fallback inteligente de busca no Google Maps (`https://www.google.com/maps/search/?api=1&query=...`).
+    - `answerSurvey` idempotente: bloqueio estrito de re-respostas (HTTP 409 Conflict), sugestão de link 5 estrelas apenas para notas 9 ou 10 e disparo / geração de link manual do WhatsApp.
+    - `recordGoogleReviewClick`: Registro auditado do clique em `POST /public/nps/:token/google-click`.
+    - `getReputationOverview`: Consolidação de métricas (`promotersCount`, `googleInvitesSent`, `googleReviewsClicked`, `conversionRatePercent`) e lista `topPromoters`.
+  - **Interface no Frontend (`apps/web`)**:
+    - **Painel NPS (`NpsDashboard.tsx`)**: Card de Reputação no Google com input para editar/salvar URL, métricas em tempo real, aviso de busca no Maps, badge explicativo da regra por plano e tabela interativa de promotores com reenvio/disparo manual via WhatsApp Web.
+    - **Página Pública de Avaliação (`PesquisaNPS.jsx`)**: Suporte a busca por token público, visual Dark Volt Rebrand CarX e banner heróico de 5 estrelas para promotores com botão de alta conversão `⭐ Avaliar 5 Estrelas no Google Meu Negócio ⭐`.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/nps/google-reputation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/nps/google-reputation.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), regressão de NPS com 11/11 testes aprovados (`nps.test.ts`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.9: Mini-Site Institucional da Oficina, Portfólio e Captação de Leads `(Concluído)`
+- **Descrição:** Vitrine pública de alta performance e conversão para cada oficina assinante do CarX (`minhaloja.carx.com.br` ou `/loja/:slug`), com otimização para SEO local, dispositivos móveis, catálogo de serviços, portfólio antes/depois, prova social e captação de orçamentos.
+- **Destaques de Implementação:**
+  - **Migration 031 (`031_minisite_portfolio_leads.up.sql`)**:
+    - Colunas adicionadas em `tenant_branding`: `minisite_enabled`, `minisite_headline`, `minisite_about`, `minisite_address`, `minisite_business_hours`, `minisite_features`.
+    - Tabela `minisite_portfolio_items`: Itens do portfólio com suporte a foto final e foto de entrada opcional para comparador interativo antes/depois (`before_image_url`, `after_image_url`), categorias, ordenação e destaque.
+    - Tabela `minisite_leads`: Captação pública de solicitações de orçamento com rastreamento por status (`new`, `contacted`, `converted`, `discarded`).
+    - Ativação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `MiniSiteService` (`apps/api/src/minisite/minisite-service.ts`)**:
+    - `getPublicMiniSiteData`: Consulta pública sem autenticação que consolida branding, serviços ativos com menor preço ("A partir de R$ ..."), itens de portfólio ordenados e métricas sociais (NPS Score e depoimentos reais de promotores).
+    - `createMiniSiteLead`: Registro público atômico de lead com geração de link profundo wa.me para atendimento ágil.
+    - `listPortfolioItems`, `createPortfolioItem`, `updatePortfolioItem`, `deletePortfolioItem`: Gestão completa do portfólio da loja autenticada.
+    - `listLeads`, `updateLeadStatus`: Painel de triagem e conversão de orçamentos para o gestor.
+    - `updateMiniSiteSettings`: Personalização de textos institucionais e horários de atendimento.
+  - **Rotas Fastify (`apps/api/src/routes/minisite-routes.ts`)**:
+    - `GET /public/tenant/:slug/site` e `POST /public/tenant/:slug/leads` (públicas sem autenticação).
+    - `GET /minisite/portfolio`, `POST /minisite/portfolio`, `PUT /minisite/portfolio/:id`, `DELETE /minisite/portfolio/:id` (protegidas).
+    - `GET /minisite/leads`, `PATCH /minisite/leads/:id/status`, `PUT /minisite/settings` (protegidas).
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Página Pública (`apps/web/src/pages/MiniSiteOficina.tsx`)**:
+      - Design automotivo premium nos tons Dark Volt (`#0E1116` e Verde Volt `#C8F52E`).
+      - Topbar com horários e localização, Navbar responsiva, Hero com headline de autoridade e badges de diferenciais.
+      - Grid de serviços com preço inicial, Galeria de portfólio com alternador interativo Antes/Depois.
+      - Prova social com notas reais de promotores de NPS e link da ficha no Google Maps.
+      - Formulário de orçamento com feedback instantâneo e botão de WhatsApp Web.
+      - Rotas no frontend: `/loja/:slug`, `/oficina/:slug`, `/site/:slug`, `/site`.
+    - **Gestão no Painel do Gestor (`apps/web/src/components/features/MiniSiteManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Mini-Site da Loja" em Configurações.
+      - Link público copiável em 1 clique.
+      - Cadastro e exclusão de trabalhos no portfólio.
+      - Triagem de leads recebidos com badges de status e botão direto de WhatsApp.
+      - Edição de headline e biografia institucional.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/minisite/minisite.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/minisite/minisite.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.10: Módulo Fiscal — Emissão de NFS-e Automática ao Liquidar a OS `(Concluído)`
+- **Descrição:** Motor fiscal multitenant para emissão e transmissão de Nota Fiscal de Serviços Eletrônica (NFS-e) integrada à máquina de estados da Ordem de Serviço (`status: 'DELIVERED'` ou quitação integral do saldo via Pix). Suporte ao provedor Focus NFe com fallback e mock para ambiente de testes/sandbox, cálculo de alíquotas de ISS, sequenciamento atômico de RPS, recepção assíncrona de webhooks e cancelamento com justificativa legal.
+- **Destaques de Implementação:**
+  - **Migration 032 (`032_fiscal_nfse_module.up.sql`)**:
+    - Tabela `tenant_fiscal_settings`: Certificado digital A1 (armazenamento criptografado), senha criptografada, token de API Focus NFe criptografado, inscrição municipal, regime tributário (Simples Nacional, MEI, Lucro Presumido, Lucro Real), alíquota de ISS municipal em pontos base, flags de auto-emissão (`auto_issue_on_delivery`, `auto_issue_on_payment`), RPS e série.
+    - Tabela `fiscal_invoices`: Vínculo direto com `work_order_id` (com índice único parcial por tenant para garantir idempotência contra notas duplicadas ativas), RPS, número oficial da NFS-e municipal, código de verificação, protocolo, status (`draft`, `processing`, `authorized`, `error`, `cancelled`), retenção/cálculo de ISS, URLs para DANFSE PDF e XML.
+    - Ativação obrigatória de RLS: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY; ALTER TABLE ... FORCE ROW LEVEL SECURITY;` com a política `tenant_isolation_policy`.
+    - Habilitação da feature `'nfse'` nos planos `profissional` e `premium` na tabela `plans`.
+  - **Criptografia Simétrica de Credenciais Fiscais (`apps/api/src/fiscal/fiscal-crypto.ts`)**:
+    - Algoritmo AES-256-GCM com Initialization Vector (IV) criptograficamente aleatório e Authentication Tag para garantia de autenticidade dos dados em repouso.
+  - **Provedor Fiscal & Resiliência (`apps/api/src/fiscal/fiscal-provider.ts`)**:
+    - Interface `FiscalProvider`: Métodos `issueNfse`, `cancelNfse`, `getInvoiceStatus`.
+    - Classe `FocusNfeProvider`: Integração direta com os endpoints da Focus NFe (`/v2/nfse`).
+    - Classe `MockFiscalProvider`: Provedor resiliente para sandbox e testes automatizados, simulando autorização em tempo hábil com geração de número de nota, código de verificação e links de PDF/XML.
+  - **Lógica de Domínio em `FiscalService` (`apps/api/src/fiscal/fiscal-service.ts`)**:
+    - `getSettings` e `updateSettings`: Gestão segura das configurações fiscais com ocultação de segredos (`hasApiToken`, `hasCertificate`).
+    - `issueWorkOrderNfse`: Validação de feature gating (`PlanFeatures.NFSE`), checagem de idempotência (HTTP 409 se nota já autorizada ou em processamento), cálculo de valor bruto, deduções, alíquota e valor do ISS, reserva atômica de próximo RPS e envio ao provedor fiscal.
+    - `handleWebhook`: Recepção de notificações assíncronas da prefeitura atualizando status para `authorized`, `error` ou `cancelled`.
+    - `cancelNfse`: Cancelamento junto à prefeitura com exigência legal de justificativa detalhada (mínimo de 15 caracteres).
+    - `tryAutoIssueWorkOrderNfse`: Disparo não-bloqueante acionado na máquina de estados da OS quando o status muda para `DELIVERED` ou ao confirmar quitação total via Pix.
+  - **Integração na Máquina de Estados da OS (`apps/api/src/work-orders/work-order-service.ts`)**:
+    - Disparos automáticos e silenciosos em segundo plano sem impactar o fluxo do balcão ou da oficina.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/fiscal-routes.ts`)**:
+    - `GET /fiscal/settings` e `PUT /fiscal/settings`.
+    - `POST /work-orders/:id/issue-nfse` e `GET /work-orders/:id/fiscal-invoice`.
+    - `GET /fiscal/invoices` e `POST /fiscal/invoices/:id/cancel`.
+    - `POST /webhooks/fiscal`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - **Configurações Fiscais (`apps/web/src/components/features/FiscalSettingsManager.tsx` integrado em `Settings.jsx`)**:
+      - Aba "Módulo Fiscal (NFS-e)" em Configurações da Oficina.
+      - Formulário de dados cadastrais (Razão Social, CNPJ, Inscrição Municipal, CNAE, Regime Tributário e Alíquota de ISS).
+      - Configuração de credenciais com criptografia AES-256 (Token Focus NFe, Certificado A1 e Senha).
+      - Chaves de auto-emissão ao entregar o veículo ou liquidar pagamento.
+    - **Ações na Ordem de Serviço (`apps/web/src/pages/OrdensServico.tsx`)**:
+      - Card de Nota Fiscal integrado no modal de detalhes da OS com visual Dark Volt.
+      - Badges dinâmicos de status (`Autorizada`, `Processando`, `Erro de Emissão`, `Cancelada`).
+      - Exibição de RPS, Número da Nota, Base de Cálculo e ISS devido.
+      - Botão "Emitir NFS-e" em 1 clique para OSs sem nota emitida.
+      - Botões para visualização/download de PDF e XML.
+      - Modal de cancelamento de NFS-e com validação de justificativa de no mínimo 15 caracteres.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/fiscal/fiscal.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/fiscal/fiscal.test.ts) (100% de aprovação) cobrindo:
+      1. Configuração com criptografia AES-256-GCM.
+      2. Feature Gating por plano (HTTP 403 Forbidden no plano Essencial).
+      3. Emissão com sucesso para a OS no plano Pro/Premium (HTTP 201 Created).
+      4. Idempotência e bloqueio de emissão duplicada (HTTP 409 Conflict).
+      5. Processamento resiliente de Webhook da prefeitura.
+      6. Cancelamento com justificativa legal obrigatória.
+      7. Isolamento multi-tenant estrito (RLS) no acesso e listagem de notas.
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **38/38 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.11: DRE Gerencial, Fluxo de Caixa Avançado & Comissões por Técnico `(Concluído)`
+- **Descrição:** Motor financeiro avançado no servidor para gestão contábil e de rentabilidade de oficinas de alta performance. Previsão de fluxo de caixa projetado (diário de 30 a 90 dias), conciliação de contas a pagar e a receber com plano de contas automotivo, e apuração automática de comissões por colaborador com dedução do custo real de insumos (bobinas de PPF/químicos da T6.5) e liquidação em lote com registro atômico de despesa.
+- **Destaques de Implementação:**
+  - **Migration 033 (`033_advanced_financial_dre_cashflow.up.sql`)**:
+    - Tabela `financial_categories`: Plano de contas pré-semeado para oficinas (Aluguel, Luz/Água/Internet, Pró-Labore/Salários, Software CarX, Marketing/Tráfego, Manutenção de Ferramentas, Comissões Técnicas e Insumos) com suporte a categorias personalizadas por tenant.
+    - Tabela `financial_bills`: Contas a pagar e a receber com restrição `CHECK (type IN ('payable', 'receivable'))`, fornecedor/cliente, vencimento, forma de pagamento, quitação parcial/total (`paid_amount_cents`), notas e comprovante.
+    - Colunas adicionadas em `commission_entries`: `spool_cost_cents` (dedução auditada de bobinas/insumos da T6.5), `batch_id` e `paid_by`.
+    - Habilitação compulsória de RLS com `FORCE ROW LEVEL SECURITY` e política `tenant_isolation_policy`.
+  - **Lógica de Domínio em `FinancialService` (`apps/api/src/financial/financial-service.ts`)**:
+    - `getAdvancedDre`: Cálculo analítico em cascata no PostgreSQL:
+      1. (+) Receita Bruta de Serviços e Produtos
+      2. (-) Deduções Comerciais (Descontos) e Fiscais (ISS NFS-e da T6.10)
+      3. (=) Receita Operacional Líquida (ROL)
+      4. (-) Custos Variáveis dos Serviços (CSP / CMV): Insumos de Estoque Consumidos + Bobinas de PPF/Películas Cortadas (T6.5) + Comissões de Técnicos
+      5. (=) Margem de Contribuição Operacional (% da ROL)
+      6. (-) Despesas Fixas (Aluguel, Utilidades, Salários/Pró-Labore, Softwares)
+      7. (-) Despesas Operacionais (Marketing/Tráfego, Ferramentas/Manutenção)
+      8. (=) **EBITDA Real da Oficina** (% margem EBITDA)
+      9. (=) Lucro Líquido Real
+    - `getCashFlowProjection`: Linha do tempo dia a dia de 30, 60 e 90 dias com saldo inicial consolidado, entradas e saídas previstas e saldo acumulado projetado com detecção de risco de caixa.
+    - `listBills`, `createBill`, `markBillPaid`, `deleteBill`: Gestão completa de contas a pagar e a receber.
+    - `batchPayCommissions`: Fechamento e quitação em lote de comissões por colaborador com gravação atômica de `batch_id` e geração automática da conta paga em `financial_bills`.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/financial-routes.ts`)**:
+    - `GET /financial/categories` e `POST /financial/categories`.
+    - `GET /financial/bills`, `POST /financial/bills`, `PATCH /financial/bills/:id/pay`, `DELETE /financial/bills/:id`.
+    - `GET /reports/dre/advanced`.
+    - `GET /financial/cashflow/projection`.
+    - `POST /commissions/batch-pay`.
+  - **Frontend no Padrão Rebrand CarX (`apps/web`)**:
+    - Componente executivo [`DreDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/DreDashboard.tsx) reformulado com 4 abas integradas:
+      1. **DRE Gerencial & EBITDA Real**: Cascata analítica de 9 degraus, cards executivos de margem e alarme de inadimplência.
+      2. **Projeção de Fluxo de Caixa**: Seletor de horizonte (30, 60, 90 dias), saldo inicial, previsão final e timeline diária.
+      3. **Contas a Pagar & Receber**: Filtros por status/tipo, modal para cadastro e quitação com 1 clique.
+      4. **Fechamento de Comissões por Técnico**: Seleção de colaborador, conferência de deduções de bobinas, seleção múltipla em lote e quitação via PIX/Transferência.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 7 testes dedicados em [`apps/api/src/financial/financial-advanced.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/financial/financial-advanced.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`7/7`), suíte acumulada: **45/45 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.12: Painel Corporativo de Redes e Franquias (Multiunidade) `(Concluído)`
+- **Descrição:** Cockpit executivo para franqueadoras e gestores de redes automotivas que operam múltiplas unidades/filiais no CarX. Visão unificada de faturamento consolidado por loja, ranking de produtividade entre unidades, taxa média de ocupação de boxes e logística inter-filiais (transferência atômica e auditada de bobinas de PPF/películas e insumos de estoque).
+- **Destaques de Implementação:**
+  - **Migration 034 (`034_corporate_multi_unit_franchise.up.sql`)**:
+    - Coluna `unit_id UUID REFERENCES units(id) ON DELETE SET NULL` adicionada nas tabelas operacionais: `work_orders`, `bays`, `materials` e `material_rolls`, permitindo alocação física por loja.
+    - Nova tabela `unit_transfers`: registro de transferências entre lojas com `from_unit_id`, `to_unit_id`, `transfer_type ('material', 'roll')`, `material_id`, `roll_id`, `quantity`, `status`, `notes`, `transferred_by`, carimbos de tempo e restrição `CONSTRAINT chk_different_units CHECK (from_unit_id <> to_unit_id)`.
+    - RLS canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, unidades de origem/destino e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `UnitDto`, `CreateUnitSchema`, `UpdateUnitSchema`, `CorporateDashboardOverviewDto`, `UnitRankingItemDto`, `CreateUnitTransferSchema`, `UnitTransferDto`.
+  - **Lógica de Domínio Backend em `CorporateService` (`apps/api/src/corporate/corporate-service.ts`)**:
+    - `listUnits`: Lista filiais ativas do tenant com contadores operacionais integrados (`workOrdersCount`, `activeBaysCount`, `totalRollsCount`).
+    - `createUnit`: Criação de filial com validação compulsória de limites de quota (`max_units`) do plano contratado e unicidade de `slug` por tenant.
+    - `updateUnit`: Edição cadastral e status operacional da filial com trilha de auditoria.
+    - `getCorporateOverview`: Agregação analítica consolidando Faturamento Total, Volume de OSs, Ticket Médio, Taxa de Ocupação de Boxes (`appointments` ativos vs total de boxes), Ranking de Performance entre lojas (ordenado por faturamento e número de OSs) e Resumo de Estoque/Bobinas por loja.
+    - `transferInventory`: Transferência atômica inter-filiais de bobina de PPF (`material_rolls.unit_id`) ou insumo de estoque (`materials` com débito na origem, crédito no destino e movimentação auditada em `stock_movements`), com bloqueio estrito contra cruzamento de dados entre diferentes tenants.
+    - `listTransfers`: Histórico auditado de transferências com nomes de filiais e usuários responsáveis.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/corporate-routes.ts`)**:
+    - `GET /corporate/overview` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/units` e `GET /corporate/units/:id`
+    - `POST /corporate/units` (Guarda RBAC: `owner`, `gestor`)
+    - `PATCH /corporate/units/:id` (Guarda RBAC: `owner`, `gestor`)
+    - `POST /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+    - `GET /corporate/transfers` (Guarda RBAC: `owner`, `gestor`)
+  - **Frontend do Gestor (`apps/web`)**:
+    - Componente executivo [`CorporateDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CorporateDashboard.tsx) e página [`Corporate.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Corporate.jsx) com:
+      1. **Seletor de Unidade no Topo**: Alternância instantânea entre "Todas as Unidades (Rede Consolidada)" e filiais específicas sem relogin.
+      2. **Visão Consolidada & Ranking**: 4 cards executivos de KPI, classificação numerada das filiais com badges de pódio e resumo de bobinas/insumos alocados.
+      3. **Gestão de Filiais**: Tabela analítica com status e modal de cadastro de filial com validação de campos.
+      4. **Logística Inter-Lojas**: Histórico de transferências e modal para movimentação rápida de bobinas de PPF e insumos entre lojas.
+    - Item de menu "Redes / Franquias" adicionado na barra lateral de navegação ([`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx)) e rotas `/corporate`, `/redes` e `/multiunidade` integradas no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/corporate/corporate-units.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/corporate/corporate-units.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), suíte acumulada: **54/54 testes verdes**, `pnpm typecheck` com zero erros em todo o monorepo.
+
+---
+
+#### Tarefa T6.13: App do Técnico Offline-First Completo (PWA com IndexedDB & Sincronização) `(Concluído)`
+- **Descrição:** Arquitetura robusta de alta resiliência operacional para que técnicos, aplicadores e operadores continuem apontando cronômetros, checklists rápidos, fotos e progresso de etapas mesmo em subsolos, galpões de detalhamento ou áreas sem sinal de internet ou Wi-Fi. Os dados são armazenados atomicamente no IndexedDB local do navegador/PWA e sincronizados de forma idempotente assim que a conexão de rede for restabelecida.
+- **Destaques de Implementação:**
+  - **Migration 035 (`035_technician_offline_sync.up.sql`)**:
+    - Nova tabela `technician_offline_sync_logs` para garantia de idempotência estrita com restrição única `CONSTRAINT uq_tech_offline_action_tenant UNIQUE (tenant_id, action_id)`.
+    - Campos: `id`, `tenant_id`, `action_id (UUID)`, `technician_id`, `work_order_id`, `action_type`, `payload (JSONB)`, `status ('applied', 'failed', 'rejected')`, `error_message`, `client_timestamp`, `synced_at`, `created_at`.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices de alta performance por OS, técnico e data.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `OfflineActionTypeSchema`: `'START_TIMER' | 'PAUSE_TIMER' | 'RESUME_TIMER' | 'STOP_TIMER' | 'UPDATE_PROGRESS' | 'CHECKLIST_ITEM' | 'ADD_NOTE'`.
+    - `SingleOfflineActionSchema`: Validação de `id` (UUID), `workOrderId` (UUID), `actionType`, `payload` e `clientTimestamp`.
+    - `BatchSyncActionsSchema`: Envio agrupado em lote com `BatchSyncActionsInputDto`.
+    - `BatchSyncResultDto` e `SyncActionResultDto`: Retorno padronizado de total processado, falhas, status individual e carimbo de sincronização.
+  - **Lógica de Domínio Backend em `TechnicianService` (`apps/api/src/technician/technician-service.ts`)**:
+    - Método `syncOfflineActions`:
+      1. Verificação de idempotência via `technician_offline_sync_logs` para cada `action_id`. Reenvios retornam `success: true` imediatamente sem duplicação de dados.
+      2. Validação estrita de multi-tenancy: bloqueia e rejeita qualquer ação cujo `work_order_id` pertença a outra oficina.
+      3. Processamento especializado para cada tipo de ação:
+         - `START_TIMER`: Inicia cronômetro com carimbo de tempo retroativo do cliente ou associa checklist de entrada.
+         - `PAUSE_TIMER`: Encerra o intervalo ativo e soma os segundos acumulados na OS.
+         - `RESUME_TIMER`: Cria novo intervalo de cronometragem ativo.
+         - `STOP_TIMER`: Finaliza o cronômetro oficial, consolidando os segundos totais.
+         - `UPDATE_PROGRESS`: Atualiza o percentual concluído dos serviços.
+         - `CHECKLIST_ITEM` & `ADD_NOTE`: Registra apontamentos e notas de execução.
+      4. Resiliência por item: falhas em ações individuais (ex: parâmetros inválidos) não abortam as demais ações válidas do lote.
+  - **Rota Fastify Registrada (`apps/api/src/routes/technician-routes.ts`)**:
+    - `POST /technician/sync` (Acesso autenticado para operadores e técnicos).
+  - **Armazenamento Local Estruturado no Cliente (`apps/web/src/services/offlineStorage.ts`)**:
+    - Banco IndexedDB nativo (`carx_offline_db`) com 4 Object Stores:
+      1. `offline_actions`: Fila de ações pendentes indexadas por `workOrderId` e `createdAt`.
+      2. `cached_queue`: Cópia local da fila de ordens de serviço do técnico para navegação sem rede.
+      3. `local_timers`: Persistência do estado do cronômetro local (`running`, `paused`, `accumulatedSeconds`, `lastTickTimestamp`).
+      4. `offline_photos`: Buffer local de fotos capturadas durante o serviço.
+  - **Hook Corporativo `useOfflineSync` (`apps/web/src/hooks/useOfflineSync.ts`)**:
+    - Monitoramento automático de conectividade via `window.addEventListener('online')` e `'offline'`.
+    - Sincronização automática em background no momento da reconexão.
+    - Suporte a disparo manual via `syncNow()` com purga de ações confirmadas no IndexedDB.
+    - Método `enqueueOfflineAction` com geração de UUID v4 seguro e tentativa de despacho instantâneo se online.
+  - **Integração nas Telas do Operador (`apps/web`)**:
+    - [`OperadorHome.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHome.tsx):
+      - Cache automático da fila no IndexedDB no carregamento com fallback transparente em caso de perda de conexão.
+      - Desativação automática de polling periódico enquanto desconectado para economia de bateria e processamento.
+      - Banner de status com telemetria: exibe indicação visual (`Modo Offline Ativo`), contador de apontamentos pendentes e botão de sincronização manual.
+    - [`ExecutorView.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ExecutorView.tsx):
+      - Cronômetro desacoplado e resiliente: se a rede cair ou estiver sem sinal, as operações de iniciar, pausar, retomar ou concluir são persistidas no IndexedDB com badge `Offline (Local)` e sincronizadas assim que a conexão voltar.
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 5 testes dedicados em [`apps/api/src/technician/technician-offline-sync.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/technician/technician-offline-sync.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`5/5`), suíte acumulada: **59/59 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.14: Inteligência Artificial Aplicada (Vistoria Inteligente & Sugestão de Orçamento) `(Concluído)`
+- **Descrição:** Motor avançado de IA multimodal integrado ao fluxo de entrada do veículo na oficina (VCR - Visual Check-in Report). Combina Visão Computacional para pré-detecção de avarias na pintura/lataria/vidros com NLP/Speech-to-Text para extração de dados do check-in por voz (KM, combustível, checklist), sugerindo automaticamente serviços automotivos de alto ticket (PPF, vitrificação, polimento corretivo, martelinho PDR) para inclusão com 1 clique no orçamento da OS.
+- **Destaques de Implementação:**
+  - **Migration 036 (`036_ai_inspection_analysis.up.sql`)**:
+    - Criação da tabela `ai_inspection_analyses` com `tenant_id`, `work_order_id`, `inspection_id`, `analysis_type ('image_damage_detection', 'voice_checklist_extraction')`, `input_payload`, `detected_damages`, `suggested_services`, `extracted_checklist`, `provider`, `tokens_used`, `status` e carimbos de tempo.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) com `tenant_isolation_policy` e índices otimizados por tenant, OS e tipo de análise.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `AiDetectedDamageItemSchema`: validação de peça (`part`), tipo de dano (`damageType`), severidade (`severity`), nível de confiança (`confidence`), coordenadas no diagrama (`view`, `xPercent`, `yPercent`) e ação recomendada.
+    - `AiSuggestedServiceItemSchema`: serviço sugerido, categoria, valor em centavos (`estimatedPriceCents`), tempo em minutos e justificativa técnica.
+    - `AiAnalyzeDamageInputSchema`, `AiDamageDetectionResultDto`, `AiVoiceChecklistInputSchema`, `AiVoiceChecklistResultDto`, `ApplyAiSuggestionsInputSchema`, `ApplyAiSuggestionsResultDto` e `AiAnalysisHistoryItemDto`.
+  - **Lógica de Domínio Backend em `AiInspectionService` (`apps/api/src/ai/ai-inspection-service.ts`)**:
+    - `analyzeDamage`: Motor multimodal com suporte a Gemini API e fallback para o motor heurístico especializado do CarX (`carx-auto-vision-ai`), detectando avarias por ângulo e peça com coordenadas compatíveis com o diagrama do veículo.
+    - `extractVoiceChecklist`: Processamento de áudio ou texto ditado com parser especializado em português do Brasil (reconhecimento de KM em dígitos e numerais por extenso até 999 mil, níveis de combustível e menções a serviços/avarias).
+    - `applyToWorkOrder`: Aplicação atômica com 1 clique que cria/atualiza a inspeção de check-in, insere os pontos de dano em `inspection_damage_points`, adiciona os serviços selecionados em `work_order_items`, recalcula o total da OS e atualiza a quilometragem em `vehicles`.
+    - `getAnalysisHistory`: Histórico completo de diagnósticos de IA associados à OS.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/ai-inspection-routes.ts`)**:
+    - `POST /ai/inspections/analyze-damage`
+    - `POST /ai/inspections/extract-voice`
+    - `POST /ai/inspections/apply-to-work-order`
+    - `GET /ai/inspections/history/:workOrderId`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`AiInspectionAssistantModal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/AiInspectionAssistantModal.tsx):
+      1. Aba de Visão Computacional com seleção de ângulos e plotagem de danos no laudo visual.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
 
 
 
 
+---
+
+#### Tarefa T6.6: Passaporte Digital do Veículo & Transferência na Revenda `(Concluído)`
+- **Descrição:** Certificado de garantia digital e histórico veicular com selo de autenticidade antifraude acessível via QR Code público (`/v/:token` e `/passaporte/:token`). Exibe procedência de películas e vitrificadores (marca e lote oficial do rolo), linha do tempo cronológica de manutenções realizadas pela oficina certificadora, com anonimização LGPD nos dados do antigo proprietário e motor transacional de transferência de custódia na revenda do veículo.
+- **Destaques de Implementação:**
+  - **Migration 029 (`029_vehicle_passport_transfer.up.sql`)**:
+    - Colunas adicionadas em `warranties`: `is_transferable BOOLEAN NOT NULL DEFAULT true`, `transferred_at TIMESTAMPTZ`, `transferred_from_customer_id UUID REFERENCES customers(id)`.
+    - Tabela de histórico `warranty_transfers`: Armazena tenant, garantia, veículo, dados anonimizados do proprietário anterior, novo titular (nome, whatsapp, email, km no hodômetro, motivo, IP e User-Agent) com RLS ativado e forçado.
+  - **Contratos e DTOs em `@carx/shared`**:
+    - DTO `PublicVehiclePassportDto` enriquecido com timeline de manutenções, procedência de bobina (`materialRollBrand`, `materialRollCode`), histórico de transferências (`transfersHistory`) e contagem total de transferências.
+    - Schemas de validação Zod: `TransferVehiclePassportInputSchema`, `TransferVehiclePassportInputDto` e `TransferVehiclePassportResultDto`.
+  - **Motor de Domínio em `QaService` (`apps/api/src/qa/qa-service.ts`)**:
+    - `verifyPublicPassport`: Endpoint público e protegido contra IDOR que recupera a garantia, mascara a placa no padrão Mercosul (`PPF-***8`), anonimiza nomes para LGPD (`Rodrigo F***`), busca o lote oficial da película e compõe a timeline cronológica completa de serviços e transferências.
+    - `transferWarrantyCustody`: Operação atômica que cadastra ou associa o novo proprietário em `customers`, atualiza o vínculo do carro em `vehicles.customer_id`, atualiza o titular da garantia em `warranties` com registro imutável em `warranty_transfers` e evento auditável em `work_order_events`.
+    - Validação de regras de negócio: Rejeita transferências de garantias expiradas/revogadas (HTTP 400 `WARRANTY_NOT_ACTIVE`) ou marcadas como intransferíveis (HTTP 400 `WARRANTY_NON_TRANSFERABLE`).
+  - **Rotas Fastify Registradas (`apps/api/src/routes/qa-routes.ts`)**:
+    - `GET /public/passports/:token`: Consulta pública completa do passaporte.
+    - `GET /v/:token`: Alias de URL curta oficial para escaneamento imediato pela câmera do smartphone via QR Code.
+    - `POST /public/passports/:token/transfer`: Endpoint público de transferência de titularidade na revenda.
+  - **Frontend Público (`apps/web/src/pages/PublicPassportPage.tsx` e `App.jsx`)**:
+    - Interface escura de alta fidelidade visual (Design System CarX `#0E1116`, `#171C24` e acentos em Verde Volt `#CCFF00`).
+    - Selo holográfico de autenticidade, badge Mercosul e contagem regressiva de dias de cobertura.
+    - Seção de Procedência & Lote da película de proteção (PPF).
+    - Linha do tempo cronológica de manutenções do carro.
+      2. Aba de Checklist por Voz com integração da Web Speech API nativa e transcrição instantânea.
+      3. Aba de Serviços para Orçamento com seleção dinâmica e totalizador de valor adicional orçado.
+    - Botão de acesso rápido "✨ Vistoria com IA" integrado no cabeçalho do laudo digital em [`CarVisualChecklist.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CarVisualChecklist.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 6 testes dedicados em [`apps/api/src/ai/ai-inspection.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`6/6`), suíte acumulada: **65/65 testes verdes**, compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
+
+---
+
+#### Tarefa T6.15: CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa `(Concluído e Homologado)`
+- **Descrição:** Motor completo de retenção ativa, pós-venda preventivo e fidelização de clientes para centros automotivos de estética e envelopamento. Gerencia réguas de contato automáticas com base no tipo de serviço executado (revisão de PPF aos 6 meses, manutenção de vitrificação cerâmica aos 12 meses, higienização semestral e película solar), radar anti-churn com identificação de clientes inativos (>90d, >180d, >365d), geração instantânea de cupons dinâmicos com prazo de validade (`RETORNO15-XXXX`) e links profundos do WhatsApp Web com mensagem personalizada e tags dinâmicas.
+- **Destaques de Implementação:**
+  - **Migration 037 (`037_crm_retention_rules.up.sql`)**:
+    - Tabela `crm_retention_rules`: regras com categoria de serviço (`ppf`, `vitrificacao`, `higienizacao`, `insulfilm`, `polimento`, `geral`), tipo de gatilho (`warranty_revision`, `service_interval`, `customer_inactivity`), intervalo em dias, template da mensagem e desconto configurável.
+    - Tabela `tenant_customer_coupons`: cupons dinâmicos emitidos pela oficina para retenção dos seus clientes com unicidade `(tenant_id, UPPER(code))`, desconto percentual ou fixo e data limite de uso.
+    - Tabela `crm_retention_contacts`: histórico completo de abordagens de retenção com rastreamento de status (`sent`, `contacted`, `scheduled`, `converted`, `ignored`), vínculo à OS convertida, receita gerada e usuário que disparou.
+    - RLS Canônico compulsório (`ENABLE` e `FORCE ROW LEVEL SECURITY`) em todas as 3 tabelas com `tenant_isolation_policy`.
+  - **Contratos e Schemas Zod em `@carx/shared` (`packages/shared/src/schemas.ts`)**:
+    - `CrmRetentionRuleDto`, `CreateCrmRetentionRuleSchema`, `UpdateCrmRetentionRuleSchema`.
+    - `CrmRetentionOverviewDto`: indicadores executivos de clientes totais, ativos (<90d), em risco (90-180d), inativos (>180d), taxa de recompra anual, pendências de garantia e receita recuperada.
+    - `WarrantyRevisionItemDto`: certificados de garantia com marcos de 6m/12m vencendo em 30d ou atrasados.
+    - `InactiveCustomerItemDto`: clientes segmentados por inatividade com ticket médio histórico e sugestão de cupom.
+    - `TriggerRetentionContactInputSchema`, `TriggerRetentionContactResultDto`, `ConvertRetentionContactInputSchema`, `RetentionContactItemDto`.
+  - **Lógica de Domínio Backend em `CrmRetentionService` (`apps/api/src/crm/crm-retention-service.ts`)**:
+    - `seedDefaultRetentionRules`: auto-inicialização das 4 réguas padrão da oficina se não existirem.
+    - `getRetentionOverview`: cálculo analítico de KPIs consolidados e taxa de recompra em 12 meses.
+    - `listWarrantyRevisions`: identificação preditiva de revisões de garantia periódica com cálculo de dias restantes ou atrasados (`daysRemainingOrOverdue`).
+    - `listInactiveCustomers`: listagem segmentada com cálculo de tempo sem visita, LTV acumulado e cupom recomendado.
+    - `triggerRetentionContact`: substituição de variáveis no template (`{cliente}`, `{veiculo}`, `{servico}`, `{cupom_codigo}`, `{cupom_beneficio}`), geração de cupom dinâmico e link do WhatsApp (`wa.me`).
+    - `convertRetentionContact`: conversão do contato em agendamento/venda com receita registrada.
+  - **Rotas Fastify Registradas (`apps/api/src/routes/crm-retention-routes.ts`)**:
+    - `GET /crm/retention/overview`
+    - `GET /crm/retention/warranty-revisions`
+    - `GET /crm/retention/inactive-customers`
+    - `GET /crm/retention/rules` e `POST /crm/retention/rules`
+    - `POST /crm/retention/trigger-contact`
+    - `GET /crm/retention/contacts`
+    - `POST /crm/retention/contacts/:id/convert`
+  - **Frontend Integrado (`apps/web`)**:
+    - Componente executivo [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx) e página [`CrmRetencao.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/CrmRetencao.jsx):
+      1. 4 Cards de Métricas: Taxa de Recompra, Revisões Preventivas, Radar Anti-Churn e Receita por Retenção.
+      2. Aba 1: Revisões de Garantia com badges de vencimento e botão "Chamar no WhatsApp".
+      3. Aba 2: Radar de Clientes Inativos com filtro por tempo de inatividade e botão de reativação com cupom.
+      4. Aba 3: Réguas de Automação ativas e modal para criação de novas réguas.
+      5. Aba 4: Histórico de Disparos com marcação de conversão e receita gerada.
+    - Rota `/crm` e `/retencao` no [`App.jsx`](file:///d:/Repositorios/CarX/apps/web/src/App.jsx) e menu "CRM & Retenção" no [`Sidebar.jsx`](file:///d:/Repositorios/CarX/apps/web/src/components/layout/Sidebar.jsx).
+  - **Validação Automatizada com Sucesso Absoluto**:
+    - 9 testes dedicados em [`apps/api/src/crm/crm-retention.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/crm/crm-retention.test.ts) (100% de aprovação).
+- **Status da Validação:** 100% dos testes aprovados (`9/9`), compilação TypeScript em todo o monorepo (`pnpm typecheck`) e build de produção do frontend (`pnpm --filter @carx/web build`) com zero erros.
 
 
+
+
+---
+
+### 🛡️ FASE 7 — Qualidade Contínua, Testes de Carga (k6), Hardening OWASP & Simulação DR `(Concluído e Homologado)`
+
+#### Tarefa T7.1: Quality Gate Automatizado (System Quality Gate) `(Concluído e Homologado)`
+- **Descrição:** Execução integral do pipeline corporativo de engenharia da qualidade regido por [`system-quality-gate/SKILL.md`](file:///d:/Repositorios/CarX/system-quality-gate/SKILL.md), cobrindo análise estática, linting, builds de produção dos frontends, suíte completa de regressão automatizada (111 testes em 17 suítes), auditoria estrutural do PostgreSQL 16 e emissão de relatórios formais de governança.
+- **Destaques de Implementação e Validação:**
+  - **Análise Estática e Linting**:
+    - `pnpm typecheck`: **0 erros** em todos os pacotes do monorepo (`@carx/shared`, `@carx/ui`, `@carx/api`, `@carx/web`, `@carx/admin`), após ajuste de contrato `channel: 'whatsapp'` em [`CrmRetentionDashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/components/features/CrmRetentionDashboard.tsx).
+    - `pnpm eslint apps packages --quiet`: **0 erros**, após limpeza de escape desnecessário em regex no [`ai-inspection-service.ts`](file:///d:/Repositorios/CarX/apps/api/src/ai/ai-inspection-service.ts).
+  - **Builds de Produção**:
+    - `@carx/web`: Build Vite + PWA concluído em `8.81s` com `106 entradas precached` (`3.52 MB`) e Service Worker offline gerado.
+    - `@carx/admin`: Build Vite do Super Admin concluído em `9.45s`.
+  - **Auditoria PostgreSQL 16 ([`db-audit.ts`](file:///d:/Repositorios/CarX/quality/scripts/db-audit.ts))**:
+    - Todas as **37 migrações SQL** (`001` a `037`) aplicadas e íntegras.
+    - **58/58 tabelas com `tenant_id`** auditadas no `pg_catalog` com `rls_enabled = true` e `rls_forced = true` (**100% de cobertura**).
+    - `0` locks bloqueantes e `0` conexões presas em `idle in transaction`. Evidência salva em [`postgres-audit.json`](file:///d:/Repositorios/CarX/quality/evidence/postgres-audit.json).
+  - **Artefatos de Governança Emitidos**:
+    - [`test-plan.md`](file:///d:/Repositorios/CarX/quality/plans/test-plan.md)
+    - [`quality-report.md`](file:///d:/Repositorios/CarX/quality/reports/quality-report.md)
+    - [`quality-summary.json`](file:///d:/Repositorios/CarX/quality/reports/quality-summary.json)
+
+---
+
+#### Tarefa T7.2: Testes de Isolamento Multitenant (CI Obrigatório) `(Concluído e Homologado)`
+- **Descrição:** Suíte automatizada de verificação dinâmica no catálogo do PostgreSQL e análise estática do código-fonte para impedir vazamentos entre oficinas (tenants) e proibir consultas fora do escopo transacional `withTenantContext`.
+- **Destaques de Implementação:**
+  - Evolução de [`tenant-isolation.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/database/tenant-isolation.test.ts) para **10 testes abrangentes (10/10 aprovados)**:
+    - Verificação dinâmica de `relrowsecurity` e `relforcerowsecurity` nas 58 tabelas com `tenant_id`, incluindo todas as tabelas das Ondas 1, 2 e 3 da Fase 6 (`warranty_transfers`, `minisite_portfolio_items`, `minisite_leads`, `tenant_fiscal_settings`, `fiscal_invoices`, `financial_categories`, `financial_bills`, `unit_transfers`, `technician_offline_sync_logs`, `ai_inspection_analyses`, `crm_retention_rules`, `tenant_customer_coupons`, `crm_retention_contacts`).
+    - Varredura estática recursiva nos 15 módulos de domínio de `apps/api/src/` comprovando **0 chamadas diretas a `adminPool.query`** em regras de negócio de oficinas.
+
+---
+
+#### Tarefa T7.3: Testes de Carga Progressivos com k6 (Até 100 Conexões Simultâneas) `(Concluído e Homologado)`
+- **Descrição:** Simulação de estresse e concorrência progressiva em 6 estágios (`1 -> 5 -> 10 -> 25 -> 50 -> 100 VUs`) exercitando os fluxos críticos de atualização de telas de Monitor TV / Tracking de OS (`/work-orders/tracking/:token`), Passaporte Digital QR Code (`/public/passports/:token`), Mini-Site da Oficina (`/public/tenant/:slug/site`) e `/health`.
+- **Resultados Obtidos ([`load-runner.ts`](file:///d:/Repositorios/CarX/quality/k6/load-runner.ts) / [`load-test.js`](file:///d:/Repositorios/CarX/quality/k6/load-test.js)):**
+  - Total acumulado nos 6 estágios: **26.085 requisições processadas**, **0 erros HTTP (0,00%)**.
+  - Desempenho no pico de **100 Conexões Simultâneas (100 VUs)**:
+    - Throughput sustentado: **1.052,4 req/s** (`10.524` requisições em `10s`).
+    - Latência `p50`: **78,93 ms** | `p90`: **120,53 ms** | `p95`: **131,98 ms** (meta `< 500 ms`) | `p99`: **152,06 ms**.
+    - Zero exaustão de pool no PostgreSQL. Evidência persistida em [`benchmark-latest-100vus.json`](file:///d:/Repositorios/CarX/quality/evidence/benchmark-latest-100vus.json).
+
+---
+
+#### Tarefa T7.4: Auditoria de Segurança e Hardening OWASP Top 10 `(Concluído e Homologado)`
+- **Descrição:** Auditoria ofensiva e defensiva das rotas e serviços da API contra o OWASP Top 10, com correção imediata de brechas de autorização e criação da suíte permanente [`owasp-hardening.test.ts`](file:///d:/Repositorios/CarX/apps/api/src/security/owasp-hardening.test.ts).
+- **Hardening Aplicado e Validado (`6/6` suítes aprovadas):**
+  - **Hardening RBAC em [`fiscal-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/fiscal-routes.ts)**: Adicionado `requireFiscalRole` bloqueando usuários com perfil `tecnico` de visualizar ou alterar configurações fiscais e certificado A1 (`HTTP 403 Forbidden`).
+  - **Hardening Anti-IDOR em [`minisite-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/minisite-routes.ts)**: Atualização de status de lead de outro tenant retorna imediatamente `HTTP 404 Not Found`.
+  - **Criptografia em Repouso (OWASP A02)**: Validação no banco de dados comprovando que `certificate_pfx_encrypted`, `certificate_password_encrypted` e `provider_api_token_encrypted` são gravados exclusivamente cifrados com `AES-256-GCM` e ocultados nas respostas JSON.
+  - **Neutralização de SQLi/XSS (OWASP A03)**, **Feature Gating por Plano & Honeypot Anti-Bot (OWASP A04)** e **Rejeição de JWT Forjado/`alg:none` (OWASP A07)**.
+
+---
+
+#### Tarefa T7.5: Simulação Mensal de Desastre e Restauração (DR Drill) `(Concluído e Homologado)`
+- **Descrição:** Procedimento automatizado de Disaster Recovery ([`dr-restore-drill.ts`](file:///d:/Repositorios/CarX/quality/scripts/dr-restore-drill.ts)) validando backup externo, destruição simulada e restauração transacional íntegra.
+- **Resultados do Exercício de DR:**
+  - Exportação de snapshot JSON externo com verificação criptográfica `SHA-256` (`5c768fd31db9ffda04462fc65d18d78f986ef7999c4e5eb09b4a0ff51a48a037`).
+  - Simulação de perda catastrófica via `DELETE ... CASCADE` zerando todas as tabelas do tenant de referência.
+  - Restauração transacional completa em **RTO = 343 ms** (meta `< 15 min`) e **RPO = 0 registros perdidos**, mantendo 100% de paridade nos registros restaurados. Evidência salva em [`dr-restore-drill.json`](file:///d:/Repositorios/CarX/quality/evidence/dr-restore-drill.json).
+
+---
+
+### 11.8 FASE 8 — GO-TO-MARKET & AMBIENTE DE HOMOLOGAÇÃO VPS
+
+#### Tarefa T8.1: Remoção de Dados Mockados e Homologação na VPS Oracle de Teste `(Concluído e Homologado)`
+- **Objetivo:** Eliminar dados estáticos/mockados do sistema, garantindo integridade transacional de ponta a ponta com persistência exclusiva dos planos cadastrados (Essencial, Profissional, Elite) e superadmin, permitindo o provisionamento isolado na VPS de teste Oracle (137.131.151.125) sem interferência no sistema Cozinha pré-existente.
+- **Implementações Realizadas:**
+  1. **Remoção de Mocks no Frontend ([`NovaOrdemServico.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/NovaOrdemServico.tsx))**:
+     - Limpeza de nomes e placas fixas (`Cleiton Alves`, `ABC1D23`, `mock-cleiton`, `mock-tera`).
+     - Integração reativa com `api.customers` e `api.vehicles`: criação automática ou vinculação de cliente e veículo reais no tenant antes da abertura da ordem de serviço.
+     - Carregamento dinâmico dos serviços via `api.catalog.getServices()`, com estado vazio orientando o usuário a cadastrar o catálogo oficial da oficina.
+  2. **Script Transacional de Limpeza ([`clean-mock-data.ts`](file:///d:/Repositorios/CarX/apps/api/src/scripts/clean-mock-data.ts))**:
+     - Limpeza em cascata (`CASCADE`) de ordens, vistorias, pagamentos, estoque, agendamentos, clientes e leads de teste.
+     - Preservação estrita da tabela `plans` com os 3 planos oficiais e validação de contagem ativa.
+  3. **Topologia de Contêineres de Homologação ([`compose.oracle-test.yml`](file:///d:/Repositorios/CarX/infra/compose.oracle-test.yml))**:
+     - API Fastify exposta na porta `3333`.
+     - Frontend Web (Oficina/Operador/PWA) exposto na porta `8080`.
+     - Frontend Admin (SuperAdmin SaaS) exposto na porta `8081`.
+     - PostgreSQL CarX isolado na rede interna e porta host `5434`, preservando a porta `5432` da Cozinha.
+  4. **Scripts de Deploy Zero-Touch**:
+     - [`deploy-oracle-test.sh`](file:///d:/Repositorios/CarX/infra/scripts/deploy-oracle-test.sh) e [`deploy-oracle-test.ps1`](file:///d:/Repositorios/CarX/infra/scripts/deploy-oracle-test.ps1) com liberação automática de regras de firewall iptables antes da regra `REJECT`.

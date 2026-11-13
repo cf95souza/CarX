@@ -1,5 +1,24 @@
-import { useState, useEffect } from 'react';
-import { supabase, hasRealConnection } from '../lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { api, getStoredToken } from '../services/api';
+
+const NOTIFICATIONS_STORAGE_KEY = 'carx_local_notifications';
+
+function getStoredNotifications() {
+  try {
+    const raw = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredNotifications(list) {
+  try {
+    localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(list.slice(0, 50)));
+  } catch {
+    // quota exceeded or disabled
+  }
+}
 
 // Helper para tocar som suave de alerta (Web Audio API - 0 latência e 0 dependências)
 export const playNotificationChime = () => {
@@ -28,23 +47,25 @@ export const triggerNativePushNotification = (notification) => {
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
       const options = {
-        body: notification.mensagem || 'Nova atualização no sistema',
+        body: notification.mensagem || notification.message || 'Nova atualização no sistema',
         icon: '/pwa-192x192.png',
         badge: '/mask-icon.svg',
         vibrate: [200, 100, 200],
         tag: `notif-${notification.id || Date.now()}`,
         requireInteraction: notification.tipo === 'ALERTA',
-        data: notification
+        data: notification,
       };
 
       if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-        navigator.serviceWorker.ready.then(reg => {
-          reg.showNotification(notification.titulo || 'OsSystem PWA', options);
-        }).catch(() => {
-          new Notification(notification.titulo || 'OsSystem PWA', options);
-        });
+        navigator.serviceWorker.ready
+          .then((reg) => {
+            reg.showNotification(notification.titulo || notification.title || 'CarX Oficina', options);
+          })
+          .catch(() => {
+            new Notification(notification.titulo || notification.title || 'CarX Oficina', options);
+          });
       } else {
-        new Notification(notification.titulo || 'OsSystem PWA', options);
+        new Notification(notification.titulo || notification.title || 'CarX Oficina', options);
       }
     } catch (err) {
       console.error('Erro ao disparar push nativo:', err);
@@ -67,8 +88,8 @@ export const requestPushPermission = async () => {
       playNotificationChime();
       triggerNativePushNotification({
         titulo: 'Notificações PWA Ativadas! 🔔',
-        mensagem: 'Agora você receberá alertas de novas OS, estoque crítico e aprovações em tempo real no seu dispositivo.',
-        tipo: 'SUCESSO'
+        mensagem: 'Você receberá alertas de novas OS, estoque crítico e aprovações em tempo real no seu dispositivo.',
+        tipo: 'SUCESSO',
       });
       return true;
     }
@@ -77,42 +98,36 @@ export const requestPushPermission = async () => {
 };
 
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState(getStoredNotifications);
+  const [loading, setLoading] = useState(false);
   const [pushPermission, setPushPermission] = useState(() => getPushPermissionStatus());
 
-  const fetchNotifications = async () => {
-    if (hasRealConnection()) {
-      const { data, error } = await supabase
-        .from('notificacoes')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
-      if (!error && data) setNotifications(data);
-    }
-    setLoading(false);
+  const fetchNotifications = useCallback(() => {
+    setNotifications(getStoredNotifications());
+  }, []);
+
+  const markAsRead = (id) => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, lida: true } : n));
+      saveStoredNotifications(updated);
+      return updated;
+    });
   };
 
-  const markAsRead = async (id) => {
-    if (hasRealConnection()) {
-      await supabase.from('notificacoes').update({ lida: true }).eq('id', id);
-      fetchNotifications();
-    }
+  const markAllAsRead = () => {
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, lida: true }));
+      saveStoredNotifications(updated);
+      return updated;
+    });
   };
 
-  const markAllAsRead = async () => {
-    if (hasRealConnection()) {
-      await supabase.from('notificacoes').update({ lida: true }).eq('lida', false);
-      fetchNotifications();
-    }
-  };
-
-  const clearNotification = async (id) => {
-    if (hasRealConnection()) {
-      await supabase.from('notificacoes').delete().eq('id', id);
-      fetchNotifications();
-    }
+  const clearNotification = (id) => {
+    setNotifications((prev) => {
+      const updated = prev.filter((n) => n.id !== id);
+      saveStoredNotifications(updated);
+      return updated;
+    });
   };
 
   const enablePush = async () => {
@@ -121,43 +136,82 @@ export const useNotifications = () => {
     return granted;
   };
 
+  // Conexão Realtime SSE com o servidor Fastify CarX
   useEffect(() => {
-    fetchNotifications();
-    if (hasRealConnection()) {
-      const channel = supabase
-        .channel('notificacoes-realtime')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'notificacoes' }, (payload) => {
-          fetchNotifications();
-          if (payload.eventType === 'INSERT' && payload.new) {
-            triggerNativePushNotification(payload.new);
-          }
-        })
-        .subscribe();
+    const token = getStoredToken();
+    if (!token) return;
 
-      return () => {
-        supabase.removeChannel(channel);
+    let eventSource = null;
+    try {
+      const url = api.realtime.getEventsUrl();
+      eventSource = new EventSource(url);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const newNotif = {
+            id: String(Date.now()),
+            titulo: payload.title || payload.tipo || 'Atualização em Tempo Real',
+            mensagem: payload.message || payload.mensagem || JSON.stringify(payload.data || ''),
+            tipo: payload.tipo || 'INFO',
+            created_at: new Date().toISOString(),
+            lida: false,
+          };
+
+          setNotifications((prev) => {
+            const next = [newNotif, ...prev];
+            saveStoredNotifications(next);
+            return next;
+          });
+
+          triggerNativePushNotification(newNotif);
+        } catch (e) {
+          // ignore keep-alive
+        }
       };
+
+      eventSource.onerror = () => {
+        eventSource?.close();
+      };
+    } catch (e) {
+      // SSE not available
     }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
   }, []);
 
-  return { 
-    notifications, 
-    loading, 
-    markAsRead, 
-    markAllAsRead, 
-    clearNotification, 
+  return {
+    notifications,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    clearNotification,
     fetchNotifications,
     pushPermission,
-    enablePush
+    enablePush,
   };
 };
 
 export const createNotification = async (data) => {
-  if (hasRealConnection()) {
-    const { error } = await supabase.from('notificacoes').insert(data);
-    return { success: !error, error };
-  } else {
-    triggerNativePushNotification(data);
-  }
+  const item = {
+    id: String(Date.now()),
+    titulo: data.titulo || data.title || 'Notificação',
+    mensagem: data.mensagem || data.message || '',
+    tipo: data.tipo || 'INFO',
+    item_id: data.item_id || null,
+    created_at: new Date().toISOString(),
+    lida: false,
+  };
+
+  const current = getStoredNotifications();
+  const next = [item, ...current];
+  saveStoredNotifications(next);
+
+  triggerNativePushNotification(item);
+  window.dispatchEvent(new CustomEvent('carx:new-notification', { detail: item }));
   return { success: true };
 };

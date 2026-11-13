@@ -326,6 +326,16 @@ export const ClientPortal: React.FC = () => {
                 </span>
               </div>
 
+              {requestOtpMutation.error && (
+                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    {(requestOtpMutation.error as any)?.message ||
+                      'Não foi possível solicitar o código de acesso no momento.'}
+                  </span>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={requestOtpMutation.isPending}

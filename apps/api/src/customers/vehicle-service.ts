@@ -242,9 +242,11 @@ export class VehicleService {
    * Cadastro de veículo com Placa Única POR OFICINA (Multitenant Real)
    */
   async create(tenantId: string, input: CreateVehicleDto, userId?: string): Promise<VehicleDto> {
-    if (!input.customerId) {
+    const targetCustomerId = input.customerId || (input as any).customer_id;
+    if (!targetCustomerId) {
       throw new VehicleError('O cliente proprietário do veículo é obrigatório.', 400);
     }
+    input.customerId = targetCustomerId;
 
     if (!input.plate) {
       throw new VehicleError('A placa do veículo é obrigatória.', 400);

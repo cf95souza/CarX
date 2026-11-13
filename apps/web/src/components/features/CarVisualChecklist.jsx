@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { X, Save, AlertCircle, Info, MousePointer2, Trash2, ShieldCheck, ChevronRight, Camera, QrCode, FileText } from 'lucide-react';
+import { X, Save, AlertCircle, Info, MousePointer2, Trash2, ShieldCheck, ChevronRight, Camera, QrCode, FileText, Sparkles } from 'lucide-react';
 import { useBrand } from '../../contexts/BrandContext';
 import { useOrders } from '../../hooks/useData';
+import { api } from '../../services/api';
 import { sendWhatsApp, getVehicleReceivedMsg } from '../../utils/whatsappUtils';
 import { toast } from '../../utils/toast';
 import QRCodeModal from './QRCodeModal';
 import VcrReportModal from './VcrReportModal';
+import { AiInspectionAssistantModal } from './AiInspectionAssistantModal';
 
 const SignaturePad = ({ onSave, onCancel }) => {
   const canvasRef = React.useRef(null);
@@ -120,6 +122,7 @@ const CarVisualChecklist = ({ onClose, osData }) => {
   const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
   const [showVcrModal, setShowVcrModal] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
   const [selectedPoint, setSelectedPoint] = useState(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [signature, setSignature] = useState(null);
@@ -161,41 +164,25 @@ const CarVisualChecklist = ({ onClose, osData }) => {
       if (!osData?.id) return;
       try {
         setIsLoading(true);
-        // import supabase para chamadas diretas
-        const { supabase, hasRealConnection } = await import('../../lib/supabase');
-        if (hasRealConnection()) {
-          const { data: checklistData } = await supabase
-            .from('checklist_avarias')
-            .select('*')
-            .eq('os_id', osData.id)
-            .single();
-
-          if (checklistData) {
-            setPoints(checklistData.pontos_avaria || []);
-            
-            // Extract KM from notes if it was saved via fallback, or use km column
-            let notes = checklistData.notas || '';
-            let savedKm = checklistData.quilometragem || '';
-            
-            const kmMatch = notes.match(/\[KM: (.*?)\]/);
-            if (kmMatch) {
-              savedKm = kmMatch[1] === 'N/A' ? '' : kmMatch[1];
-              notes = notes.replace(/\[KM: .*?\]\s*/, '');
-            }
-            
-            setGeneralNotes(notes);
-            setKm(savedKm);
+        const res = await api.inspections.getByWorkOrder(osData.id);
+        const list = res?.inspections || (Array.isArray(res) ? res : []);
+        if (list.length > 0) {
+          const insp = list[0];
+          if (insp.damagePoints && Array.isArray(insp.damagePoints)) {
+            setPoints(insp.damagePoints.map(p => ({
+              id: p.id || Date.now(),
+              view: p.view || 'exterior',
+              x: p.xPercent ?? p.x ?? 50,
+              y: p.yPercent ?? p.y ?? 50,
+              tipo: p.damageType || '⚡ Risco / Arranhão',
+              descricao: p.description || '',
+              fotoUrl: p.photoUrl || ''
+            })));
           }
-
-          const { data: mediaData } = await supabase
-            .from('os_midia')
-            .select('*')
-            .eq('os_id', osData.id)
-            .eq('tipo', 'assinatura')
-            .single();
-
-          if (mediaData) {
-            setSignature(mediaData.url);
+          if (insp.currentKm) setKm(String(insp.currentKm));
+          if (insp.notes) setGeneralNotes(insp.notes);
+          if (insp.signatureUrl || insp.customerSignatureUrl) {
+            setSignature(insp.signatureUrl || insp.customerSignatureUrl);
           }
         }
       } catch (err) {
@@ -226,6 +213,41 @@ const CarVisualChecklist = ({ onClose, osData }) => {
   };
 
   const removePoint = (id) => setPoints(points.filter(p => p.id !== id));
+
+  const handleApplyDamagesFromAi = (aiDamages) => {
+    const newPoints = aiDamages.map((dmg) => {
+      let mappedView = 'superior';
+      if (dmg.view === 'front') mappedView = 'frontal';
+      else if (dmg.view === 'rear') mappedView = 'traseira';
+      else if (dmg.view === 'left') mappedView = 'lateral_esquerda';
+      else if (dmg.view === 'right') mappedView = 'lateral_direita';
+
+      let tipoLabel = '⚡ Risco / Arranhão';
+      if (dmg.damageType === 'paint_chip') tipoLabel = '⚡ Lasca de Pintura / Pedrisco';
+      else if (dmg.damageType === 'dent') tipoLabel = '🔨 Amassado (PDR)';
+      else if (dmg.damageType === 'swirl_marks') tipoLabel = '⚡ Micro-riscos / Hologramas';
+      else if (dmg.damageType === 'oxidation') tipoLabel = '🌧️ Mancha / Oxidação';
+
+      return {
+        id: Date.now() + Math.random(),
+        view: mappedView,
+        x: dmg.xPercent || 50,
+        y: dmg.yPercent || 50,
+        tipo: tipoLabel,
+        descricao: `${dmg.description || ''} [Detectado via IA - Confiança: ${Math.round((dmg.confidence || 0.9) * 100)}%]`.trim(),
+        fotoUrl: '',
+      };
+    });
+
+    setPoints((prev) => [...prev, ...newPoints]);
+  };
+
+  const handleApplyVoiceFromAi = (data) => {
+    if (data.currentKm) setKm(String(data.currentKm));
+    if (data.generalNotes) {
+      setGeneralNotes((prev) => (prev ? `${prev}\n${data.generalNotes}` : data.generalNotes));
+    }
+  };
 
   const handleFinalSave = async (signatureData) => {
     if (!osData?.id) {
@@ -313,9 +335,19 @@ const CarVisualChecklist = ({ onClose, osData }) => {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-all group">
-            <X size={28} className="text-slate-200 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white" />
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowAiModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-volt/10 hover:bg-volt/20 text-volt border border-volt/30 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+            >
+              <Sparkles size={16} className="animate-pulse" />
+              <span>Vistoria com IA</span>
+            </button>
+            <button onClick={onClose} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full transition-all group">
+              <X size={28} className="text-slate-200 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-white" />
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -694,6 +726,16 @@ const CarVisualChecklist = ({ onClose, osData }) => {
           </div>
         </div>
       )}
+
+      {/* Modal do Assistente de IA de Vistoria (T6.14) */}
+      <AiInspectionAssistantModal
+        isOpen={showAiModal}
+        onClose={() => setShowAiModal(false)}
+        workOrderId={osData?.id || osData?.workOrderId}
+        vehicleType={vehicleType}
+        onApplyDamagesToDiagram={handleApplyDamagesFromAi}
+        onApplyVoiceChecklist={handleApplyVoiceFromAi}
+      />
 
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }

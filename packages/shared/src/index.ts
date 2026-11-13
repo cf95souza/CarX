@@ -5,3 +5,5 @@ export * from './plans.js';
 export * from './branding.js';
 export * from './storage.js';
 export * from './superadmin.js';
+export * from './coupons.js';
+export * from './whatsapp.js';

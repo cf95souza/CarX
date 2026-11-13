@@ -1,0 +1,95 @@
+{
+  "timestamp": "2026-11-13T17:16:00.000Z",
+  "environment": "local",
+  "phase": "Fase 7 — Qualidade Contínua, Testes & Hardening (T7.1 a T7.5)",
+  "git": {
+    "branch": "main",
+    "migrationsApplied": 37
+  },
+  "status": "APROVADO",
+  "tests": {
+    "typecheck": {
+      "status": "PASSED",
+      "errors": 0
+    },
+    "eslint": {
+      "status": "PASSED",
+      "errors": 0
+    },
+    "frontendBuilds": {
+      "webPwa": "PASSED (106 precached entries)",
+      "superAdmin": "PASSED"
+    },
+    "tenantIsolationSuite": {
+      "status": "PASSED",
+      "passed": 10,
+      "failed": 0
+    },
+    "owaspSecuritySuite": {
+      "status": "PASSED",
+      "passed": 6,
+      "failed": 0
+    },
+    "phase6FunctionalSuites": {
+      "status": "PASSED",
+      "suites": 15,
+      "failed": 0
+    }
+  },
+  "performance": {
+    "tool": "k6 / Native Keep-Alive Progressive Runner (T7.3)",
+    "maxVusTested": 100,
+    "totalRequests": 26085,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "peakRpsAt100Vus": 1052.4,
+    "p50MsAt100Vus": 78.93,
+    "p90MsAt100Vus": 120.53,
+    "p95MsAt100Vus": 131.98,
+    "p99MsAt100Vus": 152.06,
+    "evidenceFile": "quality/evidence/benchmark-2026-11-13T17-15-06-679Z.json"
+  },
+  "database": {
+    "engine": "PostgreSQL 16",
+    "totalMigrations": 37,
+    "totalTenantTables": 58,
+    "rlsEnabledCount": 58,
+    "rlsForcedCount": 58,
+    "blockingLocks": 0,
+    "evidenceFile": "quality/evidence/postgres-audit.json"
+  },
+  "disasterRecoveryDrill": {
+    "status": "PASSED",
+    "rtoDurationMs": 343,
+    "rpoDataLossRecords": 0,
+    "parityVerified": true,
+    "checksumSha256": "143f5467f096f1f079e8398ed79e4387083e3cd91ec61e1ba2c4e7db165bc858",
+    "evidenceFile": "quality/evidence/dr-restore-drill.json"
+  },
+  "cache": {
+    "strategy": "Tenant-scoped transactions (SET LOCAL app.current_tenant_id) + 90d Plate Lookup Cache + IndexedDB Offline-First PWA",
+    "crossTenantLeakage": false
+  },
+  "security": {
+    "owaspTop10Audit": "PASSED",
+    "fixesAppliedInGate": [
+      "Adicionado guard RBAC requireFiscalRole em GET/PUT /fiscal/settings bloqueando perfil tecnico com HTTP 403",
+      "Adicionado retorno estrito HTTP 404 Not Found em PATCH /minisite/leads/:id/status contra tentativas de IDOR cruzado",
+      "Corrigida tipagem do parametro channel em CrmRetentionDashboard.tsx"
+    ],
+    "secretsEncryptedAtRest": true
+  },
+  "risks": [
+    {
+      "severity": "LOW",
+      "description": "Medições de latência realizadas em loopback local; considerar acréscimo de 15-45ms de rede WAN na VPS."
+    }
+  ],
+  "recommendations": [
+    "Ajustar shared_buffers do PostgreSQL na VPS de 16GB para 2GB antes do Go-Live.",
+    "Manter rotina mensal de execução do script quality/scripts/dr-restore-drill.ts."
+  ],
+  "limitations": [
+    "Integrações Focus NFe, Mercado Pago e WhatsApp testadas em modo sandbox determinístico para segurança operacional."
+  ]
+}

@@ -1,14 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-// Cliente Supabase conectado às chaves do .env
-export const supabase = (supabaseUrl && supabaseAnonKey && supabaseUrl !== '...') 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
-
 /**
- * Função utilitária para decidir se usa dados reais ou mock.
+ * @deprecated
+ * O CarX utiliza agora exclusivamente a API Fastify (@carx/api) com isolamento Multi-Tenant em PostgreSQL.
+ * Este arquivo foi mantido apenas para prevenir quebras transitórias de imports legados.
  */
-export const hasRealConnection = () => !!supabase && supabaseUrl.includes('supabase.co');
+export const supabase = null;
+export const hasRealConnection = () => false;

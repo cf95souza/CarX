@@ -1,0 +1,78 @@
+[
+  {
+    "stage": "1. Smoke / Warmup",
+    "vus": 1,
+    "durationSeconds": 5,
+    "totalRequests": 133,
+    "successfulRequests": 133,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 26.6,
+    "latenciesMs": {
+      "min": 0.94,
+      "max": 71.11,
+      "avg": 10.21,
+      "p50": 8.75,
+      "p90": 16.93,
+      "p95": 32.43,
+      "p99": 66.05
+    }
+  },
+  {
+    "stage": "2. Degrau Leve",
+    "vus": 5,
+    "durationSeconds": 10,
+    "totalRequests": 1347,
+    "successfulRequests": 1347,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 134.7,
+    "latenciesMs": {
+      "min": 0.49,
+      "max": 156.7,
+      "avg": 13.01,
+      "p50": 10.94,
+      "p90": 22.3,
+      "p95": 35.3,
+      "p99": 94.94
+    }
+  },
+  {
+    "stage": "3. Degrau Médio",
+    "vus": 10,
+    "durationSeconds": 10,
+    "totalRequests": 2437,
+    "successfulRequests": 2437,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 243.7,
+    "latenciesMs": {
+      "min": 0.44,
+      "max": 150.49,
+      "avg": 17.91,
+      "p50": 12.54,
+      "p90": 45.24,
+      "p95": 63.03,
+      "p99": 112.67
+    }
+  },
+  {
+    "stage": "4. Degrau Carga Máxima Local",
+    "vus": 25,
+    "durationSeconds": 15,
+    "totalRequests": 5826,
+    "successfulRequests": 5826,
+    "failedRequests": 0,
+    "errorRatePercent": 0,
+    "rps": 388.4,
+    "latenciesMs": {
+      "min": 0.4,
+      "max": 331.34,
+      "avg": 42.41,
+      "p50": 37.55,
+      "p90": 95.39,
+      "p95": 117.83,
+      "p99": 167.91
+    }
+  }
+]

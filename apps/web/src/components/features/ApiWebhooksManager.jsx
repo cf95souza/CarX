@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { confirmDialog } from '../../utils/confirm';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../services/api';
 
 const ApiWebhooksManager = () => {
   const [activeSubTab, setActiveSubTab] = useState('TOKENS'); // 'TOKENS', 'SWAGGER', 'WEBHOOKS'
@@ -149,54 +149,37 @@ const ApiWebhooksManager = () => {
 
     try {
       if (selectedEndpoint === 'GET_ORDERS') {
-        const { data, error } = await supabase
-          .from('ordens_servico')
-          .select('id, veiculo_desc, cliente_nome, status, valor_total, created_at')
-          .order('id', { ascending: false })
-          .limit(3);
-        
-        if (error) throw error;
-        
+        const res = await api.workOrders.list({ limit: 3 });
+        const data = res?.workOrders || (Array.isArray(res) ? res : []);
         setTestResponse({
           status: 200,
           statusText: 'OK',
           headers: { 'content-type': 'application/json; charset=utf-8', 'x-ratelimit-remaining': '998/1000' },
-          data: data || []
+          data,
         });
       } else if (selectedEndpoint === 'GET_CLIENTS') {
-        const { data, error } = await supabase
-          .from('clientes')
-          .select('id, nome, telefone, email')
-          .limit(3);
-        
-        if (error) throw error;
-        
+        const res = await api.customers.list();
+        const data = res?.customers || (Array.isArray(res) ? res : []);
         setTestResponse({
           status: 200,
           statusText: 'OK',
           headers: { 'content-type': 'application/json; charset=utf-8' },
-          data: data || []
+          data,
         });
       } else if (selectedEndpoint === 'GET_NPS') {
-        const { data, error } = await supabase
-          .from('pesquisas_nps')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(3);
-
+        const metrics = await api.nps.getMetrics();
         setTestResponse({
           status: 200,
           statusText: 'OK',
-          data: data || [
-            { id: 'sample_1', os_id: 104, cliente_nome: 'Marcos Silva', nota: 10, comentario: 'Excelente acabamento no PPF!' }
-          ]
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+          data: metrics,
         });
       }
     } catch (err) {
       setTestResponse({
-        status: err.status || 500,
-        statusText: 'ERROR / RLS RESTRICTION',
-        error: err.message || 'Erro ao consultar Supabase REST API'
+        status: err.statusCode || 500,
+        statusText: 'ERROR',
+        error: err.message || 'Erro ao consultar API Fastify',
       });
     } finally {
       setIsTesting(false);

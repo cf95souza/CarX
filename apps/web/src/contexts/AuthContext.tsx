@@ -94,14 +94,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return activeMembership?.role || '';
   }, [activeMembership]);
 
-  // Adaptador de perfil para compatibilidade estrita com o legado OsSystem
+  // Adaptador de perfil para compatibilidade estrita com o legado OsSystem e novas roles
   const profile = useMemo<LegacyProfile | null>(() => {
     if (!user) return null;
+    const rawRole = String(role || activeMembership?.role || 'owner').toUpperCase();
+    
+    // Mapeia cargos para total compatibilidade tanto com telas novas quanto legadas
+    let legacyCargo = rawRole;
+    if (['OWNER', 'ADMIN', 'ADM'].includes(rawRole)) legacyCargo = 'ADM';
+    else if (['MANAGER', 'GESTOR', 'RECEPCIONISTA', 'RECEPTIONIST'].includes(rawRole)) legacyCargo = 'GESTOR';
+    else if (['TECHNICIAN', 'TECNICO', 'OPERADOR'].includes(rawRole)) legacyCargo = 'OPERADOR';
+
     return {
       id: user.id,
       nome: user.name || user.email.split('@')[0],
       email: user.email,
-      cargo: role,
+      cargo: legacyCargo,
       status: 'ativo',
       tenant_id: activeMembership?.tenant_id,
     };
@@ -126,6 +134,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Inicialização de sessão com validação do token
   const initAuth = useCallback(async () => {
+    // 0. Captura e absorve token de impersonação passado via URL (Super Admin -> Loja)
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const impersonationToken = urlParams.get('impersonation_token') || urlParams.get('token');
+      if (impersonationToken) {
+        setStoredToken(impersonationToken);
+        urlParams.delete('impersonation_token');
+        urlParams.delete('token');
+        const newQuery = urlParams.toString();
+        const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '') + window.location.hash;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    } catch {
+      // Ignora falhas de parsing de URL
+    }
+
     const token = getStoredToken();
     if (!token) {
       setUser(null);
@@ -138,23 +162,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       const res = await api.auth.getMe();
       if (res && res.user) {
+        const u = res.user as any;
+        const tenantId = u.tenant_id || u.tenantId || getStoredTenantId();
+        const userRole = u.role || 'owner';
+
         setUser({
-          id: res.user.sub,
-          email: res.user.email || '',
-          name: res.user.email?.split('@')[0] || 'Usuário CarX',
+          id: u.sub || u.id,
+          email: u.email || '',
+          name: u.name || u.email?.split('@')[0] || 'Usuário CarX',
         });
 
         // Se o JWT contiver tenant e role mas a lista estiver vazia, cria membership sintética
-        if (res.user.tenantId && memberships.length === 0) {
+        if (tenantId && (!memberships || memberships.length === 0)) {
           const synthMembership: MembershipInfo = {
-            tenant_id: res.user.tenantId,
+            tenant_id: tenantId,
             tenant_slug: getStoredTenantSlug() || '',
             tenant_name: 'Minha Oficina',
-            role: res.user.role || 'gestor',
+            role: userRole,
             is_active: true,
           };
           setMemberships([synthMembership]);
-          setActiveTenantId(res.user.tenantId);
+          setActiveTenantId(tenantId);
+          localStorage.setItem(STORED_MEMBERSHIPS_KEY, JSON.stringify([synthMembership]));
         }
       }
     } catch (err) {

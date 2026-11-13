@@ -1,6 +1,6 @@
 /**
  * Utilitários de Data para prevenir o Bug de Timezone (UTC) do JavaScript.
- * Garante que datas salvas no Supabase ou ISOs não retrocedam um dia 
+ * Garante que datas salvas no banco de dados ou ISOs não retrocedam um dia 
  * ao serem exibidas no fuso horário local (ex: pt-BR).
  */
 

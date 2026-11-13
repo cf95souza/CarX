@@ -3,6 +3,8 @@ import { qaService, QaError } from '../qa/qa-service.js';
 import {
   CreateQaAuditSchema,
   CreateWarrantySchema,
+  TransferVehiclePassportInputSchema,
+  TransferVehiclePassportInputDto,
   UserRole,
 } from '@carx/shared';
 import { authenticateBearer } from './auth-routes.js';
@@ -56,6 +58,48 @@ export async function qaRoutes(app: FastifyInstance) {
       });
     }
   });
+
+  // POST /public/passports/:token/transfer — Transferência de titularidade e custódia da garantia na revenda
+  app.post<{ Params: { token: string }; Body: TransferVehiclePassportInputDto }>(
+    '/public/passports/:token/transfer',
+    async (request: FastifyRequest<{ Params: { token: string }; Body: TransferVehiclePassportInputDto }>, reply: FastifyReply) => {
+      const parseRes = TransferVehiclePassportInputSchema.safeParse(request.body || {});
+      if (!parseRes.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'VALIDATION_ERROR',
+          message: 'Dados de transferência inválidos.',
+          errors: parseRes.error.errors,
+        });
+      }
+
+      try {
+        const result = await qaService.transferWarrantyCustody(
+          request.params.token,
+          parseRes.data,
+          {
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+          }
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof QaError) {
+          return reply.code(err.statusCode).send({
+            statusCode: err.statusCode,
+            error: err.code,
+            message: err.message,
+          });
+        }
+        request.log.error(err, 'Erro ao transferir passaporte digital');
+        return reply.code(500).send({
+          statusCode: 500,
+          error: 'INTERNAL_SERVER_ERROR',
+          message: 'Erro interno ao realizar transferência de custódia.',
+        });
+      }
+    }
+  );
 
   // ============================================================================
   // 2. AUDITORIAS DE QUALIDADE (QA AUDITS) — ROTAS AUTENTICADAS

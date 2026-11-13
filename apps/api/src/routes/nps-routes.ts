@@ -5,6 +5,7 @@ import {
   AnswerNpsSurveySchema,
   CreateReminderSchema,
   UpdateReminderStatusSchema,
+  UpdateGoogleReviewUrlSchema,
   UserRole,
 } from '@carx/shared';
 import { authenticateBearer } from './auth-routes.js';
@@ -73,6 +74,15 @@ export async function npsRoutes(app: FastifyInstance) {
           message: err.message,
         });
       }
+    }
+  );
+
+  // POST /public/nps/:token/google-click — Registro de clique para avaliar no Google (T6.8)
+  app.post<{ Params: { token: string } }>(
+    '/public/nps/:token/google-click',
+    async (request: FastifyRequest<{ Params: { token: string } }>, reply: FastifyReply) => {
+      const ok = await npsService.recordGoogleReviewClick(request.params.token);
+      return reply.code(200).send({ success: ok });
     }
   );
 
@@ -157,6 +167,81 @@ export async function npsRoutes(app: FastifyInstance) {
       const tenantId = request.tenantId!;
       const metrics = await npsService.getMetrics(tenantId);
       return reply.code(200).send(metrics);
+    }
+  );
+
+  // GET /nps/reputation-overview — Visão consolidada do Motor de Reputação no Google (T6.8)
+  app.get(
+    '/nps/reputation-overview',
+    {
+      preHandler: [
+        authenticateBearer,
+        requireTenantContext,
+        requireRole([UserRole.OWNER, UserRole.GESTOR, UserRole.ATENDENTE]),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const tenantId = request.tenantId!;
+      const overview = await npsService.getReputationOverview(tenantId);
+      return reply.code(200).send(overview);
+    }
+  );
+
+  // PUT /nps/google-review-url — Configuração do link oficial do Google Meu Negócio da loja (T6.8)
+  app.put<{ Body: unknown }>(
+    '/nps/google-review-url',
+    {
+      preHandler: [
+        authenticateBearer,
+        requireTenantContext,
+        requireRole([UserRole.OWNER, UserRole.GESTOR]),
+      ],
+    },
+    async (request: FastifyRequest<{ Body: unknown }>, reply: FastifyReply) => {
+      const tenantId = request.tenantId!;
+      const parseResult = UpdateGoogleReviewUrlSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'VALIDATION_ERROR',
+          message: parseResult.error.errors.map((e) => e.message).join(', '),
+        });
+      }
+
+      const updatedUrl = await npsService.updateGoogleReviewUrl(tenantId, parseResult.data.googleReviewUrl);
+      return reply.code(200).send({ success: true, googleReviewUrl: updatedUrl });
+    }
+  );
+
+  // POST /nps/surveys/:id/send-google-invite — Disparo/reenvio do convite para avaliação no Google (T6.8)
+  app.post<{ Params: { id: string } }>(
+    '/nps/surveys/:id/send-google-invite',
+    {
+      preHandler: [
+        authenticateBearer,
+        requireTenantContext,
+        requireRole([UserRole.OWNER, UserRole.GESTOR, UserRole.ATENDENTE]),
+      ],
+    },
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const tenantId = request.tenantId!;
+      try {
+        const result = await npsService.sendGoogleReviewInvite(tenantId, request.params.id);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof NpsError) {
+          return reply.code(err.statusCode).send({
+            statusCode: err.statusCode,
+            error: err.code,
+            message: err.message,
+          });
+        }
+        return reply.code(500).send({
+          statusCode: 500,
+          error: 'INTERNAL_SERVER_ERROR',
+          message: err.message,
+        });
+      }
     }
   );
 

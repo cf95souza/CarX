@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Operador · Execução</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+.st{display:flex;align-items:center;gap:14px;min-height:60px;padding:0 14px;border-radius:16px;background:#171C24;border:1px solid #2E3744;font-size:16px;font-weight:500}
+.ck{width:30px;height:30px;border-radius:50%;background:#C8F52E;color:#0E1116;display:flex;align-items:center;justify-content:center;flex:none}
+.ph{width:56px;height:56px;border-radius:14px;background:#232A35;border:1px solid #2E3744;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#C8F52E}
+</style>
+</helmet>
+<div style="width:390px;height:844px;background:#0E1116;color:#F2F5F8;font-family:Inter,sans-serif;display:flex;flex-direction:column;overflow:hidden">
+<div style="padding:24px 20px 8px;display:flex;align-items:center;gap:14px">
+<button aria-label="Voltar" style="width:48px;height:48px;border-radius:50%;border:1px solid #2E3744;background:#171C24;color:#F2F5F8;font-size:20px">‹</button>
+<div style="flex:1"><div style="font-size:13px;color:#9AA7B8">OS 565 · ABC1D23</div><div style="font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700">Chevrolet Montana</div></div>
+</div>
+<div style="margin:12px 20px 0;background:#171C24;border:1px solid #2E3744;border-radius:24px;padding:18px 20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><div style="font-family:'Space Grotesk',sans-serif;font-size:46px;font-weight:700;font-variant-numeric:tabular-nums">01:24:36</div><div style="font-size:15px;color:#C8F52E;font-weight:600">Previsto 03:00</div></div>
+<div style="display:flex;gap:6px"><div style="flex:1;height:8px;border-radius:99px;background:#C8F52E"></div><div style="flex:1;height:8px;border-radius:99px;background:#C8F52E"></div><div style="flex:1;height:8px;border-radius:99px;background:#2E3744"></div><div style="flex:1;height:8px;border-radius:99px;background:#2E3744"></div></div>
+<div style="font-size:14px;color:#9AA7B8">Insulfilme completo G20 · 50% concluído</div>
+</div>
+<div style="padding:18px 20px 0;display:flex;flex-direction:column;gap:8px">
+<div class="st" style="color:#9AA7B8"><span class="ck"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></span>Preparação e limpeza</div>
+<div class="st" style="border-color:#C8F52E;background:#1B2410;justify-content:space-between"><span style="display:flex;align-items:center;gap:14px"><span class="ck" style="background:transparent;border:3px solid #C8F52E"></span>Aplicação · em andamento</span></div>
+<div class="st" style="color:#9AA7B8"><span class="ck" style="background:#232A35"></span>Acabamento</div>
+<div class="st" style="color:#9AA7B8"><span class="ck" style="background:#232A35"></span>Revisão final</div>
+</div>
+<div style="padding:18px 20px 0">
+<div style="display:flex;justify-content:space-between;font-size:12px;letter-spacing:2px;color:#9AA7B8;font-weight:600;margin-bottom:10px"><span>FOTOS GUIADAS</span><span style="color:#C8F52E">3 de 5</span></div>
+<div style="display:flex;gap:10px">
+<div class="ph">Frente</div><div class="ph">Lat. E</div><div class="ph">Lat. D</div>
+<div class="ph" style="border:2px dashed #C8F52E;background:transparent">Traseira</div>
+<div class="ph" style="color:#9AA7B8">+</div>
+</div>
+</div>
+<div style="margin:14px 20px 0;background:#171C24;border:1px solid #2E3744;border-radius:16px;padding:12px 14px;display:flex;justify-content:space-between;font-size:14px"><span style="color:#9AA7B8">Material usado</span><b style="font-weight:600">Película G20 · 3,2 m</b></div>
+<div style="margin-top:auto;padding:12px 20px 24px;display:flex;gap:10px;background:#0E1116;border-top:1px solid #2E3744">
+<button style="flex:1;height:60px;border-radius:18px;border:1px solid #2E3744;background:#232A35;color:#F2F5F8;font:600 16px Inter,sans-serif">Pausar</button>
+<button style="flex:2;height:60px;border-radius:18px;border:0;background:#C8F52E;color:#0E1116;font:700 18px Inter,sans-serif">Concluir etapa</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

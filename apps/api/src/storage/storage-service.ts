@@ -433,6 +433,37 @@ export class StorageService {
     const byteArray = await (response.Body as any).transformToByteArray();
     return Buffer.from(byteArray);
   }
+
+  /**
+   * Lista arquivos do tenant (opcionalmente filtrados por category)
+   */
+  async listFiles(tenantId: string, category?: string): Promise<Array<StorageFileDto & { downloadUrl: string; url: string }>> {
+    const params: unknown[] = [tenantId];
+    let whereClause = 'tenant_id = $1';
+    if (category) {
+      params.push(category);
+      whereClause += ` AND category = $${params.length}`;
+    }
+
+    const res = await tenantQuery<StorageFileDto>(
+      tenantId,
+      `SELECT * FROM storage_files WHERE ${whereClause} ORDER BY created_at DESC LIMIT 100;`,
+      params
+    );
+
+    const filesWithUrls = await Promise.all(
+      res.rows.map(async (file) => {
+        try {
+          const { downloadUrl } = await this.getPresignedDownloadUrl(tenantId, file.id!);
+          return { ...file, downloadUrl, url: downloadUrl };
+        } catch {
+          return { ...file, downloadUrl: '', url: '' };
+        }
+      })
+    );
+
+    return filesWithUrls;
+  }
 }
 
 export const storageService = new StorageService();

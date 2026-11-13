@@ -1,0 +1,4 @@
+interface:
+  display_name: "System Quality Gate"
+  short_description: "Testes, k6, PostgreSQL, cache e releases seguros"
+  brand_color: "#2563EB"

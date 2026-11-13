@@ -1,106 +1,94 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from '../utils/toast';
-import { supabase, hasRealConnection } from '../lib/supabase';
+import { api } from '../services/api';
 
 export const useCatalog = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchCatalog = async () => {
-    if (hasRealConnection()) {
-      const { data, error } = await supabase.from('servicos').select().order('nome');
-      if (!error) setServices(data || []);
-    }
-    setLoading(false);
-  };
+  const normalizeService = (s) => ({
+    ...s,
+    id: s.id,
+    name: s.name,
+    nome: s.name,
+    category: s.category,
+    categoria: s.category,
+    price_cents: s.price_cents || 0,
+    preco_base: s.price_cents ? s.price_cents / 100 : (Number(s.preco_base) || 0),
+    estimated_minutes: s.estimated_minutes || 60,
+    tempo_estimado: s.estimated_minutes || 60,
+    warranty_months: s.warranty_months || 0,
+    garantia: s.warranty_months || 0,
+  });
 
-  useEffect(() => {
-    fetchCatalog();
-    if (hasRealConnection()) {
-      const channel = supabase
-        .channel('services-changes')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'servicos' }, fetchCatalog)
-        .subscribe();
-      return () => supabase.removeChannel(channel);
+  const fetchCatalog = useCallback(async () => {
+    try {
+      const data = await api.catalog.getServices();
+      const list = Array.isArray(data) ? data : data?.services || [];
+      setServices(list.map(normalizeService));
+    } catch (err) {
+      console.warn('[useCatalog] Falha ao listar serviços da API:', err.message);
+      setServices([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
+  useEffect(() => {
+    fetchCatalog();
+  }, [fetchCatalog]);
+
   const saveService = async (serviceData) => {
-    if (hasRealConnection()) {
-      const { data, error } = await supabase.from('servicos').insert([serviceData]).select();
-      
-      if (error) {
-        if (error.code === '42703') {
-          const safeData = { ...serviceData };
-          
-          if (error.message?.includes('garantia')) {
-             delete safeData.garantia;
-          }
-          if (error.message?.includes('materiais')) {
-             delete safeData.materiais;
-             toast.warning("Aviso: Os MATERIAIS não foram salvos pois a coluna 'materiais' não foi encontrada!");
-          }
-
-          const { data: retryData, error: retryError } = await supabase.from('servicos').insert([safeData]).select();
-          if (!retryError) {
-             await fetchCatalog();
-             return { success: true, data: retryData?.[0] };
-          }
-          toast.error('Erro no fallback de serviço: ' + retryError.message);
-          return { success: false, error: retryError };
-        }
-        toast.error('Erro ao salvar serviço: ' + error.message);
-        return { success: false, error };
-      }
-
+    try {
+      const payload = {
+        name: serviceData.name || serviceData.nome,
+        category: serviceData.category || serviceData.categoria || 'Geral',
+        price_cents: serviceData.price_cents || Math.round((Number(serviceData.preco_base) || 0) * 100),
+        estimated_minutes: Number(serviceData.estimated_minutes || serviceData.tempo_estimado) || 60,
+        warranty_months: Number(serviceData.warranty_months || serviceData.garantia) || 0,
+        description: serviceData.description || serviceData.descricao || '',
+      };
+      const created = await api.catalog.createService(payload);
       await fetchCatalog();
-      return { success: !error, error, data: data?.[0] };
+      toast.success('Serviço cadastrado com sucesso!');
+      return { success: true, data: normalizeService(created) };
+    } catch (err) {
+      toast.error('Erro ao salvar serviço: ' + err.message);
+      return { success: false, error: err };
     }
-    return { success: true };
   };
 
   const updateService = async (id, serviceData) => {
-    if (hasRealConnection()) {
-      const { error } = await supabase.from('servicos').update(serviceData).eq('id', id);
-      
-      if (error) {
-        if (error.code === '42703') {
-          const safeData = { ...serviceData };
-          
-          if (error.message?.includes('garantia')) {
-             delete safeData.garantia;
-          }
-          if (error.message?.includes('materiais')) {
-             delete safeData.materiais;
-             toast.warning("Aviso: Os MATERIAIS não foram atualizados pois a coluna 'materiais' não foi encontrada!");
-          }
-
-          const { error: retryError } = await supabase.from('servicos').update(safeData).eq('id', id);
-          if (!retryError) {
-             await fetchCatalog();
-             return { success: true };
-          }
-          toast.error('Erro no fallback de atualizar serviço: ' + retryError.message);
-          return { success: false, error: retryError };
-        }
-        toast.error('Erro ao atualizar serviço: ' + error.message);
-        return { success: false, error };
-      }
-
+    try {
+      const payload = {
+        name: serviceData.name || serviceData.nome,
+        category: serviceData.category || serviceData.categoria,
+        price_cents: serviceData.price_cents || (serviceData.preco_base !== undefined ? Math.round(Number(serviceData.preco_base) * 100) : undefined),
+        estimated_minutes: serviceData.estimated_minutes !== undefined ? Number(serviceData.estimated_minutes) : (serviceData.tempo_estimado !== undefined ? Number(serviceData.tempo_estimado) : undefined),
+        warranty_months: serviceData.warranty_months !== undefined ? Number(serviceData.warranty_months) : (serviceData.garantia !== undefined ? Number(serviceData.garantia) : undefined),
+        description: serviceData.description || serviceData.descricao,
+      };
+      await api.catalog.updateService(id, payload);
       await fetchCatalog();
-      return { success: !error, error };
+      toast.success('Serviço atualizado com sucesso!');
+      return { success: true };
+    } catch (err) {
+      toast.error('Erro ao atualizar serviço: ' + err.message);
+      return { success: false, error: err };
     }
-    return { success: true };
   };
 
   const deleteService = async (id) => {
-    if (hasRealConnection()) {
-      const { error } = await supabase.from('servicos').delete().eq('id', id);
-      if (!error) await fetchCatalog();
-      return { success: !error, error };
+    try {
+      await api.catalog.deleteService(id);
+      await fetchCatalog();
+      toast.success('Serviço removido com sucesso!');
+      return { success: true };
+    } catch (err) {
+      toast.error('Erro ao excluir serviço: ' + err.message);
+      return { success: false, error: err };
     }
-    return { success: true };
   };
 
-  return { services, loading, saveService, updateService, deleteService };
+  return { services, loading, saveService, updateService, deleteService, refreshCatalog: fetchCatalog };
 };

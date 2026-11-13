@@ -1,11 +1,16 @@
 import { tenantQuery, tenantTransaction } from '../database/tenant-query.js';
 import { auditService } from '../audit/audit-service.js';
+import { planService } from '../plans/plan-service.js';
 import {
+  PlanFeatures,
   MaterialDto,
   CreateMaterialInputDto,
   UpdateMaterialInputDto,
   MaterialRollDto,
   CreateMaterialRollInputDto,
+  RegisterRollScrapInputDto,
+  MaterialRollDetailWithHistoryDto,
+  MaterialRollHistoryItemDto,
   StockMovementDto,
   CreateStockMovementInputDto,
   WorkOrderMaterialDto,
@@ -39,6 +44,9 @@ export class StockInsufficientError extends Error {
     this.statusCode = statusCode;
   }
 }
+
+const safeUuid = (val?: string | null): string | null =>
+  val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val) ? val : null;
 
 export class StockService {
   // ============================================================================
@@ -473,6 +481,13 @@ export class StockService {
   }
 
   /**
+   * Valida permissão do plano para recursos avançados de bobinas de PPF/Películas
+   */
+  async assertSpoolControlFeature(tenantId: string): Promise<void> {
+    await planService.assertFeature(tenantId, PlanFeatures.PPF_SPOOL_CONTROL);
+  }
+
+  /**
    * Cadastra nova bobina/rolo e incrementa atomicamente o estoque do material
    */
   async createRoll(
@@ -480,6 +495,8 @@ export class StockService {
     input: CreateMaterialRollInputDto,
     actorUserId?: string
   ): Promise<MaterialRollDto> {
+    await this.assertSpoolControlFeature(tenantId);
+
     if (!input.initialMeters || input.initialMeters <= 0) {
       throw new StockValidationError('Metragem inicial da bobina deve ser estritamente maior que zero.');
     }
@@ -569,6 +586,12 @@ export class StockService {
       );
 
       // 4. Inserir movimentação de entrada vinculada à bobina
+      let validActorUserId: string | null = null;
+      if (safeUuid(actorUserId)) {
+        const uRes = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1;', [actorUserId]);
+        if (uRes.rows.length > 0) validActorUserId = actorUserId!;
+      }
+
       await client.query(
         `
         INSERT INTO stock_movements (
@@ -595,7 +618,7 @@ export class StockService {
           prevStock,
           newStock,
           `Entrada de bobina lote #${input.lotNumber || createdRoll.id}`,
-          actorUserId || null,
+          validActorUserId,
         ]
       );
     });
@@ -612,6 +635,263 @@ export class StockService {
     }
 
     return createdRoll!;
+  }
+
+  /**
+   * Obtém histórico completo e rastreabilidade da bobina:
+   * - Veículos, clientes e OSs onde a bobina foi aplicada
+   * - Metragem gasta, custo alocado e margem real por aplicação
+   * - Certificado de garantia e passaporte digital vinculado
+   * - Registro de retalhos, desperdício e taxa de eficiência
+   */
+  async getRollDetailedHistory(
+    tenantId: string,
+    rollId: string
+  ): Promise<MaterialRollDetailWithHistoryDto> {
+    await this.assertSpoolControlFeature(tenantId);
+
+    // 1. Obter dados da bobina
+    const roll = await this.getRollById(tenantId, rollId);
+    const initialMeters = Number(roll.initialMeters) || 1;
+    const costPerMeterCents = Math.round((roll.costCents || 0) / initialMeters);
+
+    // 2. Obter histórico de aplicações em Ordens de Serviço
+    const applicationsSql = `
+      SELECT 
+        wom.work_order_id AS "workOrderId",
+        wo.os_number AS "osNumber",
+        c.name AS "customerName",
+        c.phone AS "customerPhone",
+        v.plate AS "vehiclePlate",
+        CONCAT(v.brand, ' ', v.model) AS "vehicleModel",
+        COALESCE(
+          (SELECT woi.name FROM work_order_items woi WHERE woi.work_order_id = wo.id ORDER BY woi.total_cents DESC LIMIT 1),
+          m.name
+        ) AS "serviceName",
+        wom.quantity::float AS "metersUsed",
+        COALESCE(
+          (SELECT SUM(woi.total_cents) FROM work_order_items woi WHERE woi.work_order_id = wo.id),
+          wo.final_cents,
+          wo.total_cents,
+          0
+        )::int AS "servicePriceCents",
+        w.id AS "warrantyId",
+        w.verification_token::text AS "warrantyToken",
+        COALESCE(wom.consumed_at, wom.created_at)::text AS "appliedAt"
+      FROM work_order_materials wom
+      JOIN work_orders wo ON wo.id = wom.work_order_id AND wo.tenant_id = wom.tenant_id
+      JOIN customers c ON c.id = wo.customer_id AND c.tenant_id = wo.tenant_id
+      JOIN vehicles v ON v.id = wo.vehicle_id AND v.tenant_id = wo.tenant_id
+      JOIN materials m ON m.id = wom.material_id AND m.tenant_id = wom.tenant_id
+      LEFT JOIN warranties w ON w.work_order_id = wom.work_order_id AND w.tenant_id = wom.tenant_id
+      WHERE wom.tenant_id = $1 AND wom.material_roll_id = $2
+      ORDER BY wom.created_at DESC;
+    `;
+
+    const appRes = await tenantQuery<any>(tenantId, applicationsSql, [tenantId, rollId]);
+
+    // 3. Obter total de retalhos / perdas registradas
+    const scrapSql = `
+      SELECT COALESCE(SUM(ABS(quantity)), 0)::float AS "totalScrapMeters"
+      FROM stock_movements
+      WHERE tenant_id = $1 AND material_roll_id = $2 AND movement_type = 'waste';
+    `;
+    const scrapRes = await tenantQuery<{ totalScrapMeters: number }>(tenantId, scrapSql, [tenantId, rollId]);
+    const scrapMeters = Number(scrapRes.rows[0]?.totalScrapMeters) || 0;
+
+    let totalMetersUsed = 0;
+    let totalRevenueCents = 0;
+
+    const history: MaterialRollHistoryItemDto[] = appRes.rows.map((row) => {
+      const metersUsed = Number(row.metersUsed) || 0;
+      totalMetersUsed += metersUsed;
+      const servicePriceCents = Number(row.servicePriceCents) || 0;
+      totalRevenueCents += servicePriceCents;
+      const costAllocatedCents = Math.round(metersUsed * costPerMeterCents);
+      const grossProfitCents = servicePriceCents - costAllocatedCents;
+      const grossMarginPercent =
+        servicePriceCents > 0
+          ? Number(((grossProfitCents / servicePriceCents) * 100).toFixed(2))
+          : 0;
+
+      return {
+        workOrderId: row.workOrderId,
+        osNumber: Number(row.osNumber),
+        customerName: row.customerName,
+        customerPhone: row.customerPhone,
+        vehiclePlate: row.vehiclePlate,
+        vehicleModel: row.vehicleModel,
+        serviceName: row.serviceName,
+        metersUsed,
+        costAllocatedCents,
+        servicePriceCents,
+        grossProfitCents,
+        grossMarginPercent,
+        warrantyId: row.warrantyId || null,
+        warrantyToken: row.warrantyToken || null,
+        appliedAt: row.appliedAt,
+      };
+    });
+
+    const consumedMeters = totalMetersUsed;
+    const totalAccountedMeters = consumedMeters + scrapMeters;
+    const efficiencyPercent =
+      totalAccountedMeters > 0
+        ? Number(((consumedMeters / totalAccountedMeters) * 100).toFixed(2))
+        : 100;
+
+    const totalCostOfConsumed = Math.round(consumedMeters * costPerMeterCents);
+    const totalGrossProfitCents = totalRevenueCents - totalCostOfConsumed;
+    const averageMarginPercent =
+      totalRevenueCents > 0
+        ? Number(((totalGrossProfitCents / totalRevenueCents) * 100).toFixed(2))
+        : 0;
+
+    return {
+      ...roll,
+      materialName: roll.materialName || 'Película / PPF',
+      costPerMeterCents,
+      consumedMeters,
+      scrapMeters,
+      efficiencyPercent,
+      totalRevenueCents,
+      totalGrossProfitCents,
+      averageMarginPercent,
+      history,
+    };
+  }
+
+  /**
+   * Registra retalho / perda de película de uma bobina
+   */
+  async registerRollScrap(
+    tenantId: string,
+    rollId: string,
+    input: RegisterRollScrapInputDto,
+    userId?: string
+  ): Promise<MaterialRollDto> {
+    await this.assertSpoolControlFeature(tenantId);
+
+    const scrapMeters = Number(input.meters);
+    if (isNaN(scrapMeters) || scrapMeters <= 0) {
+      throw new StockValidationError('Metragem de retalho/desperdício deve ser maior que zero.');
+    }
+
+    await tenantTransaction(tenantId, async (client) => {
+      // 1. Lock na bobina
+      const rollRes = await client.query<{
+        id: string;
+        material_id: string;
+        current_meters: number;
+        initial_meters: number;
+        cost_cents: number;
+        status: string;
+        lot_number: string | null;
+      }>(
+        `SELECT id, material_id, current_meters, initial_meters, cost_cents, status, lot_number
+         FROM material_rolls
+         WHERE tenant_id = $1 AND id = $2
+         FOR UPDATE;`,
+        [tenantId, rollId]
+      );
+
+      if (rollRes.rows.length === 0) {
+        throw new StockNotFoundError('Bobina não encontrada nesta oficina.');
+      }
+
+      const roll = rollRes.rows[0];
+      const prevMeters = Number(roll.current_meters);
+
+      if (scrapMeters > prevMeters) {
+        throw new StockValidationError(
+          `Metragem de descarte (${scrapMeters}m) não pode exceder o saldo restante da bobina (${prevMeters}m).`
+        );
+      }
+
+      const newMeters = Math.max(0, prevMeters - scrapMeters);
+      const newStatus = newMeters === 0 ? 'depleted' : roll.status;
+
+      // 2. Atualizar saldo da bobina
+      await client.query(
+        `UPDATE material_rolls
+         SET current_meters = $3, status = $4, updated_at = NOW()
+         WHERE tenant_id = $1 AND id = $2;`,
+        [tenantId, rollId, newMeters, newStatus]
+      );
+
+      // 3. Atualizar estoque geral do material
+      const matRes = await client.query<{ current_stock: number }>(
+        `SELECT current_stock FROM materials WHERE tenant_id = $1 AND id = $2 FOR UPDATE;`,
+        [tenantId, roll.material_id]
+      );
+      if (matRes.rows.length > 0) {
+        const prevStock = Number(matRes.rows[0].current_stock);
+        const newStock = Math.max(0, prevStock - scrapMeters);
+        await client.query(
+          `UPDATE materials SET current_stock = $3, updated_at = NOW() WHERE tenant_id = $1 AND id = $2;`,
+          [tenantId, roll.material_id, newStock]
+        );
+      }
+
+      // 4. Calcular custos
+      const costPerMeterCents =
+        roll.initial_meters > 0 ? Math.round(roll.cost_cents / Number(roll.initial_meters)) : 0;
+      const totalCostCents = Math.round(scrapMeters * costPerMeterCents);
+
+      // 5. Inserir movimentação em stock_movements
+      let validUserId: string | null = null;
+      if (safeUuid(userId)) {
+        const uRes = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1;', [userId]);
+        if (uRes.rows.length > 0) validUserId = userId!;
+      }
+
+      await client.query(
+        `INSERT INTO stock_movements (
+          tenant_id,
+          material_id,
+          material_roll_id,
+          work_order_id,
+          movement_type,
+          quantity,
+          unit_cost_cents,
+          total_cost_cents,
+          previous_stock,
+          new_stock,
+          reason,
+          created_by
+        ) VALUES ($1, $2, $3, $4, 'waste', $5, $6, $7, $8, $9, $10, $11);`,
+        [
+          tenantId,
+          roll.material_id,
+          rollId,
+          input.workOrderId || null,
+          -scrapMeters,
+          costPerMeterCents,
+          totalCostCents,
+          prevMeters,
+          newMeters,
+          input.reason,
+          validUserId,
+        ]
+      );
+
+      // 6. Auditoria
+      await auditService.record({
+        tenantId,
+        userId,
+        action: 'MATERIAL_ROLL_SCRAP_RECORDED',
+        entity: 'material_rolls',
+        entityId: rollId,
+        newValues: {
+          meters: scrapMeters,
+          previous_meters: prevMeters,
+          new_meters: newMeters,
+          reason: input.reason,
+        },
+      });
+    });
+
+    return await this.getRollById(tenantId, rollId);
   }
 
   // ============================================================================
@@ -967,6 +1247,12 @@ export class StockService {
         return; // Idempotência: nada a fazer, não baixa novamente!
       }
 
+      let validActorUserId: string | null = null;
+      if (safeUuid(actorUserId)) {
+        const uRes = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1;', [actorUserId]);
+        if (uRes.rows.length > 0) validActorUserId = actorUserId!;
+      }
+
       // 3. Processar baixa de cada item pendente
       for (const item of unconsumedItems) {
         const qtyToDeduct = Math.abs(Number(item.quantity));
@@ -1041,7 +1327,7 @@ export class StockService {
             prevStock,
             newStock,
             `Consumo na Ordem de Serviço #${wo.os_number}`,
-            actorUserId || null,
+            validActorUserId,
           ]
         );
 
@@ -1180,6 +1466,50 @@ export class StockService {
       sumMovements,
       isConsistent,
     };
+  }
+
+  /**
+   * Remove material caso não tenha sido alocado a ordens de serviço
+   */
+  async deleteMaterial(
+    tenantId: string,
+    id: string,
+    actorUserId?: string
+  ): Promise<{ success: boolean }> {
+    await this.getMaterialById(tenantId, id);
+
+    const inUseRes = await tenantQuery<{ count: string }>(
+      tenantId,
+      `SELECT count(*)::text AS count FROM work_order_materials WHERE tenant_id = $1 AND material_id = $2;`,
+      [tenantId, id]
+    );
+    if (parseInt(inUseRes.rows[0]?.count || '0', 10) > 0) {
+      throw new StockValidationError('Não é possível excluir o material pois já foi utilizado em Ordens de Serviço.');
+    }
+
+    await tenantQuery(
+      tenantId,
+      `DELETE FROM stock_movements WHERE tenant_id = $1 AND material_id = $2;`,
+      [tenantId, id]
+    );
+
+    await tenantQuery(
+      tenantId,
+      `DELETE FROM materials WHERE tenant_id = $1 AND id = $2;`,
+      [tenantId, id]
+    );
+
+    if (actorUserId) {
+      await auditService.record({
+        tenantId,
+        userId: actorUserId,
+        action: 'MATERIAL_DELETED',
+        entity: 'materials',
+        entityId: id,
+      });
+    }
+
+    return { success: true };
   }
 }
 

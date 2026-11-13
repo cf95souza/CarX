@@ -213,41 +213,41 @@ const Vendas = () => {
   });
 
   return (
-    <div className="fade-in space-y-6 pb-20">
-      {/* Header Profissional */}
+    <div className="space-y-6 pb-20 font-sans text-[#0E1116]">
+      {/* Header Profissional Canônico */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase tracking-tighter">Vendas e Orçamentos</h2>
-          <p className="text-sm text-slate-500 font-medium">Converta interessados em clientes premium.</p>
+          <h1 className="font-display text-3xl font-bold text-[#0E1116] tracking-tight">Vendas e Orçamentos</h1>
+          <p className="text-sm text-[#5B6674] mt-0.5">Gestão de propostas comerciais, cobrança de sinais Pix e taxa de conversão.</p>
         </div>
         <button 
           onClick={() => setShowNovoModal(true)}
-          className="btn-primary flex items-center gap-2 group shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
+          className="carx-btn-volt"
         >
-          <FilePlus size={18} className="group-hover:scale-110 transition-transform" /> 
+          <FilePlus size={18} /> 
           Novo Orçamento
         </button>
       </div>
 
-      {/* KPIs de Conversão Dinâmicos */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* KPIs de Conversão Dinâmicos (Cards Brancos Rebrand) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div 
           onClick={() => toggleSelection('ORÇAMENTO')}
-          className={`card-premium p-6 flex items-center justify-between border-0 shadow-xl shadow-slate-200/50 bg-white group cursor-pointer transition-all active:scale-95 ${selectedStatuses.includes('ORÇAMENTO') ? 'ring-2 ring-amber-500/20 bg-amber-50/5' : ''}`}
+          className={`carx-card p-6 flex items-center justify-between cursor-pointer transition-all ${selectedStatuses.includes('ORÇAMENTO') ? 'border-[#0E1116] shadow-sm' : ''}`}
         >
           <div className="flex-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Aguardando Aprovação</p>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Aguardando Aprovação</span>
             {loading ? (
-                <div className="h-8 w-24 bg-slate-50 animate-pulse rounded-lg"></div>
+                <div className="h-8 w-24 bg-[#F3F5F7] animate-pulse rounded-lg mt-2"></div>
             ) : (
-                <h4 className="text-2xl font-black text-slate-800">{formatCurrency(aguardandoFaturamento)}</h4>
+                <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{formatCurrency(aguardandoFaturamento)}</div>
             )}
-            <p className="text-[10px] text-amber-500 font-bold mt-1 uppercase tracking-wider">
-                {(quotes || []).filter(q => q.status === 'ORCAMENTO').length} Orçamentos ativos
+            <p className="text-xs text-[#5B6674] font-medium mt-1">
+                {(quotes || []).filter(q => q.status === 'ORCAMENTO').length} orçamentos ativos
             </p>
           </div>
-          <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-inner group-hover:scale-110 transition-transform">
-            <Clock size={28} />
+          <div className="w-12 h-12 bg-[#FFE2A8] rounded-2xl flex items-center justify-center text-[#0E1116]">
+            <Clock size={22} />
           </div>
         </div>
 
@@ -255,48 +255,48 @@ const Vendas = () => {
           onClick={() => {
             setSelectedStatuses(['AGUARDANDO', 'EM EXECUÇÃO', 'CONCLUÍDO', 'ENTREGUE']);
           }}
-          className={`card-premium p-6 flex items-center justify-between border-0 shadow-xl shadow-slate-200/50 bg-white group cursor-pointer transition-all active:scale-95 ${!selectedStatuses.includes('ORÇAMENTO') && !selectedStatuses.includes('CANCELADO') && !selectedStatuses.includes('TODOS') ? 'ring-2 ring-emerald-500/20 bg-emerald-50/5' : ''}`}
+          className={`carx-card p-6 flex items-center justify-between cursor-pointer transition-all ${!selectedStatuses.includes('ORÇAMENTO') && !selectedStatuses.includes('CANCELADO') && !selectedStatuses.includes('TODOS') ? 'border-[#0E1116] shadow-sm' : ''}`}
         >
           <div className="flex-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total Convertido</p>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Total Convertido</span>
              {loading ? (
-                <div className="h-8 w-24 bg-slate-50 animate-pulse rounded-lg"></div>
+                <div className="h-8 w-24 bg-[#F3F5F7] animate-pulse rounded-lg mt-2"></div>
             ) : (
-                <h4 className="text-2xl font-black text-slate-800">{formatCurrency(convertidosFaturamento)}</h4>
+                <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{formatCurrency(convertidosFaturamento)}</div>
             )}
-            <p className="text-[10px] text-emerald-500 font-bold mt-1 uppercase tracking-wider">
-                Taxa: {quotes.length > 0 ? Math.round((aprovados.length / quotes.length) * 100) : 0}% de sucesso
+            <p className="text-xs text-[#5B6674] font-medium mt-1">
+                Taxa de sucesso: {quotes.length > 0 ? Math.round((aprovados.length / quotes.length) * 100) : 0}%
             </p>
           </div>
-          <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shadow-inner group-hover:scale-110 transition-transform">
-            <TrendingUp size={28} />
+          <div className="w-12 h-12 bg-[#C8F52E] rounded-2xl flex items-center justify-center text-[#0E1116]">
+            <TrendingUp size={22} />
           </div>
         </div>
 
-        <div className="card-premium p-6 flex items-center justify-between border-0 shadow-xl shadow-slate-200/50 bg-white group">
+        <div className="carx-card p-6 flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Ticket Médio</p>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Ticket Médio</span>
              {loading ? (
-                <div className="h-8 w-24 bg-slate-50 animate-pulse rounded-lg"></div>
+                <div className="h-8 w-24 bg-[#F3F5F7] animate-pulse rounded-lg mt-2"></div>
             ) : (
-                <h4 className="text-2xl font-black text-slate-800">{formatCurrency(ticketMedio)}</h4>
+                <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] mt-2">{formatCurrency(ticketMedio)}</div>
             )}
-            <p className="text-[10px] text-primary font-bold mt-1 uppercase tracking-wider">Média por venda aprovada</p>
+            <p className="text-xs text-[#5B6674] font-medium mt-1">Média por venda aprovada</p>
           </div>
-          <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-inner group-hover:scale-110 transition-transform">
-            <ArrowUpRight size={28} />
+          <div className="w-12 h-12 bg-[#0E1116] rounded-2xl flex items-center justify-center text-[#C8F52E]">
+            <ArrowUpRight size={22} />
           </div>
         </div>
       </div>
 
       {/* Barra de Busca e Filtros */}
       <div className="flex flex-col md:flex-row gap-3 items-center">
-        <div className="relative flex-1 w-full group">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
+        <div className="relative flex-1 w-full">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" />
           <input 
             type="text" 
             placeholder="Buscar por cliente, veículo ou código..." 
-            className="w-full pl-12 pr-4 py-4 bg-white border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all text-sm font-bold shadow-sm"
+            className="w-full pl-11 pr-4 py-3 bg-white border border-[#E1E6EC] rounded-xl outline-none focus:border-[#0E1116] transition-all text-sm font-medium text-[#0E1116] placeholder:text-[#5B6674]"
             value={searchTerm}
             onChange={handleSearchChange}
           />
@@ -310,18 +310,18 @@ const Vendas = () => {
         />
       </div>
 
-      {/* Tabela de Orçamentos */}
-      <div className="card-premium border-none shadow-2xl shadow-slate-200/50">
+      {/* Tabela de Orçamentos (Design System Rebrand) */}
+      <div className="bg-white border border-[#E1E6EC] rounded-3xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto overflow-y-visible">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/50 border-b border-slate-100">
+            <thead className="bg-[#F3F5F7] border-b border-[#E1E6EC]">
               <tr>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Cód / Data</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Cliente / Veículo</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Serviço Proposto</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Valor Total</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Status</th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Ações</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Cód / Data</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Cliente / Veículo</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Serviço Proposto</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Valor Total</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider text-center">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -526,14 +526,14 @@ const Vendas = () => {
                  {currentSelectedQuote.status === 'ORCAMENTO' || currentSelectedQuote.status === 'CANCELADO' ? (
                    <button 
                      onClick={() => handleApprove(currentSelectedQuote)}
-                     className="flex-1 py-5 bg-emerald-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-emerald-200 hover:-translate-y-1 active:translate-y-0 transition-all font-bold"
+                     className="flex-1 py-4 bg-[#C8F52E] hover:bg-[#d6fb4f] text-[#0E1116] rounded-2xl text-xs font-black uppercase tracking-wider shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all font-bold"
                    >
                      APROVAR
                    </button>
                  ) : (
                    <button 
                      onClick={() => navigate('/ordens')}
-                     className="flex-1 py-5 bg-blue-600 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-blue-200 hover:-translate-y-1 active:translate-y-0 transition-all font-bold"
+                     className="flex-1 py-4 bg-sky-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all font-bold"
                    >
                      Ver Ordem de Serviço
                    </button>
@@ -543,7 +543,7 @@ const Vendas = () => {
                      const cleanPhone = (currentSelectedQuote.cliente_telefone || '').replace(/\D/g, '');
                      sendWhatsApp(cleanPhone || '11999999999', getBudgetMsg(currentSelectedQuote.cliente_nome, currentSelectedQuote.veiculo_desc, currentSelectedQuote.valor || currentSelectedQuote.valor_total, currentSelectedQuote.servicos_detalhados, currentSelectedQuote.servico));
                    }}
-                  className="flex-1 py-5 bg-slate-900 text-white rounded-[2rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-2 font-bold"
+                  className="flex-1 py-4 bg-[#0E1116] text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 font-bold"
                 >
                   <Zap size={14} fill="currentColor" /> Enviar WhatsApp
                 </button>

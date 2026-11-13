@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Mail, Lock, Save, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useProfiles } from '../hooks/useData';
-import { supabase } from '../lib/supabase';
+import { api } from '../services/api';
 
 const ProfilePage = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -28,7 +28,7 @@ const ProfilePage = () => {
         if (!success) throw error;
       }
 
-      // 2. Atualizar Senha (Auth Supabase)
+      // 2. Atualizar Senha
       if (password) {
         if (password !== confirmPassword) {
           throw new Error('As senhas não coincidem.');
@@ -37,8 +37,7 @@ const ProfilePage = () => {
           throw new Error('A senha deve ter pelo menos 6 caracteres.');
         }
 
-        const { error: authError } = await supabase.auth.updateUser({ password });
-        if (authError) throw authError;
+        await api.members.resetPassword(profile.id, password);
         
         setPassword('');
         setConfirmPassword('');

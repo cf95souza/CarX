@@ -1,0 +1,147 @@
+# ==============================================================================
+# CarX — Topologia de Homologação na VPS Oracle (compose.oracle-test.yml)
+# ==============================================================================
+# Projetado para conviver com o sistema existente na VPS sem conflito de portas:
+# - API Fastify: porta 3333 (http://137.131.151.125:3333)
+# - App Web (Oficina/Operador/PWA): porta 8080 (http://137.131.151.125:8080)
+# - App Admin (SuperAdmin SaaS): porta 8081 (http://137.131.151.125:8081)
+# - PostgreSQL: porta 5434 interna/externa (banco da Cozinha continua na 5432)
+# ==============================================================================
+
+name: carx-test
+
+networks:
+  carx_test_net:
+    driver: bridge
+    name: carx_test_net
+
+volumes:
+  carx_test_pgdata:
+    name: carx_test_pgdata
+  carx_test_redisdata:
+    name: carx_test_redisdata
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Banco de Dados PostgreSQL 16
+  # ----------------------------------------------------------------------------
+  carx-db:
+    image: postgres:16-alpine
+    container_name: carx-test-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-carx_db}
+      POSTGRES_USER: ${POSTGRES_USER:-carx_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CarX@SecureOracle2026!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - carx_test_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - carx_test_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-carx_admin} -d ${POSTGRES_DB:-carx_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 2. Redis 7
+  # ----------------------------------------------------------------------------
+  carx-redis:
+    image: redis:7-alpine
+    container_name: carx-test-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-carx_redis_oracle_2026}
+    volumes:
+      - carx_test_redisdata:/data
+    networks:
+      - carx_test_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-carx_redis_oracle_2026}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------------------
+  # 3. API Backend Fastify
+  # ----------------------------------------------------------------------------
+  carx-api:
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    image: carx/api:oracle-test
+    container_name: carx-test-api
+    restart: unless-stopped
+    ports:
+      - "3333:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-carx_admin}:${POSTGRES_PASSWORD:-CarX@SecureOracle2026!}@carx-db:5432/${POSTGRES_DB:-carx_db}
+      DATABASE_ADMIN_URL: postgresql://${POSTGRES_USER:-carx_admin}:${POSTGRES_PASSWORD:-CarX@SecureOracle2026!}@carx-db:5432/${POSTGRES_DB:-carx_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-carx_redis_oracle_2026}@carx-redis:6379/0
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-carx_super_secret_jwt_access_token_oracle_2026}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-carx_super_secret_jwt_refresh_token_oracle_2026}
+      JWT_ACCESS_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 7d
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+    depends_on:
+      carx-db:
+        condition: service_healthy
+      carx-redis:
+        condition: service_healthy
+    networks:
+      - carx_test_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/health || exit 1"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 4. Frontend Web (Oficina / Operador / Clientes / PWA)
+  # ----------------------------------------------------------------------------
+  carx-web:
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        - VITE_API_URL=http://137.131.151.125:3333
+        - VITE_APP_ENV=production
+    image: carx/web:oracle-test
+    container_name: carx-test-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - carx_test_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 5. Frontend Admin (SuperAdmin SaaS)
+  # ----------------------------------------------------------------------------
+  carx-admin:
+    build:
+      context: ..
+      dockerfile: infra/docker/admin.Dockerfile
+      args:
+        - VITE_API_URL=http://137.131.151.125:3333
+        - VITE_APP_ENV=production
+    image: carx/admin:oracle-test
+    container_name: carx-test-admin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    networks:
+      - carx_test_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

@@ -16,9 +16,14 @@ import {
   Layers,
   MapPin,
   Sparkles,
+  WifiOff,
+  UploadCloud,
+  Check,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useOfflineSync } from '../hooks/useOfflineSync';
+import { offlineStorage } from '../services/offlineStorage';
 import { Button } from '@carx/ui';
 import { Badge } from '@carx/ui';
 import { Card } from '@carx/ui';
@@ -37,7 +42,10 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
   const [activeTab, setActiveTab] = useState<TabFilter>('mine');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // 1. Fila de OS do Operador e Geral da Loja via TanStack React Query
+  // Hook Offline-First (T6.13)
+  const { isOnline, pendingCount, isSyncing, syncNow } = useOfflineSync();
+
+  // 1. Fila de OS do Operador e Geral da Loja com Cache Resiliente em IndexedDB
   const {
     data: allQueue = [],
     isLoading: loadingQueue,
@@ -45,8 +53,24 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
     refetch,
   } = useQuery({
     queryKey: ['technician-queue', 'all'],
-    queryFn: () => api.technician.getQueue({ scope: 'all' }),
-    refetchInterval: 15000, // Polling a cada 15s como fallback para manter cronômetros e novas OS sincronizadas
+    queryFn: async () => {
+      try {
+        const data = await api.technician.getQueue({ scope: 'all' });
+        if (data && Array.isArray(data) && data.length > 0) {
+          // Grava cópia local no IndexedDB para uso em galpões sem sinal
+          await offlineStorage.cacheQueue(data).catch(() => {});
+        }
+        return data;
+      } catch (err) {
+        // Se a requisição de rede falhar (ex: sem sinal de internet), recupera do IndexedDB
+        const cached = await offlineStorage.getCachedQueue().catch(() => []);
+        if (cached && cached.length > 0) {
+          return cached as TechnicianQueueItemDto[];
+        }
+        throw err;
+      }
+    },
+    refetchInterval: isOnline ? 15000 : false, // Desliga polling periódico quando desconectado
   });
 
   // 2. Ranking real de técnicos para streak auditado e performance
@@ -173,6 +197,53 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto pb-8">
+      {/* Banner de Resiliência Offline & Fila IndexedDB (T6.13) */}
+      {(!isOnline || pendingCount > 0) && (
+        <div
+          className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
+            !isOnline
+              ? 'bg-alerta/10 border-alerta/40 text-alerta'
+              : 'bg-grafite border-volt/30 text-texto'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg ${
+                !isOnline ? 'bg-alerta/20 text-alerta' : 'bg-volt/10 text-volt'
+              }`}
+            >
+              {!isOnline ? (
+                <WifiOff className="w-5 h-5 animate-pulse" />
+              ) : (
+                <UploadCloud className="w-5 h-5 text-volt" />
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-bold">
+                {!isOnline ? 'Modo Offline Ativo (IndexedDB)' : 'Sincronização Pendente'}
+              </p>
+              <p className="text-[11px] text-muted">
+                {!isOnline
+                  ? `${pendingCount} apontamento(s) salvo(s) localmente no navegador. Serão sincronizados ao reconectar.`
+                  : `${pendingCount} apontamento(s) aguardando envio para a nuvem.`}
+              </p>
+            </div>
+          </div>
+          {isOnline && pendingCount > 0 && (
+            <Button
+              variant="volt"
+              size="sm"
+              onClick={() => syncNow()}
+              disabled={isSyncing}
+              className="text-xs px-3 py-1.5 h-auto flex items-center gap-1.5"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Enviando...' : 'Sincronizar'}
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* 1. Header de Gamificação Real & Performance Auditada */}
       <div className="relative overflow-hidden rounded-2xl bg-grafite border border-aco p-4 text-texto shadow-lg">
         {/* Glow de fundo */}

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useOrders, useInventory } from '../../hooks/useData';
 import { useBrand } from '../../contexts/BrandContext';
-import { supabase, hasRealConnection } from '../../lib/supabase';
+import { api } from '../../services/api';
 
 const Tv360OfficeView = ({ onClose }) => {
   const { orders } = useOrders();
@@ -41,17 +41,14 @@ const Tv360OfficeView = ({ onClose }) => {
   useEffect(() => {
     const fetchNps = async () => {
       try {
-        let remoteFbs = [];
-        if (hasRealConnection()) {
-          const { data, error } = await supabase
-            .from('pesquisas_nps')
-            .select('nota')
-            .order('created_at', { ascending: false });
-          if (!error && data) remoteFbs = data;
+        const metrics = await api.nps.getMetrics();
+        if (metrics) {
+          const total = Number(metrics.totalSurveys || metrics.totalAnswers || 0);
+          const score = metrics.averageScore !== undefined ? Number(metrics.averageScore) : (metrics.npsScore ? Number(metrics.npsScore) : 0);
+          const promotores = Number(metrics.promoters || 0);
+          const pPromotores = total > 0 ? Math.round((promotores / total) * 100) : 0;
+          setFeedbacks({ media: score.toFixed(1), pPromotores, total });
         }
-        const localFbs = JSON.parse(localStorage.getItem('pesquisas_nps_local') || '[]');
-        const combined = [...remoteFbs, ...localFbs];
-        setFeedbacks(combined);
       } catch (e) {
         console.error('Erro NPS TV:', e);
       }
@@ -62,13 +59,10 @@ const Tv360OfficeView = ({ onClose }) => {
   }, []);
 
   const npsStats = useMemo(() => {
-    const total = feedbacks.length;
-    if (total === 0) return { media: '--', pPromotores: 0, total: 0 };
-    const soma = feedbacks.reduce((acc, f) => acc + Number(f.nota || 0), 0);
-    const media = (soma / total).toFixed(1);
-    const promotores = feedbacks.filter(f => Number(f.nota || 0) >= 9).length;
-    const pPromotores = Math.round((promotores / total) * 100);
-    return { media, pPromotores, total };
+    if (!feedbacks || typeof feedbacks !== 'object' || !feedbacks.total) {
+      return { media: '--', pPromotores: 0, total: 0 };
+    }
+    return feedbacks;
   }, [feedbacks]);
 
   const toggleFullscreen = () => {
@@ -223,7 +217,7 @@ const Tv360OfficeView = ({ onClose }) => {
                 <span>Ocupação dos Box de Produção ao Vivo</span>
               </h3>
               <span className="text-xs font-mono text-slate-400 bg-slate-800 px-3 py-1 rounded-full">
-                Sincronizado via Supabase WebSocket
+                Sincronizado em Tempo Real (SSE)
               </span>
             </div>
 

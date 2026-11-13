@@ -1,3 +1,11 @@
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { RESERVED_SUBDOMAINS } from '@carx/shared';
@@ -28,6 +36,14 @@ import { financialRoutes } from './routes/financial-routes.js';
 import { realtimeRoutes } from './routes/realtime-routes.js';
 import { customerPortalRoutes } from './routes/customer-portal-routes.js';
 import { integrationRoutes } from './routes/integration-routes.js';
+import { whatsappRoutes } from './routes/whatsapp-routes.js';
+import { billingRoutes } from './routes/billing-routes.js';
+import { onboardingRoutes } from './routes/onboarding-routes.js';
+import { miniSiteRoutes } from './routes/minisite-routes.js';
+import { fiscalRoutes } from './routes/fiscal-routes.js';
+import { corporateRoutes } from './routes/corporate-routes.js';
+import { aiInspectionRoutes } from './routes/ai-inspection-routes.js';
+import { crmRetentionRoutes } from './routes/crm-retention-routes.js';
 import { tenantQuery } from './database/tenant-query.js';
 
 export function buildServer() {
@@ -120,6 +136,30 @@ export function buildServer() {
   // Integrações: API Pública v1, Chaves de API e Webhooks Reais (T3.14)
   app.register(integrationRoutes);
 
+  // Gateway de WhatsApp Desacoplado Multi-Tenant (T3.17)
+  app.register(whatsappRoutes);
+
+  // Cobrança Recorrente Automática do SaaS e Webhooks Mercado Pago (T5.2)
+  app.register(billingRoutes);
+
+  // Onboarding Self-Service Guiado por Segmento (T5.3)
+  app.register(onboardingRoutes);
+
+  // Mini-Site Institucional da Oficina, Portfólio Antes/Depois e Captação de Leads (T6.9)
+  app.register(miniSiteRoutes);
+
+  // Módulo Fiscal: Emissão de NFS-e Automática e Configurações (T6.10)
+  app.register(fiscalRoutes);
+
+  // Módulo Corporativo: Painel de Redes e Franquias Multiunidade (T6.12)
+  app.register(corporateRoutes);
+
+  // Inteligência Artificial Aplicada a Vistorias & Orçamentos (T6.14)
+  app.register(aiInspectionRoutes);
+
+  // CRM de Pós-Venda, Garantias Periódicas & Retenção Ativa (T6.15)
+  app.register(crmRetentionRoutes);
+
   // Endpoints de Saúde: Liveness (/health) e Readiness (/health/ready)
   registerHealthRoutes(app);
 
@@ -203,9 +243,9 @@ const isDirectExecution = Boolean(
   !process.argv.includes('--test')
 );
 
-if (process.env.NODE_ENV !== 'test' && isDirectExecution) {
+if (isDirectExecution) {
   const app = buildServer();
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = Number(process.env.PORT) || 3333;
 
   app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
     if (err) {

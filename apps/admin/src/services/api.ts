@@ -1,3 +1,4 @@
+/* global RequestInit */
 import {
   SuperadminLoginInput,
   SuperadminLoginResponse,
@@ -9,6 +10,17 @@ import {
   SuperadminInvoiceDto,
   LeadDto,
   ConvertLeadDto,
+  AdminPlanDto,
+  CreatePlanDto,
+  UpdatePlanDto,
+  CouponDto,
+  CreateCouponDto,
+  ValidateCouponInputDto,
+  ValidateCouponResponseDto,
+  ResetOwnerPasswordInputDto,
+  ResetOwnerPasswordResponseDto,
+  WhatsAppTelemetrySummaryDto,
+  TenantWhatsAppInstanceDto,
 } from '@carx/shared';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -171,6 +183,16 @@ export const adminApi = {
     });
   },
 
+  resetOwnerPassword: async (
+    tenantId: string,
+    data?: ResetOwnerPasswordInputDto
+  ): Promise<ResetOwnerPasswordResponseDto> => {
+    return fetchClient<ResetOwnerPasswordResponseDto>(`/admin/tenants/${tenantId}/reset-owner-password`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  },
+
   // Contratos
   listContracts: async (): Promise<ContractDto[]> => {
     return fetchClient<ContractDto[]>('/admin/contracts');
@@ -271,6 +293,70 @@ export const adminApi = {
 
   getTenantInvitations: async (tenantId: string): Promise<any[]> => {
     return fetchClient<any[]>(`/admin/tenants/${tenantId}/invitations`);
+  },
+
+  // Planos e Feature Gating
+  listPlans: async (): Promise<AdminPlanDto[]> => {
+    return fetchClient<AdminPlanDto[]>('/admin/plans');
+  },
+
+  getPlan: async (planId: string): Promise<AdminPlanDto> => {
+    return fetchClient<AdminPlanDto>(`/admin/plans/${planId}`);
+  },
+
+  createPlan: async (data: CreatePlanDto): Promise<AdminPlanDto> => {
+    return fetchClient<AdminPlanDto>('/admin/plans', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updatePlan: async (planId: string, data: UpdatePlanDto): Promise<AdminPlanDto> => {
+    return fetchClient<AdminPlanDto>(`/admin/plans/${planId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  togglePlanFeature: async (
+    planId: string,
+    feature: string,
+    enabled: boolean
+  ): Promise<AdminPlanDto> => {
+    return fetchClient<AdminPlanDto>(`/admin/plans/${planId}/features`, {
+      method: 'PATCH',
+      body: JSON.stringify({ feature, enabled }),
+    });
+  },
+
+  // Cupons Promocionais
+  listCoupons: async (): Promise<CouponDto[]> => {
+    return fetchClient<CouponDto[]>('/admin/coupons');
+  },
+
+  createCoupon: async (data: CreateCouponDto): Promise<CouponDto> => {
+    return fetchClient<CouponDto>('/admin/coupons', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteCoupon: async (id: string): Promise<CouponDto> => {
+    return fetchClient<CouponDto>(`/admin/coupons/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  validateCoupon: async (data: ValidateCouponInputDto): Promise<ValidateCouponResponseDto> => {
+    return fetchClient<ValidateCouponResponseDto>('/admin/coupons/validate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Telemetria Técnica de WhatsApp (Sem Mocks)
+  getWhatsAppTelemetry: async (): Promise<WhatsAppTelemetrySummaryDto> => {
+    return fetchClient<WhatsAppTelemetrySummaryDto>('/admin/whatsapp/telemetry');
   },
 };
 

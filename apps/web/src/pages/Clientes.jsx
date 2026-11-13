@@ -1,12 +1,13 @@
 import { formatDateBR } from '../utils/dateUtils';
 import React, { useState } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, UserPlus, Car, Loader2, ArrowRight, FilePlus, X, Clock, CheckCircle2, History, Edit2, Wrench, Save, Trash2 } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, UserPlus, Car, Loader2, ArrowRight, FilePlus, X, Clock, CheckCircle2, History, Edit2, Wrench, Save, Trash2, Sparkles } from 'lucide-react';
 import { useClients, useQuotes, useVehicles } from '../hooks/useData';
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import Pagination from '../components/ui/Pagination';
 import DetalhesServicoModal from '../components/features/DetalhesServicoModal';
 import { toast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
+import { api } from '../services/api';
 
 const ClientesView = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,40 +76,40 @@ const ClientesView = () => {
   }
 
   return (
-    <div className="fade-in space-y-6">
+    <div className="space-y-6 pb-20 font-sans text-[#0E1116]">
       {/* Header da View */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Gestão de Clientes</h2>
-          <p className="text-sm text-slate-500 font-medium">Cadastre e gerencie os proprietários e seus veículos.</p>
+          <h1 className="font-display text-3xl font-bold text-[#0E1116] tracking-tight">Clientes</h1>
+          <p className="text-sm text-[#5B6674] mt-0.5">Base de proprietários, veículos cadastrados e histórico de atendimento.</p>
         </div>
         <button 
           onClick={() => { setEditingClient(null); setShowAddModal(true); }}
-          className="btn-primary flex items-center gap-2 shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all"
+          className="carx-btn-volt"
         >
           <UserPlus size={18} /> Novo Cliente
         </button>
       </div>
 
       {/* Banner Portal do Cliente (Meu Veículo) */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-600/10 to-teal-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg flex-shrink-0">
+      <div className="p-5 rounded-3xl bg-white border border-[#E1E6EC] shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#0E1116] text-[#C8F52E] flex items-center justify-center font-bold text-xl flex-shrink-0">
             🚗
           </div>
           <div>
-            <h4 className="text-xs font-black text-slate-800 dark:text-slate-100 uppercase tracking-wider">Portal do Cliente ("Meu Veículo")</h4>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Área VIP logada por WhatsApp/Placa com histórico de serviços, laudos VCR e Certificados de Garantia.</p>
+            <h4 className="text-sm font-bold text-[#0E1116]">Portal do Cliente (&ldquo;Meu Veículo&rdquo;)</h4>
+            <p className="text-xs text-[#5B6674] mt-0.5">Área logada por WhatsApp/Placa com laudos de inspeção VCR e Certificados de Garantia digitais.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <button
             onClick={() => {
               const url = `${window.location.origin}/meu-veiculo`;
               navigator.clipboard.writeText(url);
               toast.success('Link do portal copiado! Envie pelo WhatsApp para o cliente 📋');
             }}
-            className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+            className="carx-pill !h-10 text-xs font-semibold"
           >
             📋 Copiar Link do Portal
           </button>
@@ -116,7 +117,7 @@ const ClientesView = () => {
             href="/meu-veiculo"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 flex items-center gap-1.5"
+            className="carx-btn-volt !h-10 !px-4 text-xs font-bold"
           >
             <span>Acessar Portal</span>
           </a>
@@ -125,62 +126,62 @@ const ClientesView = () => {
 
       {/* Barra de Ações */}
       <div className="flex flex-col md:flex-row gap-3 items-center">
-        <div className="relative flex-1 w-full group">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" />
+        <div className="relative flex-1 w-full">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" />
           <input 
             type="text" 
             placeholder="Buscar por nome, telefone ou placa..." 
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-medium"
+            className="w-full pl-11 pr-4 py-3 bg-white border border-[#E1E6EC] rounded-xl outline-none focus:border-[#0E1116] transition-all text-sm font-medium text-[#0E1116] placeholder:text-[#5B6674]"
             value={searchTerm}
             onChange={handleSearchChange}
           />
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all w-full md:w-auto">
+        <button className="carx-pill !h-12 !px-5 text-sm font-semibold">
           <Filter size={18} /> Filtros
         </button>
       </div>
 
       {/* Tabela de Clientes */}
-      <div className="card-premium overflow-hidden border-0 shadow-xl shadow-slate-200/50">
+      <div className="bg-white border border-[#E1E6EC] rounded-3xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead className="bg-slate-50/50 border-b border-slate-100">
+            <thead className="bg-[#F3F5F7] border-b border-[#E1E6EC]">
               <tr>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Contato</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Serviços</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cadastro</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Cliente</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Contato</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Serviços</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Cadastro</th>
+                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100/50">
+            <tbody className="divide-y divide-[#E1E6EC]">
               {filteredClients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((c) => (
-                <tr key={c.id} onClick={() => setSelectedClientProfile(c)} className="hover:bg-slate-50/80 transition-all group cursor-pointer">
-                  <td className="px-6 py-5">
+                <tr key={c.id} onClick={() => setSelectedClientProfile(c)} className="hover:bg-[#F3F5F7] transition-all group cursor-pointer">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-black text-sm border border-slate-200 group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all">
+                      <div className="w-10 h-10 rounded-xl bg-[#F3F5F7] flex items-center justify-center text-[#0E1116] font-bold text-sm border border-[#E1E6EC] group-hover:bg-[#C8F52E] transition-all">
                         {c.nome?.charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-sm font-bold text-slate-700 leading-tight">{c.nome}</span>
+                      <span className="text-sm font-semibold text-[#0E1116] leading-tight">{c.nome}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
-                    <span className="text-sm font-semibold text-slate-500 font-mono tracking-tighter">{c.telefone || 'Sem telefone'}</span>
+                  <td className="px-6 py-4">
+                    <span className="text-sm font-mono text-[#5B6674]">{c.telefone || 'Sem telefone'}</span>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                       <span className="text-xs font-black text-slate-700 bg-slate-100 px-2 py-1 rounded-lg">
+                       <span className="text-xs font-bold text-[#0E1116] bg-[#F3F5F7] border border-[#E1E6EC] px-2.5 py-1 rounded-lg">
                           {(quotes || []).filter(q => q.cliente_id === c.id || q.cliente_telefone === c.telefone).length}
                        </span>
-                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Itens</span>
+                       <span className="text-xs text-[#5B6674]">serviços</span>
                     </div>
                   </td>
-                  <td className="px-6 py-5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <td className="px-6 py-4">
+                    <span className="text-xs text-[#5B6674]">
                       {formatDateBR(c.created_at)}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-right">
+                  <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button 
                         onClick={(e) => {
@@ -188,10 +189,10 @@ const ClientesView = () => {
                           setEditingClient(c);
                           setShowAddModal(true);
                         }}
-                        className="p-2.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                        className="p-2 text-[#5B6674] hover:text-[#0E1116] hover:bg-white rounded-xl transition-all"
                         title="Editar Cadastro"
                       >
-                        <Edit2 size={18} />
+                        <Edit2 size={16} />
                       </button>
                       
                       {(quotes || []).filter(q => q.cliente_id === c.id || q.cliente_telefone === c.telefone).length === 0 && (
@@ -200,10 +201,10 @@ const ClientesView = () => {
                             e.stopPropagation();
                             handleDeleteClient(c);
                           }}
-                          className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                          className="p-2 text-[#5B6674] hover:text-[#E5484D] hover:bg-[#FEE2E2] rounded-xl transition-all"
                           title="Excluir Cliente"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
@@ -482,16 +483,71 @@ const ClientesView = () => {
               }
             }} className="p-8 space-y-4">
               <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Placa</label>
+                  <span className="text-[9px] font-bold text-emerald-600 uppercase flex items-center gap-1">
+                    <Sparkles size={11} /> Auto-consulta CarX
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    id="vehicle-input-placa"
+                    name="placa"
+                    defaultValue={editingVehicle.placa || ''}
+                    required
+                    placeholder="ABC1D23"
+                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner font-mono uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const input = document.getElementById('vehicle-input-placa');
+                      const raw = input?.value || '';
+                      const clean = raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                      if (clean.length < 7) {
+                        toast.warning('Informe uma placa com 7 caracteres.');
+                        return;
+                      }
+                      try {
+                        const res = await api.vehicles.lookupPlate(clean);
+                        toast.success(`Veículo localizado: ${res.brand} ${res.model}`);
+                        const form = input.closest('form');
+                        if (form) {
+                          if (form.marca) form.marca.value = res.brand;
+                          if (form.modelo) form.modelo.value = res.model;
+                          if (form.ano && res.year) form.ano.value = res.year;
+                          if (form.porte && res.sizeClass) {
+                            const sc = res.sizeClass.toLowerCase();
+                            const mapPorte = {
+                              hatch: 'Hatch',
+                              sedan: 'Sedan',
+                              suv: 'SUV',
+                              pickup: 'Pickup',
+                              van: 'Van',
+                              moto: 'Moto',
+                              esportivo: 'Esportivo',
+                            };
+                            form.porte.value = mapPorte[sc] || 'Hatch';
+                          }
+                        }
+                      } catch (err) {
+                        toast.error('Não foi possível consultar a placa.');
+                      }
+                    }}
+                    className="px-3 py-2 bg-slate-900 text-[#C8F52E] rounded-xl text-xs font-bold hover:bg-black transition-all flex items-center gap-1"
+                    title="Consultar dados do veículo pela placa"
+                  >
+                    Buscar
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Marca</label>
                 <input name="marca" defaultValue={editingVehicle.marca || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Modelo</label>
                 <input name="modelo" defaultValue={editingVehicle.modelo || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Placa</label>
-                <input name="placa" defaultValue={editingVehicle.placa || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner font-mono uppercase" />
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Ano</label>

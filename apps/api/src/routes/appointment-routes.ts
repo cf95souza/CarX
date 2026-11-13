@@ -9,10 +9,12 @@ import {
   UpdateAppointmentInputSchema,
   PublicBookingInputSchema,
   AppointmentStatusEnum,
+  CalculateDurationInputSchema,
 } from '@carx/shared';
 import {
   appointmentService,
   BayConflictError,
+  TechnicianConflictError,
   BayDuplicateNameError,
   BayNotFoundError,
   AppointmentNotFoundError,
@@ -168,6 +170,51 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
   // ============================================================================
 
   /**
+   * GET /appointments/smart-overview — Visão inteligente da agenda por box com atrasos (T6.7)
+   */
+  fastify.get(
+    '/appointments/smart-overview',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+      }
+
+      const { date } = request.query as { date?: string };
+      const dateTarget = date || new Date().toISOString().split('T')[0];
+      const overview = await appointmentService.getSmartScheduleOverview(tenantId, dateTarget);
+      return reply.code(200).send(overview);
+    }
+  );
+
+  /**
+   * POST /appointments/calculate-duration — Cálculo automático de duração por porte veicular (T6.7)
+   */
+  fastify.post(
+    '/appointments/calculate-duration',
+    { preHandler: [authenticateBearer, requireTenantContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const tenantId = request.tenantId;
+      if (!tenantId) {
+        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+      }
+
+      const parseResult = CalculateDurationInputSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Validation Error',
+          message: parseResult.error.errors.map((e) => e.message).join(', '),
+        });
+      }
+
+      const result = await appointmentService.calculateEstimatedDuration(tenantId, parseResult.data);
+      return reply.code(200).send(result);
+    }
+  );
+
+  /**
    * GET /appointments/availability — Consulta slots de disponibilidade por box para um determinado dia
    */
   fastify.get(
@@ -278,13 +325,14 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
       } catch (err) {
         if (
           err instanceof BayConflictError ||
+          err instanceof TechnicianConflictError ||
           err instanceof BayNotFoundError ||
           err instanceof AppointmentValidationError
         ) {
-          return reply.code(err.statusCode).send({
-            statusCode: err.statusCode,
+          return reply.code((err as any).statusCode || 400).send({
+            statusCode: (err as any).statusCode || 400,
             message: err.message,
-            conflictingAppointment: (err as BayConflictError).conflictingAppointment,
+            conflictingAppointment: (err as any).conflictingAppointment,
           });
         }
         throw err;
@@ -332,14 +380,15 @@ export async function appointmentRoutes(fastify: FastifyInstance) {
       } catch (err) {
         if (
           err instanceof BayConflictError ||
+          err instanceof TechnicianConflictError ||
           err instanceof BayNotFoundError ||
           err instanceof AppointmentNotFoundError ||
           err instanceof AppointmentValidationError
         ) {
-          return reply.code(err.statusCode).send({
-            statusCode: err.statusCode,
+          return reply.code((err as any).statusCode || 400).send({
+            statusCode: (err as any).statusCode || 400,
             message: err.message,
-            conflictingAppointment: (err as BayConflictError).conflictingAppointment,
+            conflictingAppointment: (err as any).conflictingAppointment,
           });
         }
         throw err;

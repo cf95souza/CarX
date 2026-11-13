@@ -205,37 +205,45 @@ export function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-aco/20">
-                      {metrics.revenue_by_plan.map((item) => {
-                        const percent =
-                          metrics.mrr_cents > 0
-                            ? ((item.total_mrr_cents / metrics.mrr_cents) * 100).toFixed(1)
-                            : '0.0';
-                        return (
-                          <tr key={item.plan_id} className="hover:bg-aco/20 transition-colors">
-                            <td className="py-3 px-3 font-medium text-texto">
-                              <span className="font-semibold text-white">{item.plan_name}</span>
-                              <span className="text-[10px] text-muted block uppercase">{item.plan_slug}</span>
-                            </td>
-                            <td className="py-3 px-3 text-center text-muted font-medium">
-                              {item.tenants_count}
-                            </td>
-                            <td className="py-3 px-3 text-right font-display font-semibold text-texto">
-                              {formatCurrency(item.total_mrr_cents)}
-                            </td>
-                            <td className="py-3 px-3 text-right">
-                              <div className="inline-flex items-center gap-2 justify-end">
-                                <span className="font-medium text-volt">{percent}%</span>
-                                <div className="w-16 h-1.5 bg-aco rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-volt rounded-full"
-                                    style={{ width: `${Math.min(100, Number(percent))}%` }}
-                                  />
+                      {metrics.revenue_by_plan.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="py-8 text-center text-muted">
+                            Nenhum plano com oficinas ativas no momento.
+                          </td>
+                        </tr>
+                      ) : (
+                        metrics.revenue_by_plan.map((item) => {
+                          const percent =
+                            metrics.mrr_cents > 0
+                              ? ((item.total_mrr_cents / metrics.mrr_cents) * 100).toFixed(1)
+                              : '0.0';
+                          return (
+                            <tr key={item.plan_id} className="hover:bg-aco/20 transition-colors">
+                              <td className="py-3 px-3 font-medium text-texto">
+                                <span className="font-semibold text-white">{item.plan_name}</span>
+                                <span className="text-[10px] text-muted block uppercase">{item.plan_slug}</span>
+                              </td>
+                              <td className="py-3 px-3 text-center text-muted font-medium">
+                                {item.tenants_count}
+                              </td>
+                              <td className="py-3 px-3 text-right font-display font-semibold text-texto">
+                                {formatCurrency(item.total_mrr_cents)}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <div className="inline-flex items-center gap-2 justify-end">
+                                  <span className="font-medium text-volt">{percent}%</span>
+                                  <div className="w-16 h-1.5 bg-aco rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-volt rounded-full"
+                                      style={{ width: `${Math.min(100, Number(percent))}%` }}
+                                    />
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>

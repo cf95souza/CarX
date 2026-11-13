@@ -1,14 +1,19 @@
 import { tenantQuery } from '../database/tenant-query.js';
 import { auditService } from '../audit/audit-service.js';
+import { whatsappService } from '../whatsapp/whatsapp-service.js';
+import { planService } from '../plans/plan-service.js';
 import {
   NpsSurveyDto,
   NpsMetricsDto,
   NpsClassificationEnum,
   NpsClassificationType,
   AnswerNpsSurveyInputDto,
+  AnswerNpsSurveyResponseDto,
+  GoogleReputationOverviewDto,
   CreateReminderInputDto,
   MaintenanceReminderDto,
   ReminderStatus,
+  PlanFeatures,
 } from '@carx/shared';
 
 export class NpsError extends Error {
@@ -168,18 +173,48 @@ export class NpsService {
   }
 
   /**
+   * Obtém a URL de avaliação do Google Meu Negócio configurada para a oficina
+   * Se não configurada, gera uma busca amigável no Google Maps baseada no nome da loja.
+   */
+  async getGoogleReviewUrl(tenantId: string, useFallback = true): Promise<string | null> {
+    const brandingRes = await tenantQuery<{ google_review_url: string | null }>(
+      tenantId,
+      `SELECT google_review_url FROM tenant_branding WHERE tenant_id = $1 LIMIT 1;`,
+      [tenantId]
+    );
+
+    if (brandingRes.rows.length > 0 && brandingRes.rows[0].google_review_url) {
+      return brandingRes.rows[0].google_review_url.trim();
+    }
+
+    if (!useFallback) {
+      return null;
+    }
+
+    return this.generateGoogleSearchFallbackUrl(tenantId);
+  }
+
+  /**
+   * Gera uma URL de busca no Google Maps pelo nome fantasia da oficina
+   */
+  async generateGoogleSearchFallbackUrl(tenantId: string): Promise<string> {
+    const tenantRes = await tenantQuery<{ trade_name: string }>(
+      tenantId,
+      `SELECT COALESCE(trade_name, 'Oficina Automotiva') as trade_name FROM tenants WHERE id = $1 LIMIT 1;`,
+      [tenantId]
+    );
+    const tradeName = tenantRes.rows[0]?.trade_name || 'Oficina CarX';
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tradeName)}`;
+  }
+
+  /**
    * Responde à pesquisa de satisfação NPS pelo token público
    * CRITÉRIO DE ACEITE: Responder duas vezes ao mesmo token é estritamente bloqueado (HTTP 409).
    */
   async answerSurvey(
     token: string,
     input: AnswerNpsSurveyInputDto
-  ): Promise<{
-    survey: NpsSurveyDto;
-    isPromoter: boolean;
-    isDetractor: boolean;
-    googleReviewSuggested: boolean;
-  }> {
+  ): Promise<AnswerNpsSurveyResponseDto> {
     // 1. Busca a pesquisa
     const findRes = await tenantQuery<{
       id: string;
@@ -270,12 +305,319 @@ export class NpsService {
       });
     }
 
+    // 6. MOTOR DE REPUTAÇÃO NO GOOGLE (T6.8)
+    // Se for Promotor (9 ou 10), disponibiliza o link de avaliação do Google e dispara WhatsApp conforme o plano
+    let googleReviewUrl: string | undefined = undefined;
+
+    if (isPromoter) {
+      const reviewUrl = await this.getGoogleReviewUrl(survey.tenant_id);
+      if (reviewUrl) {
+        googleReviewUrl = reviewUrl;
+      }
+
+      try {
+        const hasGateway = await planService.hasFeature(survey.tenant_id, PlanFeatures.WHATSAPP_GATEWAY);
+        const waInstance = await whatsappService.getInstance(survey.tenant_id);
+
+        // Disparo automático ocorre APENAS se a oficina tiver contratado o plano com gateway E conectado seu WhatsApp
+        if (hasGateway && waInstance.status === 'CONNECTED') {
+          const custRes = await tenantQuery<{
+            customer_name: string;
+            customer_phone: string | null;
+            trade_name: string;
+            vehicle_text: string;
+            os_number: number;
+          }>(
+            survey.tenant_id,
+            `SELECT c.name as customer_name, c.phone as customer_phone,
+                    COALESCE(t.trade_name, 'Oficina') as trade_name,
+                    CONCAT(v.brand, ' ', v.model) as vehicle_text,
+                    wo.os_number
+             FROM nps_surveys s
+             JOIN customers c ON c.id = s.customer_id
+             JOIN work_orders wo ON wo.id = s.work_order_id
+             JOIN vehicles v ON v.id = wo.vehicle_id
+             JOIN tenants t ON t.id = s.tenant_id
+             WHERE s.id = $1 LIMIT 1;`,
+            [survey.id]
+          );
+
+          if (custRes.rows.length > 0 && custRes.rows[0].customer_phone) {
+            const row = custRes.rows[0];
+            await whatsappService.dispatchTransactionalNotification(survey.tenant_id, {
+              toPhone: String(row.customer_phone),
+              eventType: 'GOOGLE_REVIEW_INVITE',
+              customerName: row.customer_name || 'Cliente',
+              vehicleText: row.vehicle_text || 'Veículo',
+              osNumber: row.os_number,
+              googleReviewUrl: googleReviewUrl || '',
+            });
+
+            await tenantQuery(
+              survey.tenant_id,
+              `UPDATE nps_surveys
+               SET google_review_sent_at = NOW(),
+                   google_review_sent_via = 'automatic'
+               WHERE id = $1;`,
+              [survey.id]
+            );
+          }
+        } else {
+          // Lojas sem gateway ou desconectadas: marca como manual (lojista dispara via wa.me sem custos)
+          await tenantQuery(
+            survey.tenant_id,
+            `UPDATE nps_surveys
+             SET google_review_sent_via = 'manual'
+             WHERE id = $1;`,
+            [survey.id]
+          );
+        }
+      } catch (waErr) {
+        // Falha no disparo externo de WhatsApp não impede a gravação da resposta do NPS
+      }
+    }
+
     return {
       survey: this.mapSurveyDto(updatedSurvey),
       isPromoter,
       isDetractor,
       googleReviewSuggested: isPromoter,
+      googleReviewUrl,
     };
+  }
+
+  /**
+   * Registra clique do cliente no link de avaliação do Google Meu Negócio
+   */
+  async recordGoogleReviewClick(token: string): Promise<boolean> {
+    const res = await tenantQuery<{ id: string }>(
+      null,
+      `UPDATE nps_surveys
+       SET google_review_clicked = true,
+           google_review_clicked_at = NOW(),
+           updated_at = NOW()
+       WHERE token = $1
+       RETURNING id;`,
+      [token],
+      { bypassRls: true }
+    );
+
+    return res.rows.length > 0;
+  }
+
+  /**
+   * Disparo ou reenvio manual/automático do convite de avaliação no Google para cliente promotor
+   */
+  async sendGoogleReviewInvite(tenantId: string, surveyId: string): Promise<{
+    success: boolean;
+    mode: 'gateway' | 'manual';
+    whatsappUrl?: string;
+    messageText: string;
+  }> {
+    const surveyRes = await tenantQuery<any>(
+      tenantId,
+      `SELECT
+         s.id,
+         s.classification,
+         c.name as customer_name,
+         c.phone as customer_phone,
+         CONCAT(v.brand, ' ', v.model) as vehicle_model,
+         wo.os_number,
+         COALESCE(t.trade_name, 'Oficina') as trade_name
+       FROM nps_surveys s
+       JOIN customers c ON c.id = s.customer_id
+       JOIN work_orders wo ON wo.id = s.work_order_id
+       JOIN vehicles v ON v.id = wo.vehicle_id
+       JOIN tenants t ON t.id = s.tenant_id
+       WHERE s.tenant_id = $1 AND s.id = $2
+       LIMIT 1;`,
+      [tenantId, surveyId]
+    );
+
+    if (surveyRes.rows.length === 0) {
+      throw new NpsError('Pesquisa de satisfação não encontrada.', 404, 'SURVEY_NOT_FOUND');
+    }
+
+    const row = surveyRes.rows[0];
+    if (row.classification !== 'promoter') {
+      throw new NpsError('O convite para o Google é exclusivo para clientes promotores (nota 9 ou 10).', 400, 'NOT_A_PROMOTER');
+    }
+
+    if (!row.customer_phone) {
+      throw new NpsError('O cliente não possui número de WhatsApp cadastrado.', 400, 'NO_PHONE');
+    }
+
+    const googleReviewUrl = await this.getGoogleReviewUrl(tenantId);
+    const hasGateway = await planService.hasFeature(tenantId, PlanFeatures.WHATSAPP_GATEWAY);
+    const waInstance = await whatsappService.getInstance(tenantId);
+
+    const firstName = (row.customer_name || 'Cliente').split(' ')[0];
+    const messageText =
+      `Olá, ${firstName}! 🌟\n\n` +
+      `Ficamos muito felizes com a sua avaliação da entrega do seu *${row.vehicle_model || 'veículo'}* na *${row.trade_name}*!\n\n` +
+      `Poderia nos dedicar 30 segundos deixando uma avaliação 5 estrelas no Google?\n\n` +
+      `👉 ${googleReviewUrl}\n\n` +
+      `Faz toda a diferença para o nosso time. Muito obrigado!`;
+
+    const cleanPhone = row.customer_phone.replace(/\D/g, '');
+    const manualWhatsAppUrl = `https://wa.me/55${cleanPhone.replace(/^55/, '')}?text=${encodeURIComponent(messageText)}`;
+
+    // Se possui plano com gateway E instância conectada: disparo direto
+    if (hasGateway && waInstance.status === 'CONNECTED') {
+      await whatsappService.dispatchTransactionalNotification(tenantId, {
+        toPhone: row.customer_phone,
+        eventType: 'GOOGLE_REVIEW_INVITE',
+        customerName: row.customer_name,
+        vehicleText: row.vehicle_model || 'Veículo',
+        osNumber: row.os_number,
+        googleReviewUrl: googleReviewUrl || '',
+      });
+
+      await tenantQuery(
+        tenantId,
+        `UPDATE nps_surveys
+         SET google_review_sent_at = NOW(),
+             google_review_sent_via = 'automatic'
+         WHERE id = $1;`,
+        [surveyId]
+      );
+
+      return {
+        success: true,
+        mode: 'gateway',
+        messageText,
+      };
+    }
+
+    // Modo manual: registra e retorna link profundo wa.me
+    await tenantQuery(
+      tenantId,
+      `UPDATE nps_surveys
+       SET google_review_sent_at = NOW(),
+           google_review_sent_via = 'manual'
+       WHERE id = $1;`,
+      [surveyId]
+    );
+
+    return {
+      success: true,
+      mode: 'manual',
+      whatsappUrl: manualWhatsAppUrl,
+      messageText,
+    };
+  }
+
+  /**
+   * Visão consolidada e métricas do Motor de Reputação no Google da oficina
+   */
+  async getReputationOverview(tenantId: string): Promise<GoogleReputationOverviewDto> {
+    const googleReviewUrl = await this.getGoogleReviewUrl(tenantId, false);
+    const suggestedGoogleSearchUrl = await this.generateGoogleSearchFallbackUrl(tenantId);
+
+    const metricsRes = await tenantQuery<{
+      promoters_count: string;
+      invites_sent: string;
+      reviews_clicked: string;
+    }>(
+      tenantId,
+      `SELECT
+         COUNT(*) FILTER (WHERE classification = 'promoter') as promoters_count,
+         COUNT(*) FILTER (WHERE classification = 'promoter' AND google_review_sent_at IS NOT NULL) as invites_sent,
+         COUNT(*) FILTER (WHERE classification = 'promoter' AND google_review_clicked = true) as reviews_clicked
+       FROM nps_surveys
+       WHERE tenant_id = $1;`,
+      [tenantId]
+    );
+
+    const m = metricsRes.rows[0];
+    const promotersCount = Number(m.promoters_count || 0);
+    const googleInvitesSent = Number(m.invites_sent || 0);
+    const googleReviewsClicked = Number(m.reviews_clicked || 0);
+    const conversionRatePercent = promotersCount > 0 ? Math.round((googleReviewsClicked / promotersCount) * 100) : 0;
+
+    const promotersRes = await tenantQuery<any>(
+      tenantId,
+      `SELECT
+         s.id as survey_id,
+         wo.os_number,
+         c.name as customer_name,
+         c.phone as customer_phone,
+         CONCAT(v.brand, ' ', v.model) as vehicle_model,
+         s.score,
+         s.comment,
+         s.answered_at,
+         s.google_review_clicked,
+         s.google_review_sent_at,
+         s.google_review_sent_via,
+         COALESCE(t.trade_name, 'Oficina') as trade_name
+       FROM nps_surveys s
+       JOIN customers c ON c.id = s.customer_id
+       JOIN work_orders wo ON wo.id = s.work_order_id
+       JOIN vehicles v ON v.id = wo.vehicle_id
+       JOIN tenants t ON t.id = s.tenant_id
+       WHERE s.tenant_id = $1 AND s.classification = 'promoter'
+       ORDER BY s.answered_at DESC
+       LIMIT 50;`,
+      [tenantId]
+    );
+
+    const targetUrl = googleReviewUrl || suggestedGoogleSearchUrl;
+
+    const topPromoters = promotersRes.rows.map((r) => {
+      const cleanPhone = (r.customer_phone || '').replace(/\D/g, '');
+      const firstName = (r.customer_name || 'Cliente').split(' ')[0];
+      const messageText =
+        `Olá, ${firstName}! 🌟\n\n` +
+        `Ficamos muito felizes com a sua avaliação da entrega do seu *${r.vehicle_model || 'veículo'}* na *${r.trade_name}*!\n\n` +
+        `Poderia nos dedicar 30 segundos deixando uma avaliação 5 estrelas no Google?\n\n` +
+        `👉 ${targetUrl}\n\n` +
+        `Muito obrigado pela parceria!`;
+
+      const manualWhatsAppUrl = cleanPhone
+        ? `https://wa.me/55${cleanPhone.replace(/^55/, '')}?text=${encodeURIComponent(messageText)}`
+        : '';
+
+      return {
+        surveyId: r.survey_id,
+        osNumber: r.os_number ? Number(r.os_number) : undefined,
+        customerName: r.customer_name,
+        customerPhone: r.customer_phone,
+        vehicleModel: r.vehicle_model,
+        score: Number(r.score),
+        comment: r.comment,
+        answeredAt: r.answered_at ? new Date(r.answered_at).toISOString() : new Date().toISOString(),
+        googleReviewClicked: Boolean(r.google_review_clicked),
+        googleReviewSentAt: r.google_review_sent_at ? new Date(r.google_review_sent_at).toISOString() : null,
+        googleReviewSentVia: r.google_review_sent_via || null,
+        manualWhatsAppUrl,
+      };
+    });
+
+    return {
+      googleReviewUrl,
+      suggestedGoogleSearchUrl,
+      promotersCount,
+      googleInvitesSent,
+      googleReviewsClicked,
+      conversionRatePercent,
+      topPromoters,
+    };
+  }
+
+  /**
+   * Atualiza a URL de avaliação do Google Meu Negócio da oficina
+   */
+  async updateGoogleReviewUrl(tenantId: string, url: string): Promise<string> {
+    const cleanUrl = url?.trim() || null;
+    await tenantQuery(
+      tenantId,
+      `INSERT INTO tenant_branding (tenant_id, google_review_url)
+       VALUES ($1, $2)
+       ON CONFLICT (tenant_id) DO UPDATE SET google_review_url = $2, updated_at = NOW();`,
+      [tenantId, cleanUrl]
+    );
+
+    return cleanUrl || '';
   }
 
   /**
@@ -557,6 +899,9 @@ export class NpsService {
       sentAt: r.sent_at ? new Date(r.sent_at).toISOString() : null,
       answeredAt: r.answered_at ? new Date(r.answered_at).toISOString() : null,
       googleReviewClicked: Boolean(r.google_review_clicked),
+      googleReviewSentAt: r.google_review_sent_at ? new Date(r.google_review_sent_at).toISOString() : null,
+      googleReviewSentVia: r.google_review_sent_via || null,
+      googleReviewClickedAt: r.google_review_clicked_at ? new Date(r.google_review_clicked_at).toISOString() : null,
       createdAt: new Date(r.created_at).toISOString(),
       updatedAt: new Date(r.updated_at).toISOString(),
     };

@@ -17,9 +17,16 @@ export default {
         secondary: "var(--color-secondary, #171C24)",
         accent: "var(--color-accent, #5CC8FF)",
         "primary-light": "var(--color-primary-light, rgba(200, 245, 46, 0.1))",
+        volt: "#C8F52E",
+        dark: "#0E1116",
+        surface: "#F3F5F7",
+        line: "#E1E6EC",
+        subtext: "#5B6674",
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['"Space Grotesk"', 'sans-serif'],
+        grotesk: ['"Space Grotesk"', 'sans-serif'],
       },
       boxShadow: {
         'premium': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
