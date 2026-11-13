@@ -27,7 +27,7 @@ ARG VITE_APP_ENV=production
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_APP_ENV=${VITE_APP_ENV}
 
-RUN pnpm --filter @carx/admin build
+RUN pnpm --filter @carx/shared build && pnpm --filter @carx/admin build
 
 # Estágio 2: Nginx Alpine
 FROM nginx:alpine AS runner

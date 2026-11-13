@@ -62,3 +62,4 @@ echo "👑 Painel SuperAdmin:       http://137.131.151.125:8081"
 echo "⚡ API Fastify:             http://137.131.151.125:3333"
 echo "🔐 SuperAdmin:              admin@carx.com.br / Admin@CarX2026!"
 echo "======================================================================"
+

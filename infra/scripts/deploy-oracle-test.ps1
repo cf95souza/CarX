@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Disparador de Deploy do CarX na VPS Oracle via PowerShell
 # ==============================================================================
 $KeyPath = "D:\VPSOracle\ssh-key-2026-08-27.key"
@@ -18,3 +18,4 @@ scp -i $KeyPath -o StrictHostKeyChecking=no "d:\Repositorios\CarX\infra\scripts\
 # 2. Executar script remotamente
 Write-Host "⚡ Executando deploy remoto na VPS..." -ForegroundColor Green
 ssh -i $KeyPath -o StrictHostKeyChecking=no $VpsHost "chmod +x /tmp/deploy-oracle-test.sh && /tmp/deploy-oracle-test.sh"
+

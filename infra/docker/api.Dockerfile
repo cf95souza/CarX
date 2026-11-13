@@ -24,7 +24,7 @@ COPY packages/shared ./packages/shared
 COPY apps/api ./apps/api
 
 # Compilação limpa TypeScript via projeto
-RUN pnpm tsc -b --force apps/api
+RUN pnpm --filter @carx/shared build && pnpm --filter @carx/api build
 
 # Estágio 2: Imagem Mínima de Produção
 FROM node:20-alpine AS runner
