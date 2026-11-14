@@ -28,6 +28,7 @@ import { useOfflineSync } from '../hooks/useOfflineSync';
 import { offlineStorage } from '../services/offlineStorage';
 import { toast } from '../utils/toast';
 import PhotoGuideGallery from '../components/features/PhotoGuideGallery';
+import OperadorLaudoInspecao from '../components/features/OperadorLaudoInspecao';
 import { Button } from '@carx/ui';
 import { Card } from '@carx/ui';
 import { Badge } from '@carx/ui';
@@ -392,6 +393,23 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
   };
 
   const hasChecklist = Boolean(os.has_checklist || os.checklist_concluido);
+
+  if (showChecklistModal) {
+    return (
+      <OperadorLaudoInspecao
+        os={os}
+        onBack={() => setShowChecklistModal(false)}
+        onComplete={() => {
+          os.has_checklist = true;
+          os.checklist_concluido = true;
+          setShowChecklistModal(false);
+          refetchTimer();
+          queryClient.invalidateQueries({ queryKey: ['technician-timer', workOrderId] });
+          queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col bg-[#0E1116] text-[#F2F5F8] rounded-2xl border border-[#2E3744] shadow-lg overflow-hidden mb-6 max-w-3xl mx-auto">

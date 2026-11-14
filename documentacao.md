@@ -4454,3 +4454,12 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
       - `MobileLayout.jsx`: Transição 100% para o tema escuro `#0E1116`, header dark com badge da loja e bottom navigation dark com destaques Volt `#C8F52E`.
       - `OperadorHome.tsx`: Reconstruído fielmente ao Figma `rebraind/Operador · Fila@2x.png` (saudação "Olá, [Nome]", pill "12 dias sem retrabalho", abas "Minha fila" e "Toda a loja", card "EM EXECUÇÃO" marcante verde Volt `#C8F52E` com cronômetro grande tabular-nums e cards "PRÓXIMAS" escuros `#171C24`).
       - `ExecutorView.tsx` & `PhotoGuideGallery.jsx`: Reconstruídos conforme `rebraind/Operador · Execução@2x.png` com cronômetro gigante 46px, 4 barras de progresso horizontais, botões táteis e vistoria guiada 360° em tema escuro coerente.
+  12. **Laudo de Inspeção 360° Interativo do Operador (`OperadorLaudoInspecao.tsx`)**:
+      - Implementado componente dedicado e 100% aderente ao protótipo do Figma `rebraind/Operador · Laudo de inspeção@2x.png`.
+      - Silhueta vetorial do veículo em SVG escuro com mapeamento interativo por toque/clique de avarias e pinos laranjas numerados (#FF9500).
+      - Abas Superior, Frente, Traseira e Laterais; pills de seleção (Risco, Amassado, Pedra, Mancha); fotos de evidência por dano.
+      - Input de KM atual, relato técnico por voz (Speech Recognition nativo) e etapa 2 com assinatura tátil do cliente em canvas digital.
+  13. **Unificação Dark Completa do App do Operador (Histórico e Perfil)**:
+      - Aba de Histórico em `App.jsx` e página `Profile.jsx` migradas para o tema escuro Rebraind (`#0E1116`, `#171C24`, `#2E3744`), eliminando qualquer fundo branco destoante.
+  14. **Bateria de Testes Visuais Automatizados (Playwright)**:
+      - Validada a jornada do Operador e Gestor via script headless em viewport mobile e desktop com captura de evidências visuais em PNG.

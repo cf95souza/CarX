@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { toast } from '../utils/toast';
 import { Button, Badge, Card, CardHeader, CardTitle, CardContent, EmptyState, Input } from '@carx/ui';
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import {
@@ -216,7 +217,7 @@ export const OrdensServico: React.FC = () => {
       setPixSettled(false);
       setPixCopied(false);
     } catch (err: any) {
-      alert(err.message || 'Erro ao gerar cobrança Pix.');
+      toast.error(err.message || 'Erro ao gerar cobrança Pix.');
     } finally {
       setIsGeneratingPix(false);
     }
@@ -234,8 +235,9 @@ export const OrdensServico: React.FC = () => {
       setPixSettled(true);
       queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
+      toast.success('Pagamento Pix confirmado com sucesso!');
     } catch (err: any) {
-      alert(err.message || 'Erro ao simular confirmação Pix.');
+      toast.error(err.message || 'Erro ao simular confirmação Pix.');
     } finally {
       setIsSimulatingPix(false);
     }
@@ -283,7 +285,7 @@ export const OrdensServico: React.FC = () => {
         window.open(res.whatsappUrl, '_blank');
       }
     } catch (err: any) {
-      alert(err.message || 'Erro ao disparar notificação de WhatsApp.');
+      toast.error(err.message || 'Erro ao disparar notificação de WhatsApp.');
     } finally {
       setIsSendingWhatsApp(false);
     }
@@ -323,7 +325,7 @@ export const OrdensServico: React.FC = () => {
   const handleConfirmCancelFiscal = async () => {
     if (!fiscalInvoice?.id) return;
     if (!cancelReason.trim() || cancelReason.trim().length < 15) {
-      alert('A justificativa de cancelamento deve ter pelo menos 15 caracteres.');
+      toast.warning('A justificativa de cancelamento deve ter pelo menos 15 caracteres.');
       return;
     }
 
@@ -336,9 +338,10 @@ export const OrdensServico: React.FC = () => {
         type: 'success',
         message: 'NFS-e cancelada com sucesso junto à prefeitura.',
       });
+      toast.success('NFS-e cancelada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
     } catch (err: any) {
-      alert(err.message || 'Erro ao cancelar a NFS-e.');
+      toast.error(err.message || 'Erro ao cancelar a NFS-e.');
     } finally {
       setCancellingFiscal(false);
     }
@@ -378,11 +381,12 @@ export const OrdensServico: React.FC = () => {
       await api.workOrders.updateStatus(orderId, nextStatus);
       queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
+      toast.success('Status da OS atualizado com sucesso!');
       if (selectedOrder?.id === orderId) {
         setSelectedOrder({ ...selectedOrder, status: nextStatus });
       }
     } catch (err: any) {
-      alert(err.message || 'Erro ao atualizar status da OS.');
+      toast.error(err.message || 'Erro ao atualizar status da OS.');
     }
   };
 
@@ -392,7 +396,7 @@ export const OrdensServico: React.FC = () => {
     if (!selectedOrder) return;
     const amountVal = parseFloat(paymentAmount.replace(',', '.'));
     if (isNaN(amountVal) || amountVal <= 0) {
-      alert('Informe um valor de pagamento válido.');
+      toast.warning('Informe um valor de pagamento válido.');
       return;
     }
 
@@ -408,9 +412,9 @@ export const OrdensServico: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
       setIsPaymentModalOpen(false);
       setPaymentAmount('');
-      alert('Pagamento registrado com sucesso!');
+      toast.success('Pagamento registrado com sucesso!');
     } catch (err: any) {
-      alert(err.message || 'Erro ao processar pagamento.');
+      toast.error(err.message || 'Erro ao processar pagamento.');
     } finally {
       setIsSubmittingPayment(false);
     }

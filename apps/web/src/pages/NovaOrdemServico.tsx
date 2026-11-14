@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { dispatchQuoteNotification, getBudgetMsg } from '../utils/whatsappUtils';
+import { toast } from '../utils/toast';
 import { Copy, Check, ExternalLink } from 'lucide-react';
 
 interface ServiceItem {
@@ -181,15 +182,15 @@ export const NovaOrdemServico: React.FC = () => {
   // Ação: Salvar / Gerar OS
   const handleSave = async (isQuote: boolean) => {
     if (!customer.name.trim()) {
-      alert('Por favor, informe o nome do cliente.');
+      toast.warning('Por favor, informe o nome do cliente.');
       return;
     }
     if (!vehicle.plate.trim()) {
-      alert('Por favor, informe a placa do veículo.');
+      toast.warning('Por favor, informe a placa do veículo.');
       return;
     }
     if (selectedServices.length === 0) {
-      alert('Selecione pelo menos um serviço para prosseguir.');
+      toast.warning('Selecione pelo menos um serviço para prosseguir.');
       return;
     }
 
@@ -212,10 +213,10 @@ export const NovaOrdemServico: React.FC = () => {
       } as any);
 
       queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
-      alert(isQuote ? 'Orçamento salvo com sucesso!' : 'Ordem de Serviço gerada e agendada com sucesso!');
+      toast.success(isQuote ? 'Orçamento salvo com sucesso!' : 'Ordem de Serviço gerada e agendada com sucesso!');
       navigate('/ordens');
     } catch (err: any) {
-      alert(err.message || (isQuote ? 'Erro ao salvar orçamento.' : 'Erro ao gerar ordem de serviço.'));
+      toast.error(err.message || (isQuote ? 'Erro ao salvar orçamento.' : 'Erro ao gerar ordem de serviço.'));
     } finally {
       setIsSubmitting(false);
     }

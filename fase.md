@@ -2436,7 +2436,7 @@ Onda 3 Roadmap de Execução:
 - **Itens Críticos Levantados pelo Usuário na Homologação Real e Solucionados:**
   1. **Lookup de Placa de Veículo**: Removido gerador aleatório por hash de marcas/modelos fictícios em `plate-lookup-service.ts`. Se o veículo não estiver no catálogo ou no banco da loja, retorna `source: 'not_found'` com campos em branco para digitação livre.
   2. **Controle de Desconto no Orçamento (`NovoOrcamentoModal.tsx`)**: Input numérico ajustado para permitir zerar, limpar e editar livremente sem travar o estado.
-  3. **Eliminação de `alert()` Nativo**: Substituídos alerts nativos por toasts modernos do CarX Design System.
+  3. **Eliminação de `alert()` Nativo**: Substituídos alerts nativos por toasts modernos do CarX Design System (`NovaOrdemServico.tsx`, `OrdensServico.tsx`, etc.).
   4. **Identificador Amigável de OS/Orçamento no Grid de Vendas**: Substituído o UUID longo por formatação sequencial `#OS-0001` via `formatOsNumber`.
   5. **Correção de Valores e Tradução de Status**:
      - `NovoOrcamentoModal.tsx` e `work-order-service.ts` sincronizados para enviar e salvar `items` e `discountCents`, calculando perfeitamente o valor total e final da OS.
@@ -2452,6 +2452,15 @@ Onda 3 Roadmap de Execução:
       - `MobileLayout.jsx`: Transição 100% para o tema escuro `#0E1116`, header dark com badge da loja e bottom navigation dark com destaques Volt `#C8F52E`.
       - `OperadorHome.tsx`: Reconstruído fielmente ao layout do Figma `rebraind/Operador · Fila@2x.png` (saudação "Olá, [Nome]", pill "12 dias sem retrabalho", abas "Minha fila" e "Toda a loja", card "EM EXECUÇÃO" marcante verde Volt `#C8F52E` com cronômetro grande tabular-nums e cards "PRÓXIMAS" escuros `#171C24`).
       - `ExecutorView.tsx` & `PhotoGuideGallery.jsx`: Reconstruídos conforme `rebraind/Operador · Execução@2x.png` com cronômetro gigante 46px, 4 barras de progresso horizontais, botões táteis e vistoria guiada 360° em tema escuro coerente.
+  12. **Laudo de Inspeção 360° Interativo do Operador (`OperadorLaudoInspecao.tsx`)**:
+      - Criado componente mobile fiel ao Figma `rebraind/Operador · Laudo de inspeção@2x.png`.
+      - Silhueta vetorial do veículo em SVG escuro com mapeamento por toque/clique de avarias e pinos laranjas numerados (#FF9500).
+      - Abas Superior, Frente, Traseira e Laterais; pills de seleção (Risco, Amassado, Pedra, Mancha); fotos de evidência por dano.
+      - Input de KM atual, relato técnico por voz (Speech Recognition) e etapa 2 com assinatura tátil do cliente em canvas digital.
+  13. **Unificação Dark Completa do App do Operador (Histórico e Perfil)**:
+      - Aba de Histórico em `App.jsx` e página `Profile.jsx` migradas para o tema escuro Rebraind (`#0E1116`, `#171C24`, `#2E3744`), eliminando qualquer fundo branco destoante.
+  14. **Bateria de Testes Visuais Automatizados (Playwright)**:
+      - Validada a jornada do Operador e Gestor via script headless em viewport mobile e desktop com captura de evidências visuais em PNG.
 - **Status:** `[x] 100% Concluído e Homologado`
 
 ---

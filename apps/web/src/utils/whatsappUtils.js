@@ -23,26 +23,39 @@ export const formatWhatsAppLink = (phone, message) => {
  */
 export const getBudgetMsg = (cliente, veiculo, valor, servicosDetalhados = [], servicoFallback = '', trackingToken = null) => {
   let listaServicos = '';
+  let calculatedTotal = 0;
 
   if (servicosDetalhados && Array.isArray(servicosDetalhados) && servicosDetalhados.length > 0) {
-    servicosDetalhados.forEach(s => {
-      const preco = s.preco_base || (s.unitPriceCents ? s.unitPriceCents / 100 : (s.unit_price_cents ? s.unit_price_cents / 100 : 0));
-      listaServicos += `• ${s.nome || s.name} - R$ ${Number(preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+    servicosDetalhados.forEach((s) => {
+      const preco =
+        s.preco_base ??
+        s.price ??
+        s.unitPrice ??
+        s.valor ??
+        (s.unitPriceCents ? s.unitPriceCents / 100 : s.unit_price_cents ? s.unit_price_cents / 100 : 0);
+      const precoNum = Number(preco) || 0;
+      calculatedTotal += precoNum;
+      const nome = s.nome || s.name || s.serviceName || s.servico || s.description || 'Serviço';
+      listaServicos += `• ${nome} - R$ ${precoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
     });
   } else {
     listaServicos = `• ${servicoFallback || 'Serviços especializados'}\n`;
   }
 
+  const finalValor = Number(valor) > 0 ? Number(valor) : (calculatedTotal > 0 ? calculatedTotal : 0);
+  const clienteNome = cliente ? cliente.trim() : 'Cliente';
+  const veiculoNome = veiculo ? veiculo.trim() : 'Veículo';
+
   const linkProposta = trackingToken 
     ? `\n👉 *Acesse os detalhes e aprove com 1 clique:*\n${window.location.origin}/proposta/${trackingToken}\n` 
     : '';
 
-  return `Olá ${cliente}! 🚗
-Concluímos o orçamento detalhado para seu veículo *${veiculo}*.
+  return `Olá ${clienteNome}! 🚗
+Concluímos o orçamento detalhado para seu veículo *${veiculoNome}*.
 
 *SERVIÇOS SELECIONADOS:*
 ${listaServicos}
-*Total dos serviços: R$ ${Number(valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*
+*Total dos serviços: R$ ${finalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}*
 ${linkProposta}
 Podemos confirmar a execução? Qualquer dúvida estamos à disposição!`;
 };
