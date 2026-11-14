@@ -105,6 +105,14 @@ const DocumentHead = () => {
    return null;
 };
 
+// Componente isolado para redirecionar /superadm ao bundle próprio sem disparar no render
+const SuperAdmRedirect = () => {
+  useEffect(() => {
+    window.location.replace(window.location.pathname + window.location.search);
+  }, []);
+  return null;
+};
+
 // Componente para Proteção de Rotas
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, profile, loading } = useAuth();
@@ -354,17 +362,7 @@ function App() {
             <React.Suspense fallback={<PageLoading />}>
               <Routes>
               {/* Redirecionamento seguro para SuperAdmin fora do SPA principal */}
-              <Route
-                path="/superadm/*"
-                element={
-                  (() => {
-                    if (typeof window !== 'undefined') {
-                      window.location.replace(window.location.pathname + window.location.search);
-                    }
-                    return null;
-                  })()
-                }
-              />
+              <Route path="/superadm/*" element={<SuperAdmRedirect />} />
 
               {/* Landing Page Oficial na Raiz (Padrão OperaBeauty) */}
               <Route path="/" element={<LandingPage />} />

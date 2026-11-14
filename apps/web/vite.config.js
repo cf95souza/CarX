@@ -65,6 +65,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      workbox: {
+        navigateFallbackDenylist: [/^\/superadm/],
+      },
       manifest: {
         name: 'CarX - Gestão Automotiva Inteligente',
         short_name: 'CarX',
