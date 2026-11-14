@@ -214,7 +214,7 @@ export function buildServer() {
     try {
       const customDomainRes = await tenantQuery<{ id: string }>(
         null,
-        "SELECT id FROM tenants WHERE custom_domain = $1 AND status = 'active' LIMIT 1",
+        "SELECT id FROM tenants WHERE custom_domain = $1 AND status IN ('active', 'trialing') LIMIT 1",
         [cleanDomain],
         { bypassRls: true }
       );

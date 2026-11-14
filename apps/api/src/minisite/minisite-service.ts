@@ -57,7 +57,7 @@ export class MiniSiteService {
         b.minisite_business_hours, b.minisite_features
        FROM tenants t
        LEFT JOIN tenant_branding b ON b.tenant_id = t.id
-       WHERE LOWER(t.slug) = $1 AND t.status = 'active'
+       WHERE LOWER(t.slug) = $1 AND t.status IN ('active', 'trialing')
        LIMIT 1;`,
       [cleanSlug],
       { bypassRls: true }
@@ -169,34 +169,18 @@ export class MiniSiteService {
     );
 
     const totalReviews = parseInt(npsRes.rows[0]?.total_surveys || '0', 10);
-    const avgScore = parseFloat(npsRes.rows[0]?.avg_score || '9.6');
-    const averageStars = Number((avgScore / 2).toFixed(1)); // Escala 0 a 5 estrelas
+    const promotersCount = parseInt(npsRes.rows[0]?.promoters_count || '0', 10);
+    const avgScore = totalReviews > 0 ? parseFloat(npsRes.rows[0]?.avg_score || '0') : 0;
+    const averageStars = totalReviews > 0 ? Number((avgScore / 2).toFixed(1)) : 0; // Escala 0 a 5 estrelas
+    const npsScore = totalReviews > 0 ? Math.round((promotersCount / totalReviews) * 100) : 0;
 
-    // Fallback amigável de depoimentos caso a loja seja nova
-    const testimonials = testimonialsRes.rows.length > 0
-      ? testimonialsRes.rows.map((row) => ({
-          customerName: row.customer_name,
-          vehicleModel: row.vehicle_model,
-          score: row.score,
-          comment: row.comment,
-          date: row.date,
-        }))
-      : [
-          {
-            customerName: 'Ricardo M.',
-            vehicleModel: 'BMW 320i M Sport',
-            score: 10,
-            comment: 'Serviço de altíssimo padrão! O PPF ficou imperceptível e o acabamento foi perfeito.',
-            date: 'Avaliação recente',
-          },
-          {
-            customerName: 'Guilherme S.',
-            vehicleModel: 'Porsche Macan',
-            score: 10,
-            comment: 'Atendimento impecável, prazo cumprido e o carro parece que saiu da concessionária hoje.',
-            date: 'Avaliação recente',
-          },
-        ];
+    const testimonials = testimonialsRes.rows.map((row) => ({
+      customerName: row.customer_name,
+      vehicleModel: row.vehicle_model,
+      score: row.score,
+      comment: row.comment,
+      date: row.date,
+    }));
 
     const defaultHours = {
       segunda_sexta: '08:00 às 18:00',
@@ -255,9 +239,9 @@ export class MiniSiteService {
         updatedAt: p.updated_at,
       })),
       reputation: {
-        npsScore: totalReviews > 0 ? 88 : 95,
-        totalReviews: totalReviews > 0 ? totalReviews : 42,
-        averageStars: averageStars || 4.9,
+        npsScore,
+        totalReviews,
+        averageStars,
         testimonials,
       },
     };
@@ -274,7 +258,7 @@ export class MiniSiteService {
       null,
       `SELECT id, trade_name, (SELECT whatsapp_phone FROM tenant_branding WHERE tenant_id = tenants.id) as whatsapp_phone, phone 
        FROM tenants 
-       WHERE LOWER(slug) = $1 AND status = 'active' LIMIT 1;`,
+       WHERE LOWER(slug) = $1 AND status IN ('active', 'trialing') LIMIT 1;`,
       [cleanSlug],
       { bypassRls: true }
     );
