@@ -254,6 +254,27 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
   /**
    * PUT /work-orders/:id — Atualização cadastral da Ordem de Serviço
    */
+  const handleUpdateWorkOrder = async (
+    request: any,
+    reply: any
+  ) => {
+    const tenantId = request.tenantId;
+    if (!tenantId) {
+      return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
+    }
+
+    try {
+      const userId = (request.user as any)?.userId || (request.user as any)?.sub;
+      const updated = await workOrderService.update(tenantId, request.params.id, request.body, userId);
+      return reply.code(200).send(updated);
+    } catch (err: any) {
+      if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
+        return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+      }
+      throw err;
+    }
+  };
+
   fastify.put<{ Params: { id: string }; Body: UpdateWorkOrderDto }>(
     '/work-orders/:id',
     {
@@ -263,23 +284,22 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
         requireRole(['owner', 'gestor', 'atendente', 'superadmin']),
       ],
     },
-    async (request, reply) => {
-      const tenantId = request.tenantId;
-      if (!tenantId) {
-        return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
-      }
+    handleUpdateWorkOrder
+  );
 
-      try {
-        const userId = (request.user as any)?.userId || (request.user as any)?.sub;
-        const updated = await workOrderService.update(tenantId, request.params.id, request.body, userId);
-        return reply.code(200).send(updated);
-      } catch (err: any) {
-        if (err instanceof WorkOrderStateError || err instanceof WorkOrderNotFoundError) {
-          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
-        }
-        throw err;
-      }
-    }
+  /**
+   * PATCH /work-orders/:id — Atualização parcial/serviços da Ordem de Serviço
+   */
+  fastify.patch<{ Params: { id: string }; Body: UpdateWorkOrderDto }>(
+    '/work-orders/:id',
+    {
+      preHandler: [
+        authenticateBearer,
+        requireTenantContext,
+        requireRole(['owner', 'gestor', 'atendente', 'superadmin']),
+      ],
+    },
+    handleUpdateWorkOrder
   );
 
   /**

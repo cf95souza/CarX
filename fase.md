@@ -2432,6 +2432,30 @@ Onda 3 Roadmap de Execução:
 
 ---
 
+### [x] T8.2b — Auditoria de Usabilidade, Fluxo Completo de Vendas/Orçamentos e Redesenho do App do Operador (Design System rebraind/) `(100% Concluído)`
+- **Itens Críticos Levantados pelo Usuário na Homologação Real e Solucionados:**
+  1. **Lookup de Placa de Veículo**: Removido gerador aleatório por hash de marcas/modelos fictícios em `plate-lookup-service.ts`. Se o veículo não estiver no catálogo ou no banco da loja, retorna `source: 'not_found'` com campos em branco para digitação livre.
+  2. **Controle de Desconto no Orçamento (`NovoOrcamentoModal.tsx`)**: Input numérico ajustado para permitir zerar, limpar e editar livremente sem travar o estado.
+  3. **Eliminação de `alert()` Nativo**: Substituídos alerts nativos por toasts modernos do CarX Design System.
+  4. **Identificador Amigável de OS/Orçamento no Grid de Vendas**: Substituído o UUID longo por formatação sequencial `#OS-0001` via `formatOsNumber`.
+  5. **Correção de Valores e Tradução de Status**:
+     - `NovoOrcamentoModal.tsx` e `work-order-service.ts` sincronizados para enviar e salvar `items` e `discountCents`, calculando perfeitamente o valor total e final da OS.
+     - Status técnicos traduzidos para português nativo (`QUOTE` ➔ `Orçamento`, `APPROVED` ➔ `Aprovado`, `SCHEDULED` ➔ `Agendado`, `IN_PROGRESS` ➔ `Em Execução`, `QA` ➔ `Controle QA`, `READY` ➔ `Pronto p/ Retirada`, etc.) via `getStatusLabel`.
+  6. **Redesenho do Modal de Detalhes do Orçamento**: Modernizado no padrão Dark Card (`#171C24` e `#0E1116`), exibindo placa, serviços detalhados com preços, subtotal, desconto e botão "Aprovar e Agendar" para ordens em status `QUOTE`.
+  7. **Redesenho do Modal de Pagamento (`PagamentoModal.jsx`)**: Alinhado ao Dark Card com acentos Volt, exibindo `#OS-0001`, valor real devido, métodos modernos (PIX, Dinheiro, Cartão) e tratamento compatível.
+  8. **Mensagem WhatsApp de Orçamento**: Ajustada em `useQuotes.js` e `whatsappUtils.js` para iterar sobre a lista real de serviços contratados e o valor total consolidado.
+  9. **Edição de Serviços da OS (`EditOrderServicesModal.jsx`)**:
+     - Inicialização corrigida para carregar tanto `items` quanto `servicos_detalhados`.
+     - Implementada a rota `PATCH /work-orders/:id` no backend Fastify com recálculo atômico dos totais da OS e substituição dos itens em `work_order_items`.
+  10. **Aprovação de Orçamento e Agendamento**: Máquina de estados atualizada em `ALLOWED_WORK_ORDER_TRANSITIONS` para permitir transição direta de `QUOTE` para `SCHEDULED` e `CHECKED_IN`, integrando a OS à agenda da oficina.
+  11. **Redesenho Fiel da Interface do Operador (Design System rebraind/)**:
+      - `MobileLayout.jsx`: Transição 100% para o tema escuro `#0E1116`, header dark com badge da loja e bottom navigation dark com destaques Volt `#C8F52E`.
+      - `OperadorHome.tsx`: Reconstruído fielmente ao layout do Figma `rebraind/Operador · Fila@2x.png` (saudação "Olá, [Nome]", pill "12 dias sem retrabalho", abas "Minha fila" e "Toda a loja", card "EM EXECUÇÃO" marcante verde Volt `#C8F52E` com cronômetro grande tabular-nums e cards "PRÓXIMAS" escuros `#171C24`).
+      - `ExecutorView.tsx` & `PhotoGuideGallery.jsx`: Reconstruídos conforme `rebraind/Operador · Execução@2x.png` com cronômetro gigante 46px, 4 barras de progresso horizontais, botões táteis e vistoria guiada 360° em tema escuro coerente.
+- **Status:** `[x] 100% Concluído e Homologado`
+
+---
+
 ### [ ] T8.2 — Seleção do Grupo Beta e Testes com Analistas
 - [ ] Recrutamento de 3 a 5 oficinas parceiras em condições especiais em troca de homologação e feedbacks semanais.
 - [ ] Rodada de homologação e testes práticos com analistas no ambiente de teste da VPS.

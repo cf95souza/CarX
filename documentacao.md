@@ -4423,3 +4423,34 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - Normalização de `role`/`cargo` em [`auth-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/auth-routes.ts) (`OPERADOR`/`operador` ➔ `tecnico`, `ADM`/`adm` ➔ `owner`, `GESTOR`/`gestor` ➔ `gestor`, etc.) e compatibilidade de `status` booleano/string em `PATCH /tenant/members/:id`.
   - Saudação dinâmica por horário e remoção de números/cards mockados em `Dashboard.tsx`, `NpsDashboard.tsx`, `Relatorios.tsx` e `MiniSiteOficina.tsx`.
   - Correção da abertura e salvamento de orçamento em [`Vendas.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Vendas.jsx).
+
+---
+
+### T8.2b — Homologação Operacional: Correção do Ciclo de Vendas/Orçamentos e Redesenho do App do Operador (Design System rebraind/) `[CONCLUÍDO]`
+- **Soluções Técnicas Implementadas**:
+  1. **Lookup de Placa Limpo e Sem Dados Fictícios**:
+     - Em `plate-lookup-service.ts`, removido o gerador aleatório por hash que inventava carros fictícios (ex: "HONDA Fista Rocam 2011"). Placas não cadastradas retornam `source: 'not_found'` com dados nulos, permitindo preenchimento livre e verdadeiro pelo usuário.
+  2. **Controle de Desconto Resiliente**:
+     - Em `NovoOrcamentoModal.tsx`, input numérico ajustado para aceitar limpeza, 0% ou valores decimais sem congelar o estado ou bloquear o wizard.
+  3. **Notificações e Modais Modernos**:
+     - Substituídos `alert()` e `confirm()` nativos por toasts modernos do Design System CarX com acentos Volt `#C8F52E` e tipografia legível.
+  4. **Identificador Amigável Sequencial**:
+     - Criado `formatOsNumber` em `statusUtils.js` e integrado em `Vendas.jsx`, `useQuotes.js`, `EditOrderServicesModal.jsx` e `PagamentoModal.jsx`, exibindo `#OS-0001` no lugar de UUIDs de 36 caracteres.
+  5. **Cálculo de Totais e Tradução Completa de Status**:
+     - Em `NovoOrcamentoModal.tsx` e `work-order-service.ts`, mapeamento automático de `items` e `discountCents` na abertura e recálculo de OS, eliminando ordens zeradas.
+     - Em `statusUtils.js`, `getStatusLabel` traduz todos os status (`QUOTE` ➔ `Orçamento`, `APPROVED` ➔ `Aprovado`, `SCHEDULED` ➔ `Agendado`, `IN_PROGRESS` ➔ `Em Execução`, `QA` ➔ `Controle QA`, `READY` ➔ `Pronto p/ Retirada`, etc.).
+  6. **Redesenho do Modal de Detalhes da Proposta**:
+     - Implementado visual Dark Card (`#171C24` e `#0E1116`), listagem individualizada de serviços com preços reais, garantias, resumo financeiro completo e botão "Aprovar e Agendar" para status `QUOTE`.
+  7. **Redesenho do Modal de Pagamento (`PagamentoModal.jsx`)**:
+     - Reconstruído no padrão Dark Card com identificador sequencial `#OS-0001`, valor real a receber, métodos táteis (PIX, Dinheiro, Cartão) e compatibilidade com objetos de pagamento.
+  8. **Mensagem WhatsApp Enriquecida**:
+     - `useQuotes.js` e `whatsappUtils.js` sincronizados para listar todos os itens contratados com preços individuais e valor final consolidado da proposta.
+  9. **Edição de Serviços e Endpoint PATCH**:
+     - Registrado `PATCH /work-orders/:id` no Fastify (`work-order-routes.ts`) acoplado ao recálculo atômico de itens em `work-order-service.ts`.
+     - `EditOrderServicesModal.jsx` inicializa reativamente a partir de `items` ou `servicos_detalhados`.
+  10. **Aprovação de Orçamento e Agendamento**:
+      - Atualizado `ALLOWED_WORK_ORDER_TRANSITIONS` em `packages/shared/src/schemas.ts` permitindo transição direta de `QUOTE` para `SCHEDULED` e `CHECKED_IN`, integrando data e hora à agenda da loja.
+  11. **Redesenho Fiel da Interface do Operador (Design System rebraind/)**:
+      - `MobileLayout.jsx`: Transição 100% para o tema escuro `#0E1116`, header dark com badge da loja e bottom navigation dark com destaques Volt `#C8F52E`.
+      - `OperadorHome.tsx`: Reconstruído fielmente ao Figma `rebraind/Operador · Fila@2x.png` (saudação "Olá, [Nome]", pill "12 dias sem retrabalho", abas "Minha fila" e "Toda a loja", card "EM EXECUÇÃO" marcante verde Volt `#C8F52E` com cronômetro grande tabular-nums e cards "PRÓXIMAS" escuros `#171C24`).
+      - `ExecutorView.tsx` & `PhotoGuideGallery.jsx`: Reconstruídos conforme `rebraind/Operador · Execução@2x.png` com cronômetro gigante 46px, 4 barras de progresso horizontais, botões táteis e vistoria guiada 360° em tema escuro coerente.

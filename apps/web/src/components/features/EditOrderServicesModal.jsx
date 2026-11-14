@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, DollarSign, ShieldCheck, Loader2, AlertTriangle, Calculator, Plus, Trash2, Search } from 'lucide-react';
-import { formatCurrency } from '../../utils/statusUtils';
+import { formatCurrency, formatOsNumber } from '../../utils/statusUtils';
 import { toast } from '../../utils/toast';
 import { useCatalog } from '../../hooks/useData';
 
@@ -13,9 +13,18 @@ const EditOrderServicesModal = ({ order, onClose, onSave }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    if (order && order.servicos_detalhados) {
-      setServices(JSON.parse(JSON.stringify(order.servicos_detalhados)));
-      setTotalValue(Number(order.valor_total || order.valor || 0));
+    if (order) {
+      const raw = order.items || order.servicos_detalhados || order.services || [];
+      const list = raw.map((s, idx) => ({
+        id: s.id || s.serviceId || String(idx),
+        nome: s.nome || s.name || `Serviço ${idx + 1}`,
+        preco_base: Number(s.preco_base !== undefined ? s.preco_base : (s.unit_price !== undefined ? s.unit_price : (s.unitPriceCents ? s.unitPriceCents / 100 : (s.valor || 0)))),
+        garantia: s.garantia || (s.warrantyMonths ? `${s.warrantyMonths} meses` : '3 meses'),
+        progresso: s.progresso || 0,
+      }));
+      setServices(list);
+      const initialTotal = list.reduce((acc, s) => acc + (Number(s.preco_base) || 0), 0);
+      setTotalValue(initialTotal > 0 ? initialTotal : Number(order.valor_total || order.valor || 0));
     }
   }, [order]);
 
@@ -103,7 +112,7 @@ const EditOrderServicesModal = ({ order, onClose, onSave }) => {
             </div>
             <div>
               <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Ajuste de Escopo e Valores</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">OS #{order.id} • {order.cliente_nome}</p>
+              <p className="text-xs text-slate-400 font-mono font-bold uppercase tracking-widest">{formatOsNumber(order.os_number || order.id)} • {order.cliente_nome}</p>
             </div>
           </div>
           <button 

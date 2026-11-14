@@ -229,21 +229,27 @@ export const NovoOrcamentoModal: React.FC<NovoOrcamentoModalProps> = ({
         scheduledAt = `${scheduledDate}T${scheduledTime || '09:00'}:00.000Z`;
       }
 
-      // 2. Criação da OS via endpoint oficial Fastify
+      // 2. Criação da OS via endpoint oficial Fastify com itens e desconto
+      const mappedItems = selectedServices.map((s) => ({
+        serviceId: s.id,
+        name: s.name,
+        unitPriceCents: s.unitPriceCents,
+        quantity: s.quantity,
+        estimatedMinutes: s.estimatedMinutes,
+        warrantyMonths: s.warrantyMonths,
+      }));
+
       const payload = {
         customerId: selectedClient.id,
         vehicleId: selectedVehicle.id,
         notes: notes.trim() || undefined,
         scheduledAt,
-        services: selectedServices.map((s) => ({
-          serviceId: s.id,
-          name: s.name,
-          unitPriceCents: s.unitPriceCents,
-          quantity: s.quantity,
-        })),
+        discountCents,
+        items: mappedItems,
+        services: mappedItems,
       };
 
-      const createdWo = await api.workOrders.create(payload);
+      const createdWo = await api.workOrders.create(payload as any);
 
       // 3. Se status inicial for APPROVED e veio como QUOTE, atualiza status
       if (initialStatus === 'APPROVED' && createdWo.status === 'QUOTE') {
@@ -700,8 +706,16 @@ export const NovoOrcamentoModal: React.FC<NovoOrcamentoModalProps> = ({
                   type="number"
                   min="0"
                   max="100"
-                  value={discountPercent || ''}
-                  onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                  value={discountPercent === 0 ? '' : discountPercent}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setDiscountPercent(0);
+                    } else {
+                      const num = parseFloat(val);
+                      setDiscountPercent(isNaN(num) ? 0 : Math.min(100, Math.max(0, num)));
+                    }
+                  }}
                   placeholder="0%"
                 />
                 <Input

@@ -133,10 +133,22 @@ export class WorkOrderService {
       );
       const osNumber = seqRes.rows[0].next_os;
 
-      // 4. Calcular totais dos itens
+      // 4. Calcular totais dos itens (compatibilidade total com items e services)
       let totalCents = 0;
       let estimatedMinutes = 0;
-      const itemsToInsert = data.items || [];
+      let rawItems = data.items;
+      if ((!rawItems || rawItems.length === 0) && (data as any).services && Array.isArray((data as any).services)) {
+        rawItems = (data as any).services.map((s: any) => ({
+          serviceId: s.serviceId || s.id,
+          name: s.name || s.nome,
+          unitPriceCents: s.unitPriceCents !== undefined ? s.unitPriceCents : Math.round(Number(s.unit_price || s.preco || s.valor || 0) * 100),
+          quantity: s.quantity || s.quantidade || 1,
+          discountCents: s.discountCents || 0,
+          estimatedMinutes: s.estimatedMinutes || s.estimated_minutes || s.tempo || 60,
+          warrantyMonths: s.warrantyMonths || s.warranty_months || 3,
+        }));
+      }
+      const itemsToInsert = rawItems || [];
 
       for (const item of itemsToInsert) {
         const qty = Math.max(1, item.quantity || 1);
@@ -775,13 +787,74 @@ export class WorkOrderService {
     const depositRequiredCents = data.depositRequiredCents !== undefined ? Math.max(0, data.depositRequiredCents) : ((existing as any).depositRequiredCents || 0);
     const scheduledAt = data.scheduledAt !== undefined ? data.scheduledAt : existing.scheduledAt;
 
+    let totalCents = existing.totalCents;
     let discountCents = existing.discountCents;
-    let finalCents = existing.finalCents;
+
+    // Se novos itens/serviços forem enviados, substitui os existentes e recalcula os totais
+    let rawUpdateItems = (data as any).items;
+    if ((!rawUpdateItems || rawUpdateItems.length === 0) && (data as any).services && Array.isArray((data as any).services)) {
+      rawUpdateItems = (data as any).services.map((s: any) => ({
+        serviceId: s.serviceId || s.id,
+        name: s.name || s.nome,
+        unitPriceCents: s.unitPriceCents !== undefined ? s.unitPriceCents : Math.round(Number(s.unit_price || s.preco || s.valor || 0) * 100),
+        quantity: s.quantity || s.quantidade || 1,
+        discountCents: s.discountCents || 0,
+        estimatedMinutes: s.estimatedMinutes || s.estimated_minutes || s.tempo || 60,
+        warrantyMonths: s.warrantyMonths || s.warranty_months || 3,
+      }));
+    }
+
+    if (rawUpdateItems && Array.isArray(rawUpdateItems)) {
+      await tenantQuery(
+        tenantId,
+        `DELETE FROM work_order_items WHERE tenant_id = $1 AND work_order_id = $2;`,
+        [tenantId, id]
+      );
+
+      totalCents = 0;
+      for (const item of rawUpdateItems) {
+        const qty = Math.max(1, item.quantity || 1);
+        const unitPrice = Math.max(0, item.unitPriceCents || 0);
+        const itemDiscount = Math.max(0, item.discountCents || 0);
+        const itemTotal = Math.max(0, unitPrice * qty - itemDiscount);
+        totalCents += itemTotal;
+
+        await tenantQuery(
+          tenantId,
+          `
+          INSERT INTO work_order_items (
+            tenant_id,
+            work_order_id,
+            service_id,
+            name,
+            quantity,
+            unit_price_cents,
+            discount_cents,
+            total_cents,
+            estimated_minutes,
+            warranty_months
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+          `,
+          [
+            tenantId,
+            id,
+            item.serviceId || null,
+            item.name,
+            qty,
+            unitPrice,
+            itemDiscount,
+            itemTotal,
+            item.estimatedMinutes || 60,
+            item.warrantyMonths || 3,
+          ]
+        );
+      }
+    }
 
     if (data.discountCents !== undefined) {
       discountCents = Math.max(0, data.discountCents);
-      finalCents = Math.max(0, existing.totalCents - discountCents);
     }
+    const finalCents = Math.max(0, totalCents - discountCents);
 
     await tenantQuery(
       tenantId,
@@ -789,17 +862,18 @@ export class WorkOrderService {
       UPDATE work_orders
       SET 
         technician_id = $3,
-        discount_cents = $4,
-        final_cents = $5,
-        scheduled_at = $6,
-        notes = $7,
-        customer_notes = $8,
-        public_notes = $9,
-        deposit_required_cents = $10,
+        total_cents = $4,
+        discount_cents = $5,
+        final_cents = $6,
+        scheduled_at = $7,
+        notes = $8,
+        customer_notes = $9,
+        public_notes = $10,
+        deposit_required_cents = $11,
         updated_at = NOW()
       WHERE tenant_id = $1 AND id = $2;
       `,
-      [tenantId, id, technicianId, discountCents, finalCents, scheduledAt, notes, customerNotes, publicNotes, depositRequiredCents]
+      [tenantId, id, technicianId, totalCents, discountCents, finalCents, scheduledAt, notes, customerNotes, publicNotes, depositRequiredCents]
     );
 
     const updated = await this.getById(tenantId, id);

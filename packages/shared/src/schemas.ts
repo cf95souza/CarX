@@ -215,15 +215,15 @@ export interface UpdateVehicleDto extends Partial<Omit<CreateVehicleDto, 'custom
 export interface PlateLookupResultDto {
   plate: string;
   isMercosul: boolean;
-  brand: string;
-  model: string;
+  brand?: string | null;
+  model?: string | null;
   year?: number | null;
   modelYear?: number | null;
   color?: string | null;
-  sizeClass: VehicleSizeClassType;
+  sizeClass?: VehicleSizeClassType | null;
   chassisMask?: string | null;
   fipePriceCents?: number | null;
-  source: 'local_tenant' | 'cache' | 'national_registry' | 'provider';
+  source: 'local_tenant' | 'cache' | 'national_registry' | 'provider' | 'not_found';
   cachedAt?: string | null;
   existingCustomer?: {
     id: string;
@@ -410,7 +410,12 @@ export function inferVehicleSizeClass(brand = '', model = ''): VehicleSizeClassT
 // ==============================================================================
 
 export const ALLOWED_WORK_ORDER_TRANSITIONS: Record<WorkOrderStatusType, readonly WorkOrderStatusType[]> = {
-  [WorkOrderStatus.QUOTE]: [WorkOrderStatus.APPROVED, WorkOrderStatus.CANCELED],
+  [WorkOrderStatus.QUOTE]: [
+    WorkOrderStatus.APPROVED,
+    WorkOrderStatus.SCHEDULED,
+    WorkOrderStatus.CHECKED_IN,
+    WorkOrderStatus.CANCELED,
+  ],
   [WorkOrderStatus.APPROVED]: [
     WorkOrderStatus.SCHEDULED,
     WorkOrderStatus.CHECKED_IN,

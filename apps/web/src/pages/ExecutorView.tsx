@@ -394,93 +394,72 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
   const hasChecklist = Boolean(os.has_checklist || os.checklist_concluido);
 
   return (
-    <div className="flex flex-col bg-grafite rounded-2xl border border-aco shadow-lg overflow-hidden mb-6 max-w-3xl mx-auto">
-      {/* 1. Header Fixo Tátil com Retorno */}
-      <div className="p-4 md:p-6 bg-asfalto border-b border-aco flex items-center justify-between shrink-0">
+    <div className="flex flex-col bg-[#0E1116] text-[#F2F5F8] rounded-2xl border border-[#2E3744] shadow-lg overflow-hidden mb-6 max-w-3xl mx-auto">
+      {/* 1. Header Fixo Tátil com Retorno (Fiel a rebraind/Operador · Execução) */}
+      <div className="p-4 md:p-5 bg-[#0E1116] border-b border-[#2E3744] flex items-center gap-3.5 shrink-0">
         <button
           type="button"
           onClick={onBack}
-          className="p-3 bg-grafite hover:bg-aco text-muted hover:text-volt rounded-xl border border-aco transition-all flex items-center gap-2 active:scale-95"
+          aria-label="Voltar à Fila"
+          className="w-12 h-12 rounded-full border border-[#2E3744] bg-[#171C24] hover:bg-[#232A35] text-[#F2F5F8] flex items-center justify-center transition-all active:scale-95 shrink-0"
         >
-          <ArrowLeft className="w-5 h-5" />
-          <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">
-            Voltar à Fila
-          </span>
+          <ArrowLeft className="w-5 h-5 text-[#F2F5F8]" />
         </button>
 
-        <div className="text-right">
-          <div className="flex items-center justify-end gap-2">
-            <span className="text-[10px] font-black text-muted uppercase tracking-widest leading-none">
-              OS #{String(os.osNumber || os.os_number || os.id).padStart(4, '0')}
-            </span>
-            <div className="px-2 py-0.5 bg-grafite border border-aco rounded text-texto font-mono font-black text-xs uppercase">
-              {os.veiculo_placa || os.vehicle?.plate || 'SEM PLACA'}
-            </div>
+        <div className="flex-1 truncate">
+          <div className="text-xs text-[#9AA7B8] flex items-center gap-2">
+            <span>OS #{String(os.osNumber || os.os_number || os.id).padStart(4, '0')}</span>
+            <span>•</span>
+            <span className="text-[#C8F52E] font-mono font-bold uppercase">{os.veiculo_placa || os.vehicle?.plate || 'SEM PLACA'}</span>
           </div>
-          <h2 className="text-base font-extrabold text-texto tracking-tight uppercase mt-1">
+          <h2 className="font-grotesk text-xl md:text-2xl font-bold text-[#F2F5F8] tracking-tight truncate mt-0.5">
             {os.veiculo_desc || `${os.vehicle?.brand || ''} ${os.vehicle?.model || ''}`.trim() || 'Veículo'}
           </h2>
         </div>
       </div>
 
-      {/* 2. Banner de Cronômetro Oficial do Servidor */}
-      <div className="p-4 bg-asfalto/60 border-b border-aco/80 flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center border shadow-inner ${
-              isTimerRunning
-                ? 'bg-volt text-asfalto border-volt animate-pulse'
-                : 'bg-grafite text-muted border-aco'
-            }`}
-          >
-            <Clock className="w-6 h-6" />
+      {/* 2. Card de Cronômetro & Progresso por Etapas (Fiel a rebraind/Operador · Execução) */}
+      <div className="m-4 md:m-5 bg-[#171C24] border border-[#2E3744] rounded-3xl p-5 md:p-6 flex flex-col gap-3 shadow-lg">
+        <div className="flex items-baseline justify-between">
+          <div className="font-grotesk text-4xl md:text-5xl font-extrabold tabular-nums tracking-tight text-[#F2F5F8]">
+            <Stopwatch seconds={displaySeconds} isActive={isTimerRunning} size="lg" showIcon={false} />
           </div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-widest text-muted">
-              Cronômetro Oficial (Servidor)
-            </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <Stopwatch
-                seconds={displaySeconds}
-                isActive={isTimerRunning}
-                size="md"
-                showIcon={false}
-              />
-              <Badge
-                variant={isTimerRunning ? 'volt' : 'neutral'}
-                dot
-                className="text-[9px] uppercase font-bold"
-              >
-                {isTimerRunning ? 'Em Andamento' : 'Pausado'}
-              </Badge>
-              {(!isOnline || localTimerOverride !== null) && (
-                <Badge variant="alert" className="text-[9px] uppercase font-bold">
-                  Offline (Local)
-                </Badge>
-              )}
-            </div>
+          <div className="text-sm md:text-base font-bold text-[#C8F52E]">
+            {isTimerRunning ? 'Previsto 03:00' : 'Pausado'}
           </div>
         </div>
 
-        {/* Botões de Ação do Cronômetro */}
-        <div className="flex items-center gap-2">
+        {/* Barras de progresso por etapa no estilo Rebraind */}
+        <div className="flex gap-1.5 my-1">
+          <div className={`flex-1 h-2 rounded-full transition-all duration-300 ${progress >= 25 ? 'bg-[#C8F52E]' : 'bg-[#2E3744]'}`} />
+          <div className={`flex-1 h-2 rounded-full transition-all duration-300 ${progress >= 50 ? 'bg-[#C8F52E]' : 'bg-[#2E3744]'}`} />
+          <div className={`flex-1 h-2 rounded-full transition-all duration-300 ${progress >= 75 ? 'bg-[#C8F52E]' : 'bg-[#2E3744]'}`} />
+          <div className={`flex-1 h-2 rounded-full transition-all duration-300 ${progress >= 100 ? 'bg-[#C8F52E]' : 'bg-[#2E3744]'}`} />
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-[#9AA7B8]">
+          <span className="truncate max-w-[220px]">
+            {servicosDetalhados[0]?.nome || os.servico || 'Serviço da Oficina'}
+          </span>
+          <span className="font-bold text-[#F2F5F8] shrink-0 font-mono">
+            {progress}% concluído
+          </span>
+        </div>
+
+        {/* Controles Táteis do Cronômetro */}
+        <div className="flex gap-2 pt-2">
           {isTimerRunning ? (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="desktop"
               onClick={() => setShowPauseModal(true)}
-              isLoading={pauseTimerMutation.isPending}
-              leftIcon={<Pause className="w-4 h-4" />}
-              className="text-xs font-bold uppercase"
+              disabled={pauseTimerMutation.isPending}
+              className="flex-1 h-12 rounded-xl border border-[#2E3744] bg-[#232A35] hover:bg-[#2E3744] text-[#F2F5F8] font-bold text-xs uppercase flex items-center justify-center gap-2 transition-all"
             >
-              Pausar
-            </Button>
+              <Pause className="w-4 h-4 text-[#FF6B5E]" /> Pausar Cronômetro
+            </button>
           ) : (
-            <Button
+            <button
               type="button"
-              variant="volt"
-              size="desktop"
               onClick={() => {
                 if (totalElapsedSeconds > 0) {
                   resumeTimerMutation.mutate();
@@ -490,43 +469,39 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
                   setShowChecklistModal(true);
                 }
               }}
-              isLoading={startTimerMutation.isPending || resumeTimerMutation.isPending}
-              leftIcon={<Play className="w-4 h-4 fill-asfalto text-asfalto" />}
-              className="text-xs font-black uppercase tracking-wider"
+              disabled={startTimerMutation.isPending || resumeTimerMutation.isPending}
+              className="flex-1 h-12 rounded-xl bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-bold text-xs uppercase flex items-center justify-center gap-2 transition-all shadow-md shadow-[#C8F52E]/15"
             >
-              {totalElapsedSeconds > 0 ? 'Retomar' : 'Iniciar'}
-            </Button>
+              <Play className="w-4 h-4 fill-[#0E1116] text-[#0E1116]" /> {totalElapsedSeconds > 0 ? 'Retomar Serviço' : 'Iniciar Serviço'}
+            </button>
           )}
         </div>
       </div>
 
-      {/* 3. Banner de Checklist de Entrada com Ação Inteligente */}
+      {/* 3. Banner de Checklist de Entrada Pendente */}
       {!hasChecklist && (
-        <div className="m-4 p-4 rounded-xl bg-alert/10 border border-alert/30 text-texto flex items-center justify-between flex-wrap gap-3">
+        <div className="mx-4 md:mx-5 mb-4 p-4 rounded-2xl bg-[#171C24] border border-[#FFB020]/40 text-[#F2F5F8] flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-alert/20 text-alert rounded-xl flex-shrink-0">
+            <div className="p-2.5 bg-[#FFB020]/20 text-[#FFB020] rounded-xl flex-shrink-0">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-alert">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#FFB020]">
                 Checklist de Entrada Pendente
               </h4>
-              <p className="text-[11px] text-muted mt-0.5">
+              <p className="text-[11px] text-[#9AA7B8] mt-0.5">
                 Faça a vistoria inicial rápida para registrar as avarias e liberar a execução.
               </p>
             </div>
           </div>
 
-          <Button
+          <button
             type="button"
-            variant="volt"
-            size="sm"
             onClick={() => setShowChecklistModal(true)}
-            leftIcon={<ClipboardCheck className="w-4 h-4" />}
-            className="font-bold text-xs uppercase"
+            className="px-4 py-2.5 bg-[#C8F52E] text-[#0E1116] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 hover:bg-[#b8e520] transition-all"
           >
-            Fazer Checklist Rápido
-          </Button>
+            <ClipboardCheck className="w-4 h-4" /> Fazer Checklist Rápido
+          </button>
         </div>
       )}
 

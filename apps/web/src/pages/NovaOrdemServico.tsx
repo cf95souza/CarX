@@ -145,7 +145,7 @@ export const NovaOrdemServico: React.FC = () => {
 
   // Garante que o cliente e veículo existam no banco do tenant antes de criar a OS
   const resolveCustomerAndVehicle = async (): Promise<{ customerId: string; vehicleId: string }> => {
-    let finalCustomerId = customer.id;
+    let finalCustomerId: string = customer.id || '';
     if (!finalCustomerId) {
       if (!customer.name.trim()) {
         throw new Error('Informe o nome do cliente.');
@@ -154,11 +154,11 @@ export const NovaOrdemServico: React.FC = () => {
         name: customer.name.trim(),
         phone: customer.phone.trim() || undefined,
       });
-      finalCustomerId = createdCust.id;
+      finalCustomerId = String(createdCust.id);
       setCustomer((prev) => ({ ...prev, id: finalCustomerId }));
     }
 
-    let finalVehicleId = vehicle.id;
+    let finalVehicleId: string = vehicle.id || '';
     if (!finalVehicleId) {
       if (!vehicle.plate.trim()) {
         throw new Error('Informe a placa do veículo.');
@@ -171,7 +171,7 @@ export const NovaOrdemServico: React.FC = () => {
         color: vehicle.color?.trim() || 'Padrão',
         sizeClass: (vehicle.sizeClass?.toLowerCase() as any) || 'sedan',
       });
-      finalVehicleId = createdVeh.id;
+      finalVehicleId = String(createdVeh.id);
       setVehicle((prev) => ({ ...prev, id: finalVehicleId }));
     }
 

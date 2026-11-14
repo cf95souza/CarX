@@ -23,7 +23,7 @@ import Pagination from '../components/ui/Pagination';
 import AgendamentoModal from '../components/features/AgendamentoModal';
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import { sendWhatsApp, getBudgetMsg, getAppointmentConfirmationMsg } from '../utils/whatsappUtils';
-import { getStatusStyle, formatCurrency } from '../utils/statusUtils';
+import { getStatusStyle, getStatusLabel, formatOsNumber, formatCurrency } from '../utils/statusUtils';
 import { confirmDialog } from '../utils/confirm';
 import { toast } from '../utils/toast';
 import PagamentoModal from '../components/features/PagamentoModal';
@@ -337,12 +337,14 @@ const Vendas = () => {
               ) : filteredQuotes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((q) => (
                 <tr key={q.id} className="hover:bg-slate-50/30 transition-all group">
                   <td className="px-6 py-4">
-                    <p className="text-xs font-black text-slate-800 tracking-tighter italic">#{q.id}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
-                                {q.data && !isNaN(new Date(q.data).getTime()) 
-                                  ? formatDateBR(q.data) 
-                                  : '--'}
-                            </p>
+                    <p className="text-xs font-black text-slate-800 tracking-tighter italic">
+                      {formatOsNumber(q.os_number || q.osNumber || q.id)}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                      {q.data && !isNaN(new Date(q.data).getTime()) 
+                        ? formatDateBR(q.data) 
+                        : '--'}
+                    </p>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -366,7 +368,7 @@ const Vendas = () => {
                   <td className="px-6 py-4">
                     <div className="flex flex-col items-center justify-center gap-1">
                       <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${getStatusStyle(q.status)}`}>
-                        {q.status}
+                        {getStatusLabel(q.status)}
                       </span>
                       {q.saldo_devedor > 0 ? (
                         <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">
@@ -446,94 +448,137 @@ const Vendas = () => {
         />
       </div>
 
-      {/* Modal Detalhes do Orçamento */}
+      {/* Modal Detalhes do Orçamento Modernizado */}
       {currentSelectedQuote && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] w-full max-w-2xl flex flex-col shadow-2xl border border-white/20 overflow-hidden max-h-[90vh]">
+          <div className="bg-[#171C24] border border-[#2E3744] rounded-[2rem] w-full max-w-2xl flex flex-col shadow-2xl overflow-hidden max-h-[90vh] text-[#F2F5F8]">
             {/* Header Fixo */}
-            <div className="p-8 md:p-10 border-b border-slate-50 flex items-center justify-between shrink-0 bg-white">
+            <div className="p-6 md:p-8 border-b border-[#2E3744] flex items-center justify-between shrink-0 bg-[#0E1116]">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shadow-inner">
+                <div className="w-12 h-12 bg-[#C8F52E]/15 text-[#C8F52E] rounded-2xl flex items-center justify-center border border-[#C8F52E]/30 shadow-inner">
                   <ArrowUpRight size={24} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Detalhes da Proposta</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">#{currentSelectedQuote.id} • {currentSelectedQuote.status}</p>
+                  <h3 className="text-xl font-black text-[#F2F5F8] uppercase tracking-tight">Detalhes da Proposta</h3>
+                  <p className="text-xs text-[#9AA7B8] font-mono font-bold uppercase tracking-wider mt-0.5">
+                    {formatOsNumber(currentSelectedQuote.os_number || currentSelectedQuote.id)} • <span className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${getStatusStyle(currentSelectedQuote.status)}`}>{getStatusLabel(currentSelectedQuote.status)}</span>
+                  </p>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedQuote(null)}
-                className="p-4 hover:bg-slate-50 rounded-full transition-all group"
+                className="p-3 bg-[#232A35] hover:bg-[#2E3744] text-[#9AA7B8] hover:text-[#F2F5F8] rounded-xl transition-all"
               >
-                <X size={24} className="text-slate-300 group-hover:text-slate-900" />
+                <X size={20} />
               </button>
             </div>
 
             {/* Conteúdo Rolável */}
-            <div className="flex-1 overflow-y-auto p-8 md:p-10 space-y-6 custom-scrollbar text-left">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar text-left">
+              {/* Cliente e Veículo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#0E1116] p-5 rounded-2xl border border-[#2E3744]">
                 <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cliente</label>
-                  <p className="font-bold text-slate-800">{currentSelectedQuote.cliente_nome}</p>
+                  <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block mb-1">Cliente</label>
+                  <p className="font-extrabold text-[#F2F5F8] text-base">{currentSelectedQuote.cliente_nome}</p>
+                  {currentSelectedQuote.cliente_telefone && (
+                    <p className="text-xs text-[#9AA7B8] font-mono mt-0.5">{currentSelectedQuote.cliente_telefone}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Veículo</label>
-                  <p className="font-bold text-slate-800">{currentSelectedQuote.veiculo_desc}</p>
+                  <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block mb-1">Veículo</label>
+                  <p className="font-extrabold text-[#F2F5F8] text-base">{currentSelectedQuote.veiculo_desc}</p>
+                  {currentSelectedQuote.placa && (
+                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-[#232A35] border border-[#2E3744] text-[#C8F52E] font-mono font-bold text-xs rounded-md">
+                      {currentSelectedQuote.placa}
+                    </span>
+                  )}
                 </div>
-                <div className="md:col-span-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Serviços Selecionados</label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {(currentSelectedQuote.servico || 'Detalhamento Premium').split(',').map((serv, i) => (
-                      <span key={i} className="bg-white border border-slate-200 shadow-sm text-slate-600 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg">
-                        {serv.trim()}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+
                 {currentSelectedQuote.data_agendamento && (
-                  <div className="md:col-span-2 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
-                    <label className="text-[9px] font-black text-blue-400 uppercase tracking-widest block mb-1 flex items-center gap-2">
+                  <div className="md:col-span-2 bg-[#232A35]/50 p-3.5 rounded-xl border border-[#2E3744]">
+                    <label className="text-[10px] font-black text-[#5CC8FF] uppercase tracking-widest block mb-1 flex items-center gap-1.5">
                       <Clock size={12} /> Data do Agendamento
                     </label>
-                    <p className="font-black text-blue-800 text-sm">
+                    <p className="font-bold text-[#F2F5F8] text-sm">
                       {new Date(currentSelectedQuote.data_agendamento).toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' })}
                     </p>
                   </div>
                 )}
                 {currentSelectedQuote.observacoes && (
-                  <div className="md:col-span-2 bg-white p-4 rounded-2xl border border-slate-200">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Observações Privadas</label>
-                    <p className="text-xs text-slate-600 italic font-medium">{currentSelectedQuote.observacoes}</p>
+                  <div className="md:col-span-2 bg-[#232A35]/30 p-3.5 rounded-xl border border-[#2E3744]">
+                    <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block mb-1">Observações Internas</label>
+                    <p className="text-xs text-[#9AA7B8] italic">{currentSelectedQuote.observacoes}</p>
                   </div>
                 )}
               </div>
 
-              <div className="p-6 border-2 border-slate-50 rounded-3xl space-y-4 text-left">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Resumo Financeiro</label>
-                <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                  <span className="text-sm font-medium text-slate-500">Valor Estimado:</span>
-                  <span className="text-lg font-black text-slate-800 font-mono tracking-tighter">{formatCurrency(currentSelectedQuote.valor || currentSelectedQuote.valor_total)}</span>
+              {/* Lista Detalhada de Serviços */}
+              <div className="bg-[#0E1116] p-5 rounded-2xl border border-[#2E3744] space-y-3">
+                <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block">Serviços Selecionados</label>
+                <div className="divide-y divide-[#2E3744]">
+                  {(currentSelectedQuote.items && currentSelectedQuote.items.length > 0
+                    ? currentSelectedQuote.items
+                    : (currentSelectedQuote.servicos_detalhados || [])
+                  ).map((serv, i) => (
+                    <div key={i} className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-[#F2F5F8]">{serv.nome || serv.name}</p>
+                        <p className="text-[11px] text-[#9AA7B8]">Garantia: {serv.garantia || '3 meses'}</p>
+                      </div>
+                      <p className="text-sm font-black text-[#C8F52E] font-mono">
+                        {formatCurrency(serv.preco_base || serv.unit_price || 0)}
+                      </p>
+                    </div>
+                  ))}
+                  {(!currentSelectedQuote.items || currentSelectedQuote.items.length === 0) &&
+                   (!currentSelectedQuote.servicos_detalhados || currentSelectedQuote.servicos_detalhados.length === 0) && (
+                    <p className="text-xs text-[#9AA7B8] py-2">{currentSelectedQuote.servico || 'Serviços Especializados'}</p>
+                  )}
                 </div>
-                <div className="bg-primary/5 p-4 rounded-2xl italic text-[10px] text-primary/70 font-medium">
-                  Este valor é uma estimativa baseada nos serviços pré-selecionados e pode variar após o laudo técnico presencial.
+              </div>
+
+              {/* Resumo Financeiro */}
+              <div className="p-5 bg-[#0E1116] border border-[#2E3744] rounded-2xl space-y-3 text-left">
+                <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block">Resumo Financeiro</label>
+                <div className="flex items-center justify-between py-1 text-xs text-[#9AA7B8]">
+                  <span>Subtotal:</span>
+                  <span className="font-mono text-[#F2F5F8]">{formatCurrency(currentSelectedQuote.valor_total || currentSelectedQuote.valor)}</span>
                 </div>
+                {Number(currentSelectedQuote.desconto) > 0 && (
+                  <div className="flex items-center justify-between py-1 text-xs text-rose-400">
+                    <span>Desconto aplicado:</span>
+                    <span className="font-mono">- {formatCurrency(currentSelectedQuote.desconto)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between py-2 border-t border-[#2E3744] text-sm">
+                  <span className="font-bold text-[#F2F5F8]">Total da Proposta:</span>
+                  <span className="text-xl font-black text-[#C8F52E] font-mono tracking-tight">
+                    {formatCurrency(currentSelectedQuote.valor || currentSelectedQuote.valor_total)}
+                  </span>
+                </div>
+                {Number(currentSelectedQuote.saldo_devedor) > 0 && (
+                  <div className="flex items-center justify-between py-1 text-xs text-amber-400 border-t border-[#2E3744]/40">
+                    <span>Saldo a Quitar:</span>
+                    <span className="font-mono font-bold">{formatCurrency(currentSelectedQuote.saldo_devedor)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Rodapé Fixo */}
-            <div className="p-8 border-t border-slate-50 shrink-0 bg-white">
+            <div className="p-6 md:p-8 border-t border-[#2E3744] shrink-0 bg-[#0E1116]">
                <div className="flex gap-4">
-                 {currentSelectedQuote.status === 'ORCAMENTO' || currentSelectedQuote.status === 'CANCELADO' ? (
+                 {['QUOTE', 'ORCAMENTO', 'ORÇAMENTO', 'CANCELADO', 'CANCELED'].includes(String(currentSelectedQuote.status).toUpperCase()) ? (
                    <button 
                      onClick={() => handleApprove(currentSelectedQuote)}
-                     className="flex-1 py-4 bg-[#C8F52E] hover:bg-[#d6fb4f] text-[#0E1116] rounded-2xl text-xs font-black uppercase tracking-wider shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all font-bold"
+                     className="flex-1 py-4 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] rounded-xl text-xs font-black uppercase tracking-wider shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all font-bold"
                    >
-                     APROVAR
+                     APROVAR E AGENDAR
                    </button>
                  ) : (
                    <button 
                      onClick={() => navigate('/ordens')}
-                     className="flex-1 py-4 bg-sky-600 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all font-bold"
+                     className="flex-1 py-4 bg-[#232A35] hover:bg-[#2E3744] text-[#F2F5F8] rounded-xl text-xs font-black uppercase tracking-wider transition-all font-bold"
                    >
                      Ver Ordem de Serviço
                    </button>
@@ -541,9 +586,19 @@ const Vendas = () => {
                 <button 
                    onClick={() => {
                      const cleanPhone = (currentSelectedQuote.cliente_telefone || '').replace(/\D/g, '');
-                     sendWhatsApp(cleanPhone || '11999999999', getBudgetMsg(currentSelectedQuote.cliente_nome, currentSelectedQuote.veiculo_desc, currentSelectedQuote.valor || currentSelectedQuote.valor_total, currentSelectedQuote.servicos_detalhados, currentSelectedQuote.servico));
+                     sendWhatsApp(
+                       cleanPhone || '11999999999',
+                       getBudgetMsg(
+                         currentSelectedQuote.cliente_nome,
+                         currentSelectedQuote.veiculo_desc,
+                         currentSelectedQuote.valor || currentSelectedQuote.valor_total,
+                         currentSelectedQuote.items || currentSelectedQuote.servicos_detalhados,
+                         currentSelectedQuote.servico,
+                         currentSelectedQuote.tracking_token || currentSelectedQuote.trackingToken
+                       )
+                     );
                    }}
-                  className="flex-1 py-4 bg-[#0E1116] text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-xs hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 font-bold"
+                  className="flex-1 py-4 bg-[#232A35] hover:bg-[#2E3744] text-[#C8F52E] border border-[#C8F52E]/30 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 font-bold"
                 >
                   <Zap size={14} fill="currentColor" /> Enviar WhatsApp
                 </button>
@@ -558,7 +613,9 @@ const Vendas = () => {
         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => setActiveMenuQuote(null)}>
           <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-scaleUp border border-white/20" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black text-slate-800 uppercase text-sm tracking-widest">Ações • OS #{currentActiveQuote.id}</h3>
+              <h3 className="font-black text-slate-800 uppercase text-sm tracking-widest">
+                Ações • {formatOsNumber(currentActiveQuote.os_number || currentActiveQuote.id)}
+              </h3>
               <button 
                 onClick={() => setActiveMenuQuote(null)} 
                 className="p-2 hover:bg-slate-50 rounded-full transition-all text-slate-400 hover:text-slate-800"
@@ -568,13 +625,13 @@ const Vendas = () => {
             </div>
 
             <div className="space-y-3">
-              {currentActiveQuote.status === 'ORCAMENTO' ? (
+              {['QUOTE', 'ORCAMENTO', 'ORÇAMENTO'].includes(String(currentActiveQuote.status).toUpperCase()) ? (
                   <>
                     <button 
                       onClick={() => { handleApprove(currentActiveQuote); setActiveMenuQuote(null); }} 
                       className="w-full py-4 bg-emerald-50 text-emerald-600 font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
                     >
-                      <CheckCircle2 size={16} /> Aproveitar Proposta
+                      <CheckCircle2 size={16} /> Aprovar e Agendar
                     </button>
                     <button 
                       onClick={() => handleCancel(currentActiveQuote)} 
@@ -583,7 +640,7 @@ const Vendas = () => {
                       <AlertCircle size={16} /> Cancelar Proposta
                     </button>
                   </>
-                ) : currentActiveQuote.status === 'CANCELADO' ? (
+                ) : ['CANCELADO', 'CANCELED'].includes(String(currentActiveQuote.status).toUpperCase()) ? (
                   <button 
                     onClick={() => handleReopen(currentActiveQuote)} 
                     className="w-full py-4 bg-amber-50 text-amber-600 font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-100 hover:scale-[1.02] active:scale-[0.98] transition-all"

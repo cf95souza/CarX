@@ -45,15 +45,15 @@ const PhotoGuideGallery = ({
     <div className="space-y-8 animate-fade-in">
       
       {/* Barra Superior: Status do Rastreamento e Botão Comparador */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-50 dark:bg-slate-900/60 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#171C24] p-6 rounded-[2rem] border border-[#2E3744] shadow-sm text-[#F2F5F8]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Sparkles size={16} className="text-primary animate-pulse" />
-            <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">
+            <Sparkles size={16} className="text-[#C8F52E] animate-pulse" />
+            <h4 className="text-xs font-black uppercase tracking-widest text-[#F2F5F8]">
               Vistoria Guiada 360° & Acabamento
             </h4>
           </div>
-          <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] font-bold text-[#9AA7B8]">
             {isReadOnly 
               ? 'Acompanhe a documentação fotográfica do veículo separada por fase e ângulo.' 
               : 'Selecione a fase (Antes, Durante, Depois) e registre os 5 ângulos corporativos.'}
@@ -66,8 +66,8 @@ const PhotoGuideGallery = ({
           disabled={!hasComparison}
           className={`px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center gap-2.5 transition-all shadow-md shrink-0 ${
             hasComparison
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:scale-105 shadow-emerald-500/20 cursor-pointer animate-pulse'
-              : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed opacity-70'
+              ? 'bg-[#C8F52E] text-[#0E1116] hover:scale-105 shadow-[#C8F52E]/20 cursor-pointer animate-pulse font-bold'
+              : 'bg-[#232A35] text-[#9AA7B8] cursor-not-allowed opacity-60'
           }`}
           title={hasComparison ? 'Abra o comparador visual' : 'Registre ao menos uma foto ANTES e DEPOIS do mesmo ângulo para ativar o comparador'}
         >
@@ -78,7 +78,7 @@ const PhotoGuideGallery = ({
       </div>
 
       {/* Abas de Fase (Antes | Durante | Depois) */}
-      <div className="flex flex-wrap justify-center gap-2 md:gap-3 bg-slate-100 dark:bg-slate-900/80 p-2 rounded-3xl border border-slate-200/60 dark:border-slate-800">
+      <div className="flex flex-wrap justify-center gap-2 md:gap-3 bg-[#0E1116] p-2 rounded-2xl border border-[#2E3744]">
         {PHOTO_PHASES.map((ph) => {
           const count = photos.filter(p => p.fase_execucao === ph.id).length;
           const isActive = activePhase === ph.id;
@@ -86,16 +86,16 @@ const PhotoGuideGallery = ({
             <button
               key={ph.id}
               onClick={() => setActivePhase(ph.id)}
-              className={`flex-1 min-w-[100px] py-3 px-2 md:py-3.5 md:px-5 rounded-2xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2.5 shadow-sm ${
+              className={`flex-1 min-w-[100px] py-3 px-2 md:py-3.5 md:px-5 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest transition-all flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2.5 shadow-sm ${
                 isActive
-                  ? 'bg-white dark:bg-slate-800 text-primary dark:text-white shadow-md scale-[1.02] border border-slate-200 dark:border-slate-700'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
+                  ? 'bg-[#171C24] text-[#C8F52E] shadow-md border border-[#C8F52E]/30 font-bold'
+                  : 'text-[#9AA7B8] hover:text-[#F2F5F8] hover:bg-[#171C24]/50'
               }`}
             >
               <span className="text-base">{ph.icon}</span>
               <span>{ph.label}</span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                isActive ? 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                isActive ? 'bg-[#C8F52E]/20 text-[#C8F52E]' : 'bg-[#232A35] text-[#9AA7B8]'
               }`}>
                 {count}
               </span>

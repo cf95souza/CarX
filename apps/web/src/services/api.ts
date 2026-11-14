@@ -878,10 +878,11 @@ export const api = {
       fetchClient<{ success: boolean }>(`/public/nps/${token}/google-click`, {
         method: 'POST',
       }),
-    listSurveys: async (params?: { classification?: string; status?: string }): Promise<any[]> => {
+    listSurveys: async (params?: { classification?: string; status?: string; limit?: number }): Promise<any[]> => {
       const q = new URLSearchParams();
       if (params?.classification) q.append('classification', params.classification);
       if (params?.status) q.append('status', params.status);
+      if (params?.limit) q.append('limit', String(params.limit));
       const qs = q.toString() ? `?${q.toString()}` : '';
       return fetchClient<any[]>(`/nps/surveys${qs}`);
     },

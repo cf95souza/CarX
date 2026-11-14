@@ -236,103 +236,22 @@ export class PlateLookupService {
         rawPayload: { provider: 'carx_benchmark_catalog' },
       };
     } else {
-      // Motor de enriquecimento determinístico e inteligente
-      // Gera dados consistentes para qualquer placa automotiva válida
-      const brandsList = ['VOLKSWAGEN', 'CHEVROLET', 'TOYOTA', 'HYUNDAI', 'FIAT', 'HONDA', 'JEEP', 'BYD', 'NISSAN', 'RENAULT'];
-      const modelsByBrand: Record<string, Array<{ model: string; sizeClass: VehicleSizeClassType; priceCents: number }>> = {
-        VOLKSWAGEN: [
-          { model: 'Tera 1.0 TSI', sizeClass: 'suv', priceCents: 11990000 },
-          { model: 'T-Cross Highline 1.4 TSI', sizeClass: 'suv', priceCents: 17590000 },
-          { model: 'Polo Track 1.0 Flex', sizeClass: 'hatch', priceCents: 8990000 },
-          { model: 'Virtus Highline 200 TSI', sizeClass: 'sedan', priceCents: 13890000 },
-          { model: 'Saveiro Robust 1.6', sizeClass: 'pickup', priceCents: 9890000 },
-        ],
-        CHEVROLET: [
-          { model: 'Tracker Premier 1.2 Turbo', sizeClass: 'suv', priceCents: 16990000 },
-          { model: 'Onix Plus Premier 1.0 Turbo', sizeClass: 'sedan', priceCents: 11990000 },
-          { model: 'Onix LTZ 1.0 Turbo', sizeClass: 'hatch', priceCents: 9990000 },
-          { model: 'Montana RS 1.2 Turbo', sizeClass: 'pickup', priceCents: 14990000 },
-          { model: 'S10 High Country 2.8 Diesel', sizeClass: 'pickup', priceCents: 29990000 },
-        ],
-        TOYOTA: [
-          { model: 'Corolla Cross XRE 2.0', sizeClass: 'suv', priceCents: 17990000 },
-          { model: 'Corolla Altis Hybrid 1.8', sizeClass: 'sedan', priceCents: 19890000 },
-          { model: 'Hilux SRX 2.8 4x4 Diesel', sizeClass: 'pickup', priceCents: 32490000 },
-          { model: 'Yaris Sedan XS 1.5 Flex', sizeClass: 'sedan', priceCents: 10990000 },
-        ],
-        HYUNDAI: [
-          { model: 'Creta Ultimate 2.0', sizeClass: 'suv', priceCents: 17990000 },
-          { model: 'HB20 Platinum Plus 1.0 Turbo', sizeClass: 'hatch', priceCents: 11990000 },
-          { model: 'HB20S Platinum 1.0 Turbo', sizeClass: 'sedan', priceCents: 12290000 },
-          { model: 'HR 2.5 Diesel', sizeClass: 'van', priceCents: 14590000 },
-        ],
-        FIAT: [
-          { model: 'Fastback Limited Edition 1.3 Turbo', sizeClass: 'suv', priceCents: 15990000 },
-          { model: 'Pulse Impetus 1.0 Turbo', sizeClass: 'suv', priceCents: 13190000 },
-          { model: 'Toro Volcano 1.3 Turbo Flex', sizeClass: 'pickup', priceCents: 17890000 },
-          { model: 'Strada Volcano 1.3 CVT', sizeClass: 'pickup', priceCents: 12190000 },
-          { model: 'Fiorino Endurance 1.4', sizeClass: 'van', priceCents: 10190000 },
-        ],
-        HONDA: [
-          { model: 'HR-V Touring 1.5 Turbo', sizeClass: 'suv', priceCents: 19990000 },
-          { model: 'Civic Touring Híbrido 2.0', sizeClass: 'sedan', priceCents: 26590000 },
-          { model: 'City Hatchback Touring 1.5', sizeClass: 'hatch', priceCents: 13890000 },
-          { model: 'City Sedan EXL 1.5', sizeClass: 'sedan', priceCents: 12990000 },
-        ],
-        JEEP: [
-          { model: 'Compass Longitude 1.3 Turbo', sizeClass: 'suv', priceCents: 19590000 },
-          { model: 'Renegade Longitude 1.3 Turbo', sizeClass: 'suv', priceCents: 14290000 },
-          { model: 'Commander Overland 2.0 Diesel', sizeClass: 'suv', priceCents: 28990000 },
-        ],
-        BYD: [
-          { model: 'Song Plus DM-i Plug-in Hybrid', sizeClass: 'suv', priceCents: 23980000 },
-          { model: 'Dolphin GS EV Elétrico', sizeClass: 'hatch', priceCents: 14980000 },
-          { model: 'Yuan Plus EV Elétrico', sizeClass: 'suv', priceCents: 22980000 },
-          { model: 'Seal AWD EV Elétrico', sizeClass: 'sedan', priceCents: 29680000 },
-        ],
-        NISSAN: [
-          { model: 'Kicks Exclusive 1.6 CVT', sizeClass: 'suv', priceCents: 14990000 },
-          { model: 'Versa Exclusive 1.6 CVT', sizeClass: 'sedan', priceCents: 12990000 },
-          { model: 'Frontier PRO-4X 2.3 Bi-Turbo', sizeClass: 'pickup', priceCents: 31990000 },
-        ],
-        RENAULT: [
-          { model: 'Duster Iconic 1.3 Turbo', sizeClass: 'suv', priceCents: 15390000 },
-          { model: 'Kardian Premiere Edition 1.0 Turbo', sizeClass: 'suv', priceCents: 13290000 },
-          { model: 'Kwid Outsider 1.0 Flex', sizeClass: 'hatch', priceCents: 7490000 },
-          { model: 'Master Furgão 2.3 Diesel', sizeClass: 'van', priceCents: 23990000 },
-        ],
-      };
-
-      const colorsList = ['BRANCO', 'PRETO', 'PRATA', 'CINZA', 'AZUL', 'VERMELHO'];
-
-      // Cálculo determinístico com base nos caracteres da placa
-      let hash = 0;
-      for (let i = 0; i < cleanPlate.length; i++) {
-        hash = (hash << 5) - hash + cleanPlate.charCodeAt(i);
-        hash |= 0;
-      }
-      const absHash = Math.abs(hash);
-
-      const brandIndex = absHash % brandsList.length;
-      const brand = brandsList[brandIndex];
-      const models = modelsByBrand[brand];
-      const modelItem = models[absHash % models.length];
-      const color = colorsList[absHash % colorsList.length];
-
-      // Ano entre 2018 e 2026
-      const year = 2018 + (absHash % 9);
-      const modelYear = year + (absHash % 2);
-
-      fetchedData = {
-        brand,
-        model: modelItem.model,
-        year,
-        modelYear,
-        color,
-        sizeClass: modelItem.sizeClass || inferVehicleSizeClass(brand, modelItem.model),
-        fipePriceCents: modelItem.priceCents,
-        chassisMask: `***9BR${cleanPlate.slice(0, 4)}`,
-        rawPayload: { generatedAt: new Date().toISOString() },
+      // Se não houver provedor externo oficial configurado e não estiver no catálogo de benchmark,
+      // NUNCA inventar modelo ou marca fictícia por hash. Retorna dados vazios (not_found)
+      // para permitir que o gestor/operador digite livremente as informações reais do carro.
+      return {
+        plate: cleanPlate,
+        isMercosul,
+        brand: null,
+        model: null,
+        year: null,
+        modelYear: null,
+        color: null,
+        sizeClass: null,
+        chassisMask: null,
+        fipePriceCents: null,
+        source: 'not_found',
+        cachedAt: new Date().toISOString(),
       };
     }
 

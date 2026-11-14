@@ -6,13 +6,11 @@ import {
   LogOut
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { useBrand } from '../../contexts/BrandContext';
 
 const MobileLayout = ({ children, currentView, setView, title }) => {
   const { name } = useBrand();
   const { signOut } = useAuth();
-  const navigate = useNavigate();
 
   const navItems = [
     { id: 'tarefas', icon: ClipboardList, label: 'Tarefas' },
@@ -20,26 +18,26 @@ const MobileLayout = ({ children, currentView, setView, title }) => {
     { id: 'perfil', icon: User, label: 'Perfil' },
   ];
 
-  const handleLogout = signOut;
-
   return (
-    <div className="h-screen bg-transparent flex flex-col overflow-hidden font-sans">
-      {/* Header Mobile */}
-      <header className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0 z-30">
+    <div className="h-screen bg-[#0E1116] text-[#F2F5F8] flex flex-col overflow-hidden font-sans">
+      {/* Header Mobile 100% Dark (Rebraind Style) */}
+      <header className="bg-[#0E1116] border-b border-[#2E3744] px-5 py-3.5 flex items-center justify-between flex-shrink-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-black text-xs">
-            {name.charAt(0)}
+          <div className="w-8 h-8 bg-[#C8F52E] rounded-xl flex items-center justify-center text-[#0E1116] font-black text-xs font-mono shadow-sm">
+            {(name || 'C').charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-sm font-black text-slate-800 leading-none">{title}</h1>
-            <p className="text-[9px] text-slate-400 uppercase font-bold tracking-widest mt-0.5">Operador</p>
+            <h1 className="text-sm font-extrabold text-[#F2F5F8] leading-tight tracking-tight font-grotesk">{title}</h1>
+            <p className="text-[10px] text-[#9AA7B8] uppercase font-bold tracking-widest">
+              {name || 'Oficina'} · Operador
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Sino oculto por solicitação White Label */}
+        <div className="flex items-center gap-2">
           <button 
-            onClick={handleLogout}
-            className="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-full"
+            onClick={signOut}
+            title="Sair da conta"
+            className="p-2 text-[#9AA7B8] hover:text-[#FF6B5E] hover:bg-[#232A35] rounded-xl transition-all"
           >
             <LogOut size={18} />
           </button>
@@ -47,30 +45,33 @@ const MobileLayout = ({ children, currentView, setView, title }) => {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-24">
+      <main className="flex-1 overflow-y-auto custom-scrollbar p-4 pb-24 bg-[#0E1116]">
         {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-2 py-1 flex items-center justify-around shadow-[0_-4px_20px_rgba(0,0,0,0.03)] z-40">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setView(item.id)}
-            className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all duration-300 ${
-              currentView === item.id 
-                ? 'text-primary scale-110' 
-                : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <item.icon size={22} className={currentView === item.id ? 'stroke-[2.5px]' : ''} />
-            <span className={`text-[9px] font-bold mt-1 uppercase tracking-wider ${
-              currentView === item.id ? 'opacity-100' : 'opacity-60'
-            }`}>
-              {item.label}
-            </span>
-          </button>
-        ))}
+      {/* Bottom Navigation 100% Dark (Rebraind Style) */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-[#0E1116] border-t border-[#2E3744] px-3 py-1 flex items-center justify-around z-40">
+        {navItems.map((item) => {
+          const isActive = currentView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setView(item.id)}
+              className={`flex-1 flex flex-col items-center justify-center min-h-[56px] py-1 transition-all ${
+                isActive 
+                  ? 'text-[#C8F52E]' 
+                  : 'text-[#9AA7B8] hover:text-[#F2F5F8]'
+              }`}
+            >
+              <item.icon size={22} className={isActive ? 'stroke-[2.5px]' : 'stroke-[1.8px]'} />
+              <span className={`text-[10px] font-bold mt-1 tracking-wider uppercase ${
+                isActive ? 'opacity-100 font-black' : 'opacity-70'
+              }`}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
       </nav>
     </div>
   );
