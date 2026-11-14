@@ -4407,3 +4407,19 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
      - PostgreSQL CarX isolado na rede interna e porta host `5434`, preservando a porta `5432` da Cozinha.
   4. **Scripts de Deploy Zero-Touch**:
      - [`deploy-oracle-test.sh`](file:///d:/Repositorios/CarX/infra/scripts/deploy-oracle-test.sh) e [`deploy-oracle-test.ps1`](file:///d:/Repositorios/CarX/infra/scripts/deploy-oracle-test.ps1) com liberação automática de regras de firewall iptables antes da regra `REJECT`.
+
+---
+
+### T8.2a — Homologação VPS: Correções Operacionais e Roteamento Unificado Padrão OperaBeauty
+- **Arquitetura de URLs Unificada (Entrada Única em `carx-web` / porta `8080`)**:
+  - `/` ➔ Landing Page institucional ([`LandingPage.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/LandingPage.tsx)).
+  - `/superadm` ➔ Painel SuperAdmin SaaS (`@carx/admin` compilado com `VITE_BASE_PATH=/superadm/` e servido pelo Nginx de `carx-web` em `/usr/share/nginx/html/superadm`, mantendo compatibilidade retroativa com a porta `8081`).
+  - `/dashboard` e `/:slug/dashboard` ➔ Painel gerencial autenticado ([`Dashboard.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Dashboard.tsx)).
+  - `/:slug` ➔ Site público da oficina ([`MiniSiteOficina.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/MiniSiteOficina.tsx)).
+  - `/:slug/login` ➔ Autenticação de Gestor e Operacional da oficina ([`LoginPage.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/LoginPage.tsx)) com branding carregado via `api.branding.get(slug)`.
+  - `/:slug/meuportal` (e alias `/:slug/portal`) ➔ Portal do Cliente por oficina ([`ClientPortal.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/ClientPortal.tsx)).
+  - `/:slug/agendar` ➔ Agendamento online público por oficina ([`SelfBooking.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/SelfBooking.jsx)).
+- **Correções Aplicadas**:
+  - Normalização de `role`/`cargo` em [`auth-routes.ts`](file:///d:/Repositorios/CarX/apps/api/src/routes/auth-routes.ts) (`OPERADOR`/`operador` ➔ `tecnico`, `ADM`/`adm` ➔ `owner`, `GESTOR`/`gestor` ➔ `gestor`, etc.) e compatibilidade de `status` booleano/string em `PATCH /tenant/members/:id`.
+  - Saudação dinâmica por horário e remoção de números/cards mockados em `Dashboard.tsx`, `NpsDashboard.tsx`, `Relatorios.tsx` e `MiniSiteOficina.tsx`.
+  - Correção da abertura e salvamento de orçamento em [`Vendas.jsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/Vendas.jsx).

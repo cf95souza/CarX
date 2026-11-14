@@ -16,8 +16,16 @@ import { LeadsPage } from './pages/LeadsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
 
 export function App() {
+  const routerBase =
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/superadm')
+      ? '/superadm'
+      : '/';
+
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <BrowserRouter
+      basename={routerBase}
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <AuthProvider>
         <Routes>
           {/* Rota Pública de Autenticação */}

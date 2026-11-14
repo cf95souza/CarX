@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useBrand } from '../contexts/BrandContext';
+import { api, setStoredTenantSlug } from '../services/api';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '@carx/ui';
 import {
   Wrench,
@@ -18,9 +19,11 @@ import {
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
+  const { slug } = useParams<{ slug?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [tenantSlug, setTenantSlug] = useState('');
+  const [tenantSlug, setTenantSlug] = useState(slug || '');
+  const [slugBrandName, setSlugBrandName] = useState<string | null>(null);
   const [showTenantField, setShowTenantField] = useState(false);
   const [totpCode, setTotpCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,13 +36,27 @@ export const LoginPage: React.FC = () => {
 
   const redirectPath = (location.state as any)?.from?.pathname;
 
+  useEffect(() => {
+    if (slug) {
+      setTenantSlug(slug);
+      setStoredTenantSlug(slug);
+      api.branding
+        .get(slug)
+        .then((b: any) => {
+          const brandLabel = b?.nome_loja || b?.name || b?.trade_name;
+          if (brandLabel) setSlugBrandName(brandLabel);
+        })
+        .catch(() => {});
+    }
+  }, [slug]);
+
   // Redirecionamento automático se já estiver logado
   useEffect(() => {
     if (!loading && user && role) {
       if (isOperador) {
         navigate('/operador', { replace: true });
       } else {
-        navigate(redirectPath || '/', { replace: true });
+        navigate(redirectPath || '/dashboard', { replace: true });
       }
     }
   }, [user, role, loading, isOperador, navigate, redirectPath]);
@@ -63,7 +80,7 @@ export const LoginPage: React.FC = () => {
       if (userRole === 'TECNICO' || userRole === 'OPERADOR') {
         navigate('/operador', { replace: true });
       } else {
-        navigate(redirectPath || '/', { replace: true });
+        navigate(redirectPath || '/dashboard', { replace: true });
       }
     } catch (err: any) {
       let msg = 'Credenciais inválidas ou loja não encontrada.';
@@ -97,7 +114,7 @@ export const LoginPage: React.FC = () => {
       if (userRole === 'TECNICO' || userRole === 'OPERADOR') {
         navigate('/operador', { replace: true });
       } else {
-        navigate(redirectPath || '/', { replace: true });
+        navigate(redirectPath || '/dashboard', { replace: true });
       }
     } catch (err: any) {
       setError(err?.message || 'Código autenticador inválido ou expirado. Tente novamente.');
@@ -148,7 +165,7 @@ export const LoginPage: React.FC = () => {
             <Badge variant="volt">PRO</Badge>
           </div>
           <p className="text-muted text-xs font-medium uppercase tracking-[0.2em] mt-1">
-            {name ? `${name} · Gestão de Oficina` : 'Gestão Automotiva Inteligente'}
+            {slugBrandName || name ? `${slugBrandName || name} · Gestão de Oficina` : 'Gestão Automotiva Inteligente'}
           </p>
         </div>
 

@@ -85,134 +85,157 @@ export const MiniSiteOficina: React.FC = () => {
     }));
   };
 
-  // Fallback para visualização de demonstração ou enquanto carrega
+  const isDemo = activeSlug === 'demo';
+
+  // Fallback exclusivo para visualização de demonstração (/demo) ou slug não carregado
   const tenant = siteData?.tenant || {
-    id: 'demo-tenant',
-    name: 'CarX Detail Studio',
+    id: isDemo ? 'demo-tenant' : '',
+    name: isDemo ? 'CarX Detail Studio' : activeSlug,
     slug: activeSlug,
     logoUrl: null,
     coverUrl: null,
     primaryColor: '#C8F52E',
     secondaryColor: '#0E1116',
-    whatsappPhone: '11999998888',
-    phone: '11999998888',
-    instagram: 'carxdetail',
+    whatsappPhone: isDemo ? '11999998888' : '',
+    phone: isDemo ? '11999998888' : '',
+    instagram: isDemo ? 'carxdetail' : null,
     facebook: null,
     headline: 'Centro Especializado em Estética e Proteção Automotiva de Alta Performance',
-    about: 'Referência em tratamento automotivo, estética de precisão e aplicação de películas regenerativas (PPF). Atendimento exclusivo com técnicos certificados e ambiente climatizado.',
-    address: 'Av. das Américas, 4500 - Barra da Tijuca, Rio de Janeiro - RJ',
+    about: isDemo
+      ? 'Referência em tratamento automotivo, estética de precisão e aplicação de películas regenerativas (PPF). Atendimento exclusivo com técnicos certificados e ambiente climatizado.'
+      : '',
+    address: isDemo ? 'Av. das Américas, 4500 - Barra da Tijuca, Rio de Janeiro - RJ' : '',
     businessHours: {
       segunda_sexta: '08:00 às 18:30',
       sabado: '08:00 às 13:00',
       domingo: 'Fechado',
     },
-    features: [
-      'Garantia Certificada com QR Code',
-      'Películas Originais com Lote Auditado',
-      'Profissionais Treinados em Detailing',
-      'Sala VIP Climatizada com Wi-Fi & Café',
-    ],
-    googleReviewUrl: 'https://maps.google.com',
+    features: isDemo
+      ? [
+          'Garantia Certificada com QR Code',
+          'Películas Originais com Lote Auditado',
+          'Profissionais Treinados em Detailing',
+          'Sala VIP Climatizada com Wi-Fi & Café',
+        ]
+      : [],
+    googleReviewUrl: null,
   };
 
-  const services = siteData?.services || [
-    {
-      id: '1',
-      name: 'PPF Frontal Completo (Paint Protection Film)',
-      description: 'Proteção extrema anti-impacto de pedras e arranhões com tecnologia auto-regenerativa.',
-      category: 'PPF',
-      estimatedMinutes: 360,
-      startingPriceCents: 650000,
-    },
-    {
-      id: '2',
-      name: 'Polimento Técnico & Vitrificação Cerâmica 9H',
-      description: 'Correção cirúrgica de verniz, eliminação de hologramas e proteção cerâmica hidrofóbica.',
-      category: 'Vitrificação',
-      estimatedMinutes: 240,
-      startingPriceCents: 240000,
-    },
-    {
-      id: '3',
-      name: 'Insulfilm Alta Performance Térmica (Cerâmica)',
-      description: 'Redução térmica de até 95% do calor infravermelho e bloqueio total dos raios UV.',
-      category: 'Insulfilm',
-      estimatedMinutes: 120,
-      startingPriceCents: 98000,
-    },
-    {
-      id: '4',
-      name: 'Higienização Interna Detalhada & Oxi-Sanitização',
-      description: 'Limpeza minuciosa de couro, alcantara e carpetes com eliminação total de odores e bactérias.',
-      category: 'Higienização',
-      estimatedMinutes: 180,
-      startingPriceCents: 65000,
-    },
-  ];
+  const services =
+    siteData?.services ??
+    (isDemo
+      ? [
+          {
+            id: '1',
+            name: 'PPF Frontal Completo (Paint Protection Film)',
+            description: 'Proteção extrema anti-impacto de pedras e arranhões com tecnologia auto-regenerativa.',
+            category: 'PPF',
+            estimatedMinutes: 360,
+            startingPriceCents: 650000,
+          },
+          {
+            id: '2',
+            name: 'Polimento Técnico & Vitrificação Cerâmica 9H',
+            description: 'Correção cirúrgica de verniz, eliminação de hologramas e proteção cerâmica hidrofóbica.',
+            category: 'Vitrificação',
+            estimatedMinutes: 240,
+            startingPriceCents: 240000,
+          },
+          {
+            id: '3',
+            name: 'Insulfilm Alta Performance Térmica (Cerâmica)',
+            description: 'Redução térmica de até 95% do calor infravermelho e bloqueio total dos raios UV.',
+            category: 'Insulfilm',
+            estimatedMinutes: 120,
+            startingPriceCents: 98000,
+          },
+          {
+            id: '4',
+            name: 'Higienização Interna Detalhada & Oxi-Sanitização',
+            description: 'Limpeza minuciosa de couro, alcantara e carpetes com eliminação total de odores e bactérias.',
+            category: 'Higienização',
+            estimatedMinutes: 180,
+            startingPriceCents: 65000,
+          },
+        ]
+      : []);
 
-  const portfolio = siteData?.portfolio || [
-    {
-      id: 'p1',
-      tenantId: tenant.id,
-      title: 'PPF Frontal & Vitrificação Cerâmica - Porsche 911 GT3',
-      category: 'PPF',
-      beforeImageUrl: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?w=800&auto=format&fit=crop&q=80',
-      afterImageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80',
-      description: 'Aplicação integral de película regenerativa no pacote frontal com acabamento invisível.',
-      isFeatured: true,
-      displayOrder: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'p2',
-      tenantId: tenant.id,
-      title: 'Polimento de Correção & Vitrificação 5 Anos - BMW M3 Competition',
-      category: 'Vitrificação',
-      beforeImageUrl: null,
-      afterImageUrl: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&auto=format&fit=crop&q=80',
-      description: 'Recuperação de brilho profundo e blindagem cerâmica 9H com garantia oficial.',
-      isFeatured: true,
-      displayOrder: 2,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 'p3',
-      tenantId: tenant.id,
-      title: 'Proteção Térmica Nano Cerâmica - Audi RS6 Avant',
-      category: 'Insulfilm',
-      beforeImageUrl: null,
-      afterImageUrl: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=800&auto=format&fit=crop&q=80',
-      description: 'Aplicação de película de cerâmica escura com transparência ótica cristalina por dentro.',
-      isFeatured: false,
-      displayOrder: 3,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
+  const portfolio =
+    siteData?.portfolio ??
+    (isDemo
+      ? [
+          {
+            id: 'p1',
+            tenantId: tenant.id,
+            title: 'PPF Frontal & Vitrificação Cerâmica - Porsche 911 GT3',
+            category: 'PPF',
+            beforeImageUrl: 'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?w=800&auto=format&fit=crop&q=80',
+            afterImageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80',
+            description: 'Aplicação integral de película regenerativa no pacote frontal com acabamento invisível.',
+            isFeatured: true,
+            displayOrder: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'p2',
+            tenantId: tenant.id,
+            title: 'Polimento de Correção & Vitrificação 5 Anos - BMW M3 Competition',
+            category: 'Vitrificação',
+            beforeImageUrl: null,
+            afterImageUrl: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?w=800&auto=format&fit=crop&q=80',
+            description: 'Recuperação de brilho profundo e blindagem cerâmica 9H com garantia oficial.',
+            isFeatured: true,
+            displayOrder: 2,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          {
+            id: 'p3',
+            tenantId: tenant.id,
+            title: 'Proteção Térmica Nano Cerâmica - Audi RS6 Avant',
+            category: 'Insulfilm',
+            beforeImageUrl: null,
+            afterImageUrl: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?w=800&auto=format&fit=crop&q=80',
+            description: 'Aplicação de película de cerâmica escura com transparência ótica cristalina por dentro.',
+            isFeatured: false,
+            displayOrder: 3,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        ]
+      : []);
 
-  const reputation = siteData?.reputation || {
-    npsScore: 94,
-    totalReviews: 68,
-    averageStars: 4.9,
-    testimonials: [
-      {
-        customerName: 'Fernando A.',
-        vehicleModel: 'Porsche Macan GTS',
-        score: 10,
-        comment: 'Serviço surreal! O PPF ficou imperceptível e o acabamento dos cantos foi milimétrico. Vale cada centavo.',
-        date: 'Ontem',
-      },
-      {
-        customerName: 'Marcelo C.',
-        vehicleModel: 'BMW 330i M Sport',
-        score: 10,
-        comment: 'Minha terceira vez trazendo carro aqui. A equipe é super atenciosa e a vitrificação deixou o carro com brilho espelhado incrível.',
-        date: 'Há 3 dias',
-      },
-    ],
-  };
+  const reputation =
+    siteData?.reputation ??
+    (isDemo
+      ? {
+          npsScore: 94,
+          totalReviews: 68,
+          averageStars: 4.9,
+          testimonials: [
+            {
+              customerName: 'Fernando A.',
+              vehicleModel: 'Porsche Macan GTS',
+              score: 10,
+              comment: 'Serviço surreal! O PPF ficou imperceptível e o acabamento dos cantos foi milimétrico. Vale cada centavo.',
+              date: 'Ontem',
+            },
+            {
+              customerName: 'Marcelo C.',
+              vehicleModel: 'BMW 330i M Sport',
+              score: 10,
+              comment: 'Minha terceira vez trazendo carro aqui. A equipe é super atenciosa e a vitrificação deixou o carro com brilho espelhado incrível.',
+              date: 'Há 3 dias',
+            },
+          ],
+        }
+      : {
+          npsScore: 0,
+          totalReviews: 0,
+          averageStars: 0,
+          testimonials: [],
+        });
 
   const categories = ['todos', ...Array.from(new Set(portfolio.map((p) => p.category)))];
   const filteredPortfolio =
@@ -245,10 +268,10 @@ export const MiniSiteOficina: React.FC = () => {
           O endereço ou identificador da oficina informado não foi localizado ou o site está temporariamente desativado.
         </p>
         <a
-          href="/portal"
+          href="/"
           className="bg-[#C8F52E] text-[#0E1116] font-black text-xs uppercase px-6 py-3 rounded-xl tracking-wider"
         >
-          Acessar Portal do Cliente
+          Voltar para a CarX
         </a>
       </div>
     );
@@ -272,14 +295,18 @@ export const MiniSiteOficina: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 ml-auto">
             <a
-              href={`/agendar?loja=${tenant.slug}`}
+              href={`/${tenant.slug}/agendar`}
               className="text-[#C8F52E] font-bold hover:underline flex items-center gap-1"
             >
               <Calendar className="w-3 h-3" /> Auto-Agendamento
             </a>
             <span className="text-slate-600">|</span>
-            <a href="/portal" className="text-slate-300 hover:text-white flex items-center gap-1">
+            <a href={`/${tenant.slug}/meuportal`} className="text-slate-300 hover:text-white flex items-center gap-1">
               <Car className="w-3 h-3 text-[#C8F52E]" /> Portal Meu Veículo
+            </a>
+            <span className="text-slate-600">|</span>
+            <a href={`/${tenant.slug}/login`} className="text-slate-300 hover:text-white flex items-center gap-1">
+              Área da Oficina
             </a>
           </div>
         </div>

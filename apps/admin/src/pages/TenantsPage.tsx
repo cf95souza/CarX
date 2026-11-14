@@ -102,7 +102,8 @@ export function TenantsPage() {
   };
 
   const handleCopyWhatsAppMessage = (tenant: AdminTenantSummaryDto, result: ResetOwnerPasswordResponseDto) => {
-    const text = `Olá ${result.owner_name}! Suas credenciais de acesso ao CarX da sua oficina (${tenant.trade_name}) foram atualizadas com sucesso:\n\n🔗 Acesso: https://${tenant.slug}.carx.com.br\n📧 Login: ${result.owner_email}\n🔑 Senha: ${result.temporary_password}\n\nRecomendamos alterar a sua senha no primeiro acesso através das configurações do seu perfil.`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const text = `Olá ${result.owner_name}! Suas credenciais de acesso ao CarX da sua oficina (${tenant.trade_name}) foram atualizadas com sucesso:\n\n🔗 Acesso: ${baseUrl}/${tenant.slug}/login\n🌐 Mini-site: ${baseUrl}/${tenant.slug}\n📧 Login: ${result.owner_email}\n🔑 Senha: ${result.temporary_password}\n\nRecomendamos alterar a sua senha no primeiro acesso através das configurações do seu perfil.`;
     navigator.clipboard.writeText(text);
     setResetPasswordMsgCopied(true);
     setTimeout(() => setResetPasswordMsgCopied(false), 2000);
@@ -382,9 +383,14 @@ export function TenantsPage() {
                     </td>
 
                     <td className="py-3.5 px-4">
-                      <div className="font-mono text-volt text-[11px] font-medium">
-                        {tenant.slug}.carx.com.br
-                      </div>
+                      <a
+                        href={`/${tenant.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-mono text-volt text-[11px] font-medium hover:underline"
+                      >
+                        /{tenant.slug}
+                      </a>
                       <div className="text-[11px] text-muted">
                         {tenant.cnpj || 'CNPJ não informado'}
                       </div>
@@ -580,8 +586,8 @@ export function TenantsPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      // Simular abertura do app da oficina com token injetado
-                      const shopAppUrl = `http://localhost:5173/?impersonation_token=${impersonateResult.token}`;
+                      const baseOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+                      const shopAppUrl = `${baseOrigin}/dashboard?impersonation_token=${impersonateResult.token}`;
                       window.open(shopAppUrl, '_blank');
                     }}
                     className="px-4 py-2 bg-volt hover:bg-volt-hover text-asfalto font-semibold rounded-btn text-xs flex items-center gap-1.5 transition-all shadow-md shadow-volt/20"

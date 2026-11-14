@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Car,
@@ -37,6 +38,7 @@ import {
   setStoredPortalToken,
   setStoredPortalCustomer,
   clearStoredPortalAuth,
+  setStoredTenantSlug,
 } from '../services/api';
 import type {
   PortalCustomerDto,
@@ -55,8 +57,20 @@ import ReciboOS from '../components/features/ReciboOS';
 import CalendarSyncModal from '../components/ui/CalendarSyncModal';
 
 export const ClientPortal: React.FC = () => {
+  const { slug } = useParams<{ slug?: string }>();
   const brand = useBrand();
   const queryClient = useQueryClient();
+
+  if (slug && typeof window !== 'undefined') {
+    setStoredTenantSlug(slug);
+  }
+
+  useEffect(() => {
+    if (slug) {
+      setStoredTenantSlug(slug);
+      api.branding.get(slug).catch(() => {});
+    }
+  }, [slug]);
 
   // ============================================================================
   // ESTADO DE AUTENTICAÇÃO DO PORTAL (ISOLADO DA EQUIPE DA LOJA)
@@ -502,7 +516,7 @@ export const ClientPortal: React.FC = () => {
               <Car className="w-4 h-4 text-[#C8F52E]" /> Minha Frota ({vehicles.length})
             </h2>
             <a
-              href="/agendar"
+              href={slug ? `/${slug}/agendar` : '/agendar'}
               className="text-xs font-bold text-[#C8F52E] hover:underline flex items-center gap-1"
             >
               <span>+ Agendar Novo Veículo</span>
@@ -624,7 +638,7 @@ export const ClientPortal: React.FC = () => {
                 Não localizamos ordens de serviço ativas ou passadas para o filtro selecionado.
               </p>
               <a
-                href="/agendar"
+                href={slug ? `/${slug}/agendar` : '/agendar'}
                 className="px-6 py-3 rounded-xl bg-[#C8F52E] hover:bg-[#b5e022] text-[#0E1116] font-black text-xs uppercase tracking-wider shadow-lg shadow-[#C8F52E]/20 inline-flex items-center gap-2 transition-all"
               >
                 <span>📅 Agendar Primeiro Serviço Online</span>

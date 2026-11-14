@@ -20,10 +20,17 @@ export const Relatorios: React.FC = () => {
   const [serviceFilter, setServiceFilter] = useState<string>('Todos os serviços');
   const [hideValues, setHideValues] = useState<boolean>(false);
 
-  // Busca ordens de serviço para alimentar a visão gerencial e garantias
+  // Busca ordens de serviço para alimentar a visão gerencial
   const { data: workOrdersResponse } = useQuery({
     queryKey: ['reports-work-orders'],
     queryFn: () => api.workOrders.list({ limit: 500 }),
+    staleTime: 1000 * 60,
+  });
+
+  // Busca garantias e revisões programadas reais
+  const { data: warrantyRevisions = [], isLoading: loadingWarranties } = useQuery({
+    queryKey: ['reports-warranty-revisions'],
+    queryFn: () => api.crm.getWarrantyRevisions().catch(() => []),
     staleTime: 1000 * 60,
   });
 
@@ -94,7 +101,7 @@ export const Relatorios: React.FC = () => {
             Relatórios
           </div>
           <div style={{ fontSize: '14px', color: '#5B6674' }}>
-            Inteligência do negócio · outubro de 2026
+            Inteligência do negócio · {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
           </div>
         </div>
 
@@ -276,19 +283,21 @@ export const Relatorios: React.FC = () => {
           }}
         >
           <span>Garantias e revisões</span>
-          <em
-            style={{
-              fontStyle: 'normal',
-              background: '#FFB020',
-              color: '#0E1116',
-              borderRadius: '99px',
-              padding: '2px 8px',
-              fontSize: '12px',
-              fontWeight: 700,
-            }}
-          >
-            4 vencendo
-          </em>
+          {warrantyRevisions.length > 0 && (
+            <em
+              style={{
+                fontStyle: 'normal',
+                background: '#FFB020',
+                color: '#0E1116',
+                borderRadius: '99px',
+                padding: '2px 8px',
+                fontSize: '12px',
+                fontWeight: 700,
+              }}
+            >
+              {warrantyRevisions.length} vencendo
+            </em>
+          )}
         </button>
 
         <button
@@ -411,65 +420,63 @@ export const Relatorios: React.FC = () => {
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 16px',
-                border: '1px solid #E1E6EC',
-                borderRadius: '14px',
-              }}
-            >
-              <div>
-                <b style={{ color: '#0E1116', fontSize: '15px' }}>Porsche 911 Carrera (Placa POR9110)</b>
-                <div style={{ fontSize: '13px', color: '#5B6674' }}>
-                  PPF Full Body · Garantia de 5 anos · Revisão anual 1 de 5
-                </div>
+            {loadingWarranties ? (
+              <div style={{ padding: '16px', fontSize: '14px', color: '#5B6674' }}>
+                Carregando garantias e revisões...
               </div>
-              <span
+            ) : warrantyRevisions.length === 0 ? (
+              <div
                 style={{
-                  background: '#FEF08A',
-                  color: '#854D0E',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
+                  padding: '20px',
+                  border: '1px dashed #CBD5E1',
+                  borderRadius: '14px',
+                  fontSize: '14px',
+                  color: '#5B6674',
+                  textAlign: 'center',
                 }}
               >
-                Vence em 4 dias
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 16px',
-                border: '1px solid #E1E6EC',
-                borderRadius: '14px',
-              }}
-            >
-              <div>
-                <b style={{ color: '#0E1116', fontSize: '15px' }}>BMW M3 Competition (Placa BMW0M30)</b>
-                <div style={{ fontSize: '13px', color: '#5B6674' }}>
-                  Vitrificação Cerâmica 9H · Inspeção de brilho e hidrofobia
-                </div>
+                Nenhuma garantia ou revisão programada vencendo nos próximos dias.
               </div>
-              <span
-                style={{
-                  background: '#FEF08A',
-                  color: '#854D0E',
-                  fontWeight: 700,
-                  fontSize: '12px',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
-                }}
-              >
-                Vence em 7 dias
-              </span>
-            </div>
+            ) : (
+              warrantyRevisions.map((item) => (
+                <div
+                  key={item.warrantyId}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 16px',
+                    border: '1px solid #E1E6EC',
+                    borderRadius: '14px',
+                  }}
+                >
+                  <div>
+                    <b style={{ color: '#0E1116', fontSize: '15px' }}>
+                      {item.vehicleModel} (Placa {item.vehiclePlate})
+                    </b>
+                    <div style={{ fontSize: '13px', color: '#5B6674' }}>
+                      {item.serviceName} · Cliente: {item.customerName}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      background: item.isOverdue ? '#FEE2E2' : '#FEF08A',
+                      color: item.isOverdue ? '#B91C1C' : '#854D0E',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    {item.isOverdue
+                      ? `Venceu há ${Math.abs(item.daysRemainingOrOverdue)} dia(s)`
+                      : item.daysRemainingOrOverdue === 0
+                        ? 'Vence hoje'
+                        : `Vence em ${item.daysRemainingOrOverdue} dia(s)`}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

@@ -634,9 +634,13 @@ const Vendas = () => {
       )}
 
        {showNovoModal && (
-         <NovoOrcamentoModal 
+         <NovoOrcamentoModal
+           isOpen={showNovoModal}
            onClose={() => setShowNovoModal(false)}
-           onSave={saveQuote}
+           onCreated={() => {
+             fetchQuotes();
+             toast.success('Orçamento registrado com sucesso!');
+           }}
          />
        )}
 

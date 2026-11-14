@@ -282,15 +282,37 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
 
       if (body.role || body.cargo) {
+        const rawRole = String(body.role || body.cargo).toLowerCase().trim();
+        const roleMap: Record<string, string> = {
+          adm: 'owner',
+          admin: 'owner',
+          owner: 'owner',
+          proprietario: 'owner',
+          gestor: 'gestor',
+          gerente: 'gestor',
+          manager: 'gestor',
+          operador: 'tecnico',
+          operator: 'tecnico',
+          tecnico: 'tecnico',
+          'técnico': 'tecnico',
+          atendente: 'atendente',
+          financeiro: 'financeiro',
+        };
+        const normalizedRole = roleMap[rawRole] || 'tecnico';
         await tenantQuery(
           tenantId,
           `UPDATE memberships SET role = $1, updated_at = NOW() WHERE tenant_id = $2 AND user_id = $3;`,
-          [body.role || body.cargo, tenantId, id]
+          [normalizedRole, tenantId, id]
         );
       }
 
       if (body.is_active !== undefined || body.status !== undefined) {
-        const isActive = body.is_active !== undefined ? Boolean(body.is_active) : body.status === 'ativo';
+        const isActive =
+          body.is_active !== undefined
+            ? Boolean(body.is_active)
+            : typeof body.status === 'boolean'
+              ? body.status
+              : body.status === 'ativo' || body.status === 'true';
         await tenantQuery(
           tenantId,
           `UPDATE memberships SET is_active = $1, updated_at = NOW() WHERE tenant_id = $2 AND user_id = $3;`,
@@ -335,7 +357,23 @@ export async function authRoutes(fastify: FastifyInstance) {
         userId = ins.rows[0].id;
       }
 
-      const cleanRole = (role || 'tecnico').toLowerCase().trim();
+      const rawRole = (role || 'tecnico').toLowerCase().trim();
+      const roleMap: Record<string, string> = {
+        adm: 'owner',
+        admin: 'owner',
+        owner: 'owner',
+        proprietario: 'owner',
+        gestor: 'gestor',
+        gerente: 'gestor',
+        manager: 'gestor',
+        operador: 'tecnico',
+        operator: 'tecnico',
+        tecnico: 'tecnico',
+        'técnico': 'tecnico',
+        atendente: 'atendente',
+        financeiro: 'financeiro',
+      };
+      const cleanRole = roleMap[rawRole] || 'tecnico';
       const existingMem = await adminPool.query(
         'SELECT id FROM memberships WHERE tenant_id = $1 AND user_id = $2 LIMIT 1;',
         [tenantId, userId]

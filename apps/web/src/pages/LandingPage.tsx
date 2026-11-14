@@ -207,7 +207,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           
           {/* Logo CarX */}
-          <Link to="/landing" className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-[#C8F52E] flex items-center justify-center font-black text-[#0E1116] text-xl shadow-lg shadow-[#C8F52E]/20 group-hover:scale-105 transition-transform">
               CX
             </div>
@@ -233,6 +233,12 @@ export default function LandingPage() {
 
           {/* CTAs do Header */}
           <div className="flex items-center gap-3">
+            <a
+              href="/superadm/"
+              className="hidden sm:inline-flex text-xs font-semibold text-slate-400 hover:text-white px-2.5 py-2 transition-colors"
+            >
+              Super Admin
+            </a>
             <Link 
               to="/login" 
               className="text-xs font-bold text-slate-300 hover:text-white px-3.5 py-2 rounded-lg border border-slate-800 hover:border-slate-700 transition-colors"
@@ -1091,10 +1097,11 @@ export default function LandingPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-6 font-medium">
-            <Link to="/landing" className="hover:text-white transition-colors">Início</Link>
+            <Link to="/" className="hover:text-white transition-colors">Início</Link>
             <Link to="/termos" className="hover:text-white transition-colors">Termos de Uso</Link>
             <Link to="/privacidade" className="hover:text-white transition-colors">Privacidade & LGPD</Link>
             <Link to="/login" className="hover:text-white transition-colors">Acessar Painel</Link>
+            <a href="/superadm/" className="hover:text-white transition-colors">Super Admin</a>
           </div>
         </div>
       </footer>

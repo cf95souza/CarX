@@ -2415,6 +2415,23 @@ Onda 3 Roadmap de Execução:
 
 ---
 
+### [x] T8.2a — Remoção de Fallbacks Visuais, Correções de Equipe/Orçamento e Roteamento Padrão OperaBeauty `(Concluído e Homologado)`
+- **Escopo Solicitado na Homologação VPS:**
+  - **Correção de Equipe (`POST /tenant/members` / `PATCH /tenant/members/:id`)**: Normalizar papéis enviados pelo frontend (`OPERADOR`, `GESTOR`, `ADM`, `operador`, `gestor`, `adm`) para o enum PostgreSQL `membership_role` (`tecnico`, `gestor`, `owner`, `atendente`, `financeiro`) e aceitar status booleano/string sem gerar Erro 500.
+  - **Correção do Botão "+ Novo Orçamento" (`Vendas.jsx`)**: Garantir abertura e salvamento corretos do modal de orçamento.
+  - **Saudação Dinâmica e Remoção de Mocks Visuais**: Substituir saudação fixa `"Bom dia"` por saudação dinâmica por horário (`Bom dia` / `Boa tarde` / `Boa noite`), zerar/buscar dados reais em `Dashboard.tsx`, `NpsDashboard.tsx`, `Relatorios.tsx` (aba Garantias e Revisões) e remover fallback demo quando uma oficina real está carregada em `MiniSiteOficina.tsx`.
+  - **Roteamento Unificado Padrão OperaBeauty (Entrada Única na porta 8080 / domínio principal)**:
+    - `/` ➔ Landing Page oficial
+    - `/superadm` ➔ Painel SuperAdmin SaaS (`@carx/admin` servido sob `/superadm/` no Nginx principal)
+    - `/dashboard` (e `/:slug/dashboard`) ➔ Painel do Gestor autenticado
+    - `/:slug` ➔ Site público da oficina
+    - `/:slug/login` ➔ Login do Gestor e Operacional da oficina
+    - `/:slug/meuportal` (e `/:slug/portal`) ➔ Portal do Cliente da oficina
+    - `/:slug/agendar` ➔ Agendamento online da oficina
+- **Status:** `[x] 100% Concluído e Homologado`
+
+---
+
 ### [ ] T8.2 — Seleção do Grupo Beta e Testes com Analistas
 - [ ] Recrutamento de 3 a 5 oficinas parceiras em condições especiais em troca de homologação e feedbacks semanais.
 - [ ] Rodada de homologação e testes práticos com analistas no ambiente de teste da VPS.

@@ -223,7 +223,7 @@ export const OnboardingPage: React.FC = () => {
         localStorage.setItem('carx_memberships_cached', JSON.stringify([initialMembership]));
 
         // Redirecionamento completo para o App com sessão ativa
-        window.location.href = '/';
+        window.location.href = '/dashboard';
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Falha ao processar o cadastro da oficina. Tente novamente.');
@@ -237,7 +237,7 @@ export const OnboardingPage: React.FC = () => {
     <div className="min-h-screen bg-[#0E1116] text-white flex flex-col justify-between selection:bg-[#C8F52E]/20 selection:text-[#C8F52E]">
       {/* Header Minimalista */}
       <header className="border-b border-white/5 py-4 px-6 md:px-12 flex items-center justify-between">
-        <Link to="/landing" className="flex items-center gap-2.5">
+        <Link to="/" className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-[#C8F52E] flex items-center justify-center font-black text-black text-xl shadow-lg shadow-[#C8F52E]/10">
             CX
           </div>

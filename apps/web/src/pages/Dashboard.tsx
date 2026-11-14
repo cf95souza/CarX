@@ -69,6 +69,13 @@ const Dashboard: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<DashboardWorkOrder | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Bom dia';
+    if (hour >= 12 && hour < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }, []);
+
   // 1. Consulta ordens de serviço
   const {
     data: ordersData,
@@ -84,9 +91,34 @@ const Dashboard: React.FC = () => {
     refetchInterval: 15000,
   });
 
+  // 2. Consulta alertas reais de estoque baixo
+  const { data: lowStockData } = useQuery({
+    queryKey: ['dashboard-low-stock-alerts'],
+    queryFn: () => api.materials.getLowStockAlerts().catch(() => []),
+    staleTime: 1000 * 60,
+  });
+
+  // 3. Consulta métricas reais de NPS
+  const { data: npsMetrics } = useQuery({
+    queryKey: ['dashboard-nps-metrics'],
+    queryFn: () => api.nps.getMetrics().catch(() => null),
+    staleTime: 1000 * 60,
+  });
+
   const allOrders: DashboardWorkOrder[] = useMemo(() => {
     return ordersData?.workOrders || [];
   }, [ordersData]);
+
+  const lowStockItems: any[] = useMemo(() => {
+    if (!lowStockData) return [];
+    if (Array.isArray(lowStockData)) return lowStockData;
+    return lowStockData.alerts || lowStockData.materials || lowStockData.items || [];
+  }, [lowStockData]);
+
+  const pendingQuotesCount = useMemo(
+    () => allOrders.filter((o) => o.status === 'QUOTE').length,
+    [allOrders]
+  );
 
   const patioOrders = useMemo(() => {
     return allOrders.filter(
@@ -115,7 +147,7 @@ const Dashboard: React.FC = () => {
       waiting,
       inProgress,
       ready,
-      delivered: delivered > 0 ? delivered : 47,
+      delivered,
     };
   }, [patioOrders, allOrders]);
 
@@ -161,7 +193,7 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight text-[#0E1116]">
-            Bom dia, {profile?.nome ? profile.nome.split(' ')[0] : 'Gestor'}
+            {greeting}, {profile?.nome ? profile.nome.split(' ')[0] : 'Gestor'}
           </h1>
           <div className="flex items-center gap-2 mt-1 text-sm text-[#5B6674] capitalize">
             <span>{formattedToday}</span>
@@ -222,12 +254,12 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="mt-4">
             <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116] tracking-tight">
-              {formatBRL(stats.faturamentoReais > 0 ? stats.faturamentoReais : 140426.8)}
+              {formatBRL(stats.faturamentoReais)}
             </div>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-[#5B6674]">este mês</span>
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#C8F52E] text-[#0E1116]">
-                +12% vs mês anterior
+                {allOrders.length} OS no período
               </span>
             </div>
           </div>
@@ -243,7 +275,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="mt-4">
             <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116]">
-              {stats.waiting > 0 ? stats.waiting : 53}
+              {stats.waiting}
             </div>
             <p className="text-xs text-[#5B6674] mt-1">veículos na fila do pátio</p>
           </div>
@@ -259,7 +291,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="mt-4">
             <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116]">
-              {stats.inProgress > 0 ? stats.inProgress : 77}
+              {stats.inProgress}
             </div>
             <p className="text-xs text-[#5B6674] mt-1">boxes ativos com cronômetro</p>
           </div>
@@ -275,7 +307,7 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="mt-4">
             <div className="font-display text-2xl lg:text-3xl font-bold text-[#0E1116]">
-              {stats.delivered > 0 ? stats.delivered : 471}
+              {stats.delivered}
             </div>
             <p className="text-xs text-[#5B6674] mt-1">clientes atendidos este ano</p>
           </div>
@@ -553,13 +585,17 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Orçamentos</span>
               <span className="px-2 py-0.5 rounded-full bg-[#FFE2A8] text-[#0E1116] text-[11px] font-bold">
-                3 pendentes
+                {pendingQuotesCount} {pendingQuotesCount === 1 ? 'pendente' : 'pendentes'}
               </span>
             </div>
             <div>
-              <h4 className="font-semibold text-sm text-[#0E1116]">Cobrança de Sinal Pix</h4>
+              <h4 className="font-semibold text-sm text-[#0E1116]">
+                {pendingQuotesCount > 0 ? 'Propostas aguardando aprovação' : 'Nenhum orçamento pendente'}
+              </h4>
               <p className="text-xs text-[#5B6674] mt-0.5">
-                3 propostas enviadas nas últimas 24h aguardam confirmação do cliente.
+                {pendingQuotesCount > 0
+                  ? `${pendingQuotesCount} orçamento(s) aguardam confirmação do cliente.`
+                  : 'Todos os orçamentos recentes foram convertidos ou finalizados.'}
               </p>
             </div>
             <button
@@ -574,21 +610,33 @@ const Dashboard: React.FC = () => {
           <div className="carx-card p-5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Estoque Crítico</span>
-              <span className="px-2 py-0.5 rounded-full bg-[#FEE2E2] text-[#E5484D] text-[11px] font-bold flex items-center gap-1">
-                <AlertTriangle size={12} /> Alerta
-              </span>
+              {lowStockItems.length > 0 ? (
+                <span className="px-2 py-0.5 rounded-full bg-[#FEE2E2] text-[#E5484D] text-[11px] font-bold flex items-center gap-1">
+                  <AlertTriangle size={12} /> {lowStockItems.length} alerta{lowStockItems.length > 1 ? 's' : ''}
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-full bg-[#E1E6EC] text-[#5B6674] text-[11px] font-bold">
+                  Normal
+                </span>
+              )}
             </div>
             <div>
-              <h4 className="font-semibold text-sm text-[#0E1116]">Bobina PPF STEK Ultra</h4>
+              <h4 className="font-semibold text-sm text-[#0E1116]">
+                {lowStockItems.length > 0
+                  ? lowStockItems[0]?.name || lowStockItems[0]?.materialName || 'Insumo em nível crítico'
+                  : 'Estoque em dia'}
+              </h4>
               <p className="text-xs text-[#5B6674] mt-0.5">
-                Rolo #B-042 com apenas <strong>3,5 metros</strong> restantes (mínimo de segurança: 5m).
+                {lowStockItems.length > 0
+                  ? `${lowStockItems.length} insumo(s) abaixo do mínimo de segurança configurado.`
+                  : 'Nenhum produto abaixo do estoque mínimo neste momento.'}
               </p>
             </div>
             <button
               onClick={() => navigate('/estoque')}
               className="carx-btn-white !h-10 !text-xs !px-4 mt-1"
             >
-              Repor no estoque
+              {lowStockItems.length > 0 ? 'Repor no estoque' : 'Ver estoque'}
             </button>
           </div>
 
@@ -597,13 +645,23 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#5B6674]">Satisfação do Cliente</span>
               <span className="px-2 py-0.5 rounded-full bg-[#C8F52E] text-[#0E1116] text-[11px] font-bold">
-                NPS 72
+                {npsMetrics && npsMetrics.totalAnswered > 0 ? `NPS ${npsMetrics.npsScore}` : 'Sem dados'}
               </span>
             </div>
             <div>
-              <h4 className="font-semibold text-sm text-[#0E1116]">Zona de Excelência</h4>
+              <h4 className="font-semibold text-sm text-[#0E1116]">
+                {npsMetrics && npsMetrics.totalAnswered > 0
+                  ? npsMetrics.npsScore >= 75
+                    ? 'Zona de Excelência'
+                    : npsMetrics.npsScore >= 50
+                      ? 'Zona de Qualidade'
+                      : 'Atenção à Experiência'
+                  : 'Aguardando primeiras avaliações'}
+              </h4>
               <p className="text-xs text-[#5B6674] mt-0.5">
-                10 clientes concluídos ontem aptos para avaliação automática no WhatsApp.
+                {npsMetrics && npsMetrics.totalAnswered > 0
+                  ? `${npsMetrics.totalAnswered} avaliação(ões) recebida(s), com ${npsMetrics.promotersCount} promotor(es).`
+                  : 'Dispare pesquisas NPS após a entrega das ordens de serviço.'}
               </p>
             </div>
             <button

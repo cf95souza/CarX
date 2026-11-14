@@ -5,8 +5,9 @@ import {
   Sparkles, ArrowRight, ArrowLeft, Send, MessageCircle, AlertCircle, 
   Check, Phone, Mail, User, FileText, ChevronRight, Zap, Star
 } from 'lucide-react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useBrand } from '../contexts/BrandContext';
-import { api } from '../services/api';
+import { api, setStoredTenantSlug } from '../services/api';
 import { toast } from '../utils/toast';
 import { sendWhatsApp } from '../utils/whatsappUtils';
 import CalendarSyncModal from '../components/ui/CalendarSyncModal';
@@ -34,6 +35,12 @@ const TIME_SLOTS = [
 ];
 
 const SelfBooking = () => {
+  const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const activeSlug = slug || searchParams.get('loja') || searchParams.get('slug') || '';
+  if (activeSlug) {
+    setStoredTenantSlug(activeSlug);
+  }
   const brand = useBrand();
   const [step, setStep] = useState(1);
   const [servicesCatalog, setServicesCatalog] = useState(DEFAULT_SERVICES);
@@ -204,7 +211,7 @@ const SelfBooking = () => {
             serviceIds: selectedServiceIds.filter(id => id && String(id).includes('-')),
             preferredStartTime: dataAgendamentoIso,
             notes: notes || 'Agendamento solicitado via Self-Booking',
-          });
+          }, activeSlug || undefined);
         } catch {
           // Se a rota pública com validação de UUIDs de serviço estritos falhar, criar via appointment padrão
         }

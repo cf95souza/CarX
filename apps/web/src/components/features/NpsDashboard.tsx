@@ -19,6 +19,17 @@ export const NpsDashboard: React.FC = () => {
     staleTime: 1000 * 30,
   });
 
+  // Consulta de pesquisas NPS reais (para envios pendentes e detratores reais)
+  const { data: surveysData } = useQuery({
+    queryKey: ['nps-surveys-list'],
+    queryFn: () => api.nps.listSurveys({ limit: 50 }).catch(() => []),
+    staleTime: 1000 * 30,
+  });
+
+  const surveysList: any[] = Array.isArray(surveysData)
+    ? surveysData
+    : (surveysData as any)?.surveys || [];
+
   // Consulta da visão consolidada de reputação Google Meu Negócio
   const { data: reputation, isLoading: isLoadingReputation } = useQuery<GoogleReputationOverviewDto>({
     queryKey: ['nps-reputation-overview'],
@@ -80,31 +91,46 @@ export const NpsDashboard: React.FC = () => {
     }
   };
 
-  const score = metrics?.npsScore && metrics.totalAnswered > 0 ? metrics.npsScore : 72;
-  const promotersPercent = metrics?.promotersPercent && metrics.totalAnswered > 0 ? metrics.promotersPercent : 74;
-  const passivesPercent = metrics?.passivesPercent && metrics.totalAnswered > 0 ? metrics.passivesPercent : 24;
-  const detractorsPercent = metrics?.detractorsPercent && metrics.totalAnswered > 0 ? metrics.detractorsPercent : 2;
-  const totalReviews = metrics?.totalAnswered && metrics.totalAnswered > 0 ? metrics.totalAnswered : 38;
+  const hasReviews = Boolean(metrics && metrics.totalAnswered > 0);
+  const score = hasReviews ? metrics!.npsScore : 0;
+  const promotersPercent = hasReviews ? metrics!.promotersPercent : 0;
+  const passivesPercent = hasReviews ? metrics!.passivesPercent : 0;
+  const detractorsPercent = hasReviews ? metrics!.detractorsPercent : 0;
+  const totalReviews = metrics?.totalAnswered ?? 0;
 
-  // Lista exemplo de clientes para disparo
-  const sampleClients = [
-    { id: '1', name: 'José Luiz F.', vehicle: 'Caminhão HR', osId: '564', phone: '11988881111' },
-    { id: '2', name: 'Ganil A.', vehicle: 'VW Saveiro', osId: '563', phone: '11988882222' },
-    { id: '3', name: 'Victor O.', vehicle: 'Fiat Fiorino', osId: '562', phone: '11988883333' },
-    { id: '4', name: 'Paulo M.', vehicle: 'Renault Master', osId: '561', phone: '11988884444' },
-    { id: '5', name: 'Mauricio R.', vehicle: 'Fiat Strada', osId: '560', phone: '11988885555' },
-    { id: '6', name: 'Ghilherme S.', vehicle: 'Hyundai HR', osId: '559', phone: '11988886666' },
-  ];
+  const pendingClients = surveysList
+    .filter((s: any) => s && !s.answeredAt && s.status !== 'ANSWERED')
+    .map((s: any) => ({
+      id: String(s.id),
+      name: s.customerName || s.customer?.name || 'Cliente',
+      vehicle: s.vehicleModel || s.vehicle?.model || 'Veículo',
+      osId: String(s.osNumber || s.workOrderNumber || s.workOrderId || '-'),
+      phone: String(s.customerPhone || s.customer?.phone || '').replace(/\D/g, ''),
+      token: s.token || s.id,
+    }));
 
-  const handleSendSingle = (client: (typeof sampleClients)[0]) => {
-    const msg = `Olá, *${client.name}*! Agradecemos a confiança em trazer seu *${client.vehicle}* na nossa oficina! Poderia avaliar nosso atendimento com uma nota rápida de 0 a 10? Acesse: ${window.location.origin}/nps/${client.osId}`;
-    window.open(`https://wa.me/55${client.phone}?text=${encodeURIComponent(msg)}`, '_blank');
+  const latestDetractor = surveysList.find(
+    (s: any) => s && typeof s.score === 'number' && s.score <= 6
+  );
+
+  const handleSendSingle = (client: (typeof pendingClients)[0]) => {
+    if (!client.phone) {
+      toast.warning('Cliente sem telefone cadastrado para envio via WhatsApp.');
+      return;
+    }
+    const cleanPhone = client.phone.startsWith('55') ? client.phone : `55${client.phone}`;
+    const msg = `Olá, *${client.name}*! Agradecemos a confiança em trazer seu *${client.vehicle}* na nossa oficina! Poderia avaliar nosso atendimento com uma nota rápida de 0 a 10? Acesse: ${window.location.origin}/nps/${client.token}`;
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, '_blank');
     setSentClients((prev) => [...prev, client.id]);
   };
 
   const handleSendBatch = () => {
-    toast.info('Disparando avaliação para os clientes das últimas 24h via WhatsApp...');
-    setSentClients(sampleClients.map((c) => c.id));
+    if (pendingClients.length === 0) {
+      toast.info('Nenhum cliente pendente de avaliação no momento.');
+      return;
+    }
+    toast.info(`Preparando envio para ${pendingClients.length} cliente(s) pendente(s)...`);
+    pendingClients.forEach((client) => handleSendSingle(client));
   };
 
   return (
@@ -143,7 +169,15 @@ export const NpsDashboard: React.FC = () => {
             {score}
           </b>
           <span style={{ fontSize: '14px', color: '#9AA7B8', fontWeight: 500 }}>
-            {totalReviews} avaliações · zona de excelência
+            {totalReviews === 0
+              ? 'Sem avaliações recebidas ainda'
+              : `${totalReviews} avaliação(ões) · ${
+                  score >= 75
+                    ? 'zona de excelência'
+                    : score >= 50
+                      ? 'zona de qualidade'
+                      : 'em acompanhamento'
+                }`}
           </span>
         </div>
 
@@ -255,7 +289,7 @@ export const NpsDashboard: React.FC = () => {
               height: '8px',
               borderRadius: '99px',
               background: '#E5484D',
-              width: `${Math.max(8, detractorsPercent * 3)}%`,
+              width: `${detractorsPercent > 0 ? Math.max(8, detractorsPercent * 3) : 0}%`,
               fontStyle: 'normal',
             }}
           />
@@ -329,53 +363,69 @@ export const NpsDashboard: React.FC = () => {
           </div>
 
           {/* GRID COM 2 COLUNAS DE CLIENTES */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            {sampleClients.map((c) => {
-              const isSent = sentClients.includes(c.id);
-              return (
-                <div
-                  key={c.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    background: '#fff',
-                    border: '1px solid #E1E6EC',
-                    borderRadius: '14px',
-                    padding: '10px 14px',
-                    fontSize: '14px',
-                    color: '#5B6674',
-                  }}
-                >
-                  <div>
-                    <b style={{ color: '#0E1116', fontSize: '15px', fontWeight: 600, display: 'block' }}>
-                      {c.name}
-                    </b>
-                    {c.vehicle} · OS {c.osId}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleSendSingle(c)}
+          {pendingClients.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {pendingClients.map((c) => {
+                const isSent = sentClients.includes(c.id);
+                return (
+                  <div
+                    key={c.id}
                     style={{
-                      marginLeft: 'auto',
-                      height: '40px',
-                      padding: '0 16px',
-                      borderRadius: '12px',
-                      border: '1px solid #0E1116',
-                      background: isSent ? '#0E1116' : '#fff',
-                      color: isSent ? '#C8F52E' : '#0E1116',
-                      font: '600 14px Inter, sans-serif',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                      background: '#fff',
+                      border: '1px solid #E1E6EC',
+                      borderRadius: '14px',
+                      padding: '10px 14px',
+                      fontSize: '14px',
+                      color: '#5B6674',
                     }}
                   >
-                    {isSent ? 'Enviado ✓' : 'Enviar'}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                    <div>
+                      <b style={{ color: '#0E1116', fontSize: '15px', fontWeight: 600, display: 'block' }}>
+                        {c.name}
+                      </b>
+                      {c.vehicle} · OS {c.osId}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleSendSingle(c)}
+                      style={{
+                        marginLeft: 'auto',
+                        height: '40px',
+                        padding: '0 16px',
+                        borderRadius: '12px',
+                        border: '1px solid #0E1116',
+                        background: isSent ? '#0E1116' : '#fff',
+                        color: isSent ? '#C8F52E' : '#0E1116',
+                        font: '600 14px Inter, sans-serif',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {isSent ? 'Enviado ✓' : 'Enviar'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid #E1E6EC',
+                borderRadius: '14px',
+                padding: '20px',
+                fontSize: '14px',
+                color: '#5B6674',
+                textAlign: 'center',
+              }}
+            >
+              Nenhum cliente pendente de avaliação no momento. Assim que ordens de serviço forem concluídas, os clientes elegíveis aparecerão aqui.
+            </div>
+          )}
 
           {/* TABELA DE PROMOTORES & REPUTAÇÃO GOOGLE (T6.8) */}
           <div
@@ -607,44 +657,77 @@ export const NpsDashboard: React.FC = () => {
           </div>
 
           {/* CARD 2: ATENÇÃO: DETRATOR */}
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #E5484D',
-              borderRadius: '20px',
-              padding: '20px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}
-          >
-            <span style={{ color: '#E5484D', fontWeight: 600, fontSize: '14px' }}>
-              Atenção: detrator
-            </span>
-            <div style={{ fontSize: '15px', lineHeight: 1.4, color: '#0E1116' }}>
-              <b style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 700 }}>
-                Nota 4 · OS 548
-              </b>
-              <br />
-              <span style={{ color: '#5B6674' }}>“Atrasou a entrega.” Ligar hoje para o cliente.</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => alert('Registrando contato com o cliente da OS 548...')}
+          {latestDetractor ? (
+            <div
               style={{
-                height: '44px',
-                border: 0,
-                borderRadius: '12px',
-                background: '#0E1116',
-                color: '#fff',
-                font: '600 14px Inter, sans-serif',
-                cursor: 'pointer',
-                marginTop: '4px',
+                background: '#fff',
+                border: '1px solid #E5484D',
+                borderRadius: '20px',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
               }}
             >
-              Registrar contato
-            </button>
-          </div>
+              <span style={{ color: '#E5484D', fontWeight: 600, fontSize: '14px' }}>
+                Atenção: detrator
+              </span>
+              <div style={{ fontSize: '15px', lineHeight: 1.4, color: '#0E1116' }}>
+                <b style={{ fontFamily: 'Inter, sans-serif', fontSize: '15px', fontWeight: 700 }}>
+                  Nota {latestDetractor.score} · {latestDetractor.customerName || 'Cliente'}
+                </b>
+                <br />
+                <span style={{ color: '#5B6674' }}>
+                  {latestDetractor.comment
+                    ? `“${latestDetractor.comment}”`
+                    : 'Entrar em contato para entender a insatisfação.'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const rawPhone = String(latestDetractor.customerPhone || '').replace(/\D/g, '');
+                  if (rawPhone) {
+                    const cleanPhone = rawPhone.startsWith('55') ? rawPhone : `55${rawPhone}`;
+                    window.open(`https://wa.me/${cleanPhone}`, '_blank');
+                  } else {
+                    toast.info('Contato registrado para acompanhamento.');
+                  }
+                }}
+                style={{
+                  height: '44px',
+                  border: 0,
+                  borderRadius: '12px',
+                  background: '#0E1116',
+                  color: '#fff',
+                  font: '600 14px Inter, sans-serif',
+                  cursor: 'pointer',
+                  marginTop: '4px',
+                }}
+              >
+                Registrar contato
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid #E1E6EC',
+                borderRadius: '20px',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              <span style={{ color: '#0E1116', fontWeight: 600, fontSize: '14px' }}>
+                Sem detratores registrados
+              </span>
+              <p style={{ fontSize: '13px', color: '#5B6674', margin: 0, lineHeight: 1.45 }}>
+                Nenhuma avaliação com nota baixa (0 a 6) foi registrada até o momento.
+              </p>
+            </div>
+          )}
 
           {/* CARD 3: MOTOR DE REPUTAÇÃO NO GOOGLE MEU NEGÓCIO (T6.8) */}
           <div

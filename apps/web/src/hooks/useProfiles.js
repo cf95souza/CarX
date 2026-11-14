@@ -1,18 +1,33 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
 
+function mapRoleToCargo(role) {
+  const normalized = String(role || 'tecnico').toLowerCase().trim();
+  if (normalized === 'owner' || normalized === 'adm' || normalized === 'admin') {
+    return 'ADM';
+  }
+  if (normalized === 'gestor' || normalized === 'manager') {
+    return 'GESTOR';
+  }
+  return 'OPERADOR';
+}
+
 function normalizeProfile(p) {
   if (!p) return null;
+  const isActive =
+    typeof p.status === 'boolean'
+      ? p.status
+      : p.is_active !== false && p.status !== 'inativo';
   return {
     ...p,
     id: p.id,
     nome: p.name || p.nome || 'Colaborador',
     name: p.name || p.nome || 'Colaborador',
     email: p.email || '',
-    cargo: p.role || p.cargo || 'tecnico',
+    cargo: mapRoleToCargo(p.role || p.cargo),
     role: p.role || p.cargo || 'tecnico',
-    status: p.is_active !== false ? 'ativo' : 'inativo',
-    is_active: p.is_active !== false,
+    status: isActive,
+    is_active: isActive,
     avatar_url: p.avatar_url || null,
     created_at: p.created_at || new Date().toISOString(),
   };

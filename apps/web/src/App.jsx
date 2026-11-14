@@ -120,7 +120,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   if (!user) {
-    if (location.pathname === '/login') return children;
+    if (location.pathname === '/login' || location.pathname.endsWith('/login')) return children;
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -177,14 +177,14 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     }
     
     // Evita loop infinito
-    if (location.pathname === '/') {
+    if (location.pathname === '/dashboard' || location.pathname.endsWith('/dashboard')) {
       return (
          <div className="h-screen flex items-center justify-center bg-slate-50 p-6 text-center text-rose-500 font-bold uppercase tracking-widest text-xs">
              Acesso Negado: Perfil sem permissão para painel administrativo.
          </div>
       );
     }
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
@@ -284,12 +284,13 @@ const AppLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const path = location.pathname.substring(1) || 'dashboard';
-    setActivePage(path);
+    const cleanPath = location.pathname.replace(/^\/+/, '');
+    const pageSegment = cleanPath.endsWith('/dashboard') ? 'dashboard' : cleanPath || 'dashboard';
+    setActivePage(pageSegment);
   }, [location]);
 
   const handleNavigate = (pageId) => {
-    const path = pageId === 'dashboard' ? '/' : `/${pageId}`;
+    const path = pageId === 'dashboard' ? '/dashboard' : `/${pageId}`;
     navigate(path);
     setIsSidebarOpen(false);
   };
@@ -352,8 +353,22 @@ function App() {
             <ReloadPrompt />
             <React.Suspense fallback={<PageLoading />}>
               <Routes>
-              {/* Páginas Públicas Institucionais da Landing Page */}
-              <Route path="/landing" element={<LandingPage />} />
+              {/* Redirecionamento seguro para SuperAdmin fora do SPA principal */}
+              <Route
+                path="/superadm/*"
+                element={
+                  (() => {
+                    if (typeof window !== 'undefined') {
+                      window.location.replace(window.location.pathname + window.location.search);
+                    }
+                    return null;
+                  })()
+                }
+              />
+
+              {/* Landing Page Oficial na Raiz (Padrão OperaBeauty) */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/landing" element={<Navigate to="/" replace />} />
               <Route path="/precos" element={<LandingPage />} />
               <Route path="/recursos" element={<LandingPage />} />
               <Route path="/para/:segment" element={<LandingPage />} />
@@ -378,18 +393,20 @@ function App() {
               <Route path="/agendar" element={<SelfBooking />} />
               <Route path="/reserva" element={<SelfBooking />} />
               <Route path="/meu-veiculo" element={<ClientPortal />} />
+              <Route path="/meuportal" element={<ClientPortal />} />
               <Route path="/portal" element={<ClientPortal />} />
               <Route path="/nps/:osId" element={<PesquisaNPS />} />
               <Route path="/avaliar/:osId" element={<PesquisaNPS />} />
 
-              {/* Mini-Site Institucional da Oficina & Captação de Leads (T6.9) */}
+              {/* Mini-Site Institucional da Oficina (Aliases legados) */}
               <Route path="/loja/:slug" element={<MiniSiteOficina />} />
               <Route path="/oficina/:slug" element={<MiniSiteOficina />} />
               <Route path="/site/:slug" element={<MiniSiteOficina />} />
               <Route path="/site" element={<MiniSiteOficina />} />
 
-              {/* Rotas Administrativas */}
-              <Route path="/" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+              {/* Rotas Administrativas do Gestor */}
+              <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
+              <Route path="/:slug/dashboard" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/clientes" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Clientes /></AppLayout></ProtectedRoute>} />
               <Route path="/vendas" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Vendas /></AppLayout></ProtectedRoute>} />
               <Route path="/ordens" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR', 'OPERADOR']}><AppLayout><OrdensServico /></AppLayout></ProtectedRoute>} />
@@ -411,6 +428,13 @@ function App() {
 
               {/* Rota do Operador */}
               <Route path="/operador" element={<ProtectedRoute allowedRoles={['OPERADOR', 'ADM', 'GESTOR']}><OperadorLayoutWrapper /></ProtectedRoute>} />
+
+              {/* Rotas por Slug da Oficina (Padrão OperaBeauty) */}
+              <Route path="/:slug/login" element={<LoginPage />} />
+              <Route path="/:slug/meuportal" element={<ClientPortal />} />
+              <Route path="/:slug/portal" element={<ClientPortal />} />
+              <Route path="/:slug/agendar" element={<SelfBooking />} />
+              <Route path="/:slug" element={<MiniSiteOficina />} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
