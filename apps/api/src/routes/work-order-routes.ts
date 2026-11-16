@@ -22,6 +22,24 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
   // ============================================================================
 
   /**
+   * GET /public/tv/:slug — Painel público do Monitor TV da oficina isolado por tenant
+   */
+  fastify.get<{ Params: { slug: string } }>(
+    '/public/tv/:slug',
+    async (request, reply) => {
+      try {
+        const result = await workOrderService.getPublicTvData(request.params.slug);
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof WorkOrderNotFoundError) {
+          return reply.code(err.statusCode).send({ statusCode: err.statusCode, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
    * GET /public/quotes/:token — Consulta pública de orçamento digital com proteção LGPD
    */
   fastify.get<{ Params: { token: string } }>(

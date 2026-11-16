@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { realtimeHub } from '../realtime/realtime-hub.js';
 import { verifyJwt, JwtPayload } from '../auth/jwt.js';
+import { tenantQuery } from '../database/tenant-query.js';
 import {
   PublishRealtimeEventSchema,
   UserRole,
@@ -18,10 +19,11 @@ export async function realtimeRoutes(app: FastifyInstance) {
   app.get<{
     Querystring: {
       token?: string;
+      slug?: string;
     };
   }>(
     '/realtime/events',
-    async (request: FastifyRequest<{ Querystring: { token?: string } }>, reply: FastifyReply) => {
+    async (request: FastifyRequest<{ Querystring: { token?: string; slug?: string } }>, reply: FastifyReply) => {
       // 1. Resolução do token: suporte tanto a Authorization Bearer quanto query param token (necessário para EventSource nativo do browser)
       let rawToken = '';
       const authHeader = request.headers.authorization;
@@ -32,35 +34,44 @@ export async function realtimeRoutes(app: FastifyInstance) {
         rawToken = request.query.token.trim();
       }
 
-      if (!rawToken) {
-        return reply.code(401).send({
-          statusCode: 401,
-          error: 'UNAUTHORIZED',
-          message: 'Token de autenticação não fornecido no cabeçalho ou parâmetro token.',
-        });
+      let tenantId = '';
+      let userId: string | undefined = undefined;
+
+      if (rawToken) {
+        let payload: JwtPayload;
+        try {
+          payload = verifyJwt<JwtPayload>(rawToken);
+        } catch (err: any) {
+          return reply.code(401).send({
+            statusCode: 401,
+            error: 'UNAUTHORIZED',
+            message: `Token inválido ou expirado: ${err.message}`,
+          });
+        }
+
+        tenantId = (payload.tenantId || payload.tenant_id) as string;
+        userId = (payload.userId || payload.sub) as string | undefined;
+      } else if (request.query.slug) {
+        // Conexão pública de Monitor TV por slug da oficina
+        const cleanSlug = request.query.slug.trim().toLowerCase();
+        const tenantRes = await tenantQuery<{ id: string }>(
+          null,
+          `SELECT id FROM tenants WHERE LOWER(slug) = $1 AND status IN ('active', 'trialing') LIMIT 1;`,
+          [cleanSlug],
+          { bypassRls: true }
+        );
+        if (tenantRes.rows.length > 0) {
+          tenantId = tenantRes.rows[0].id;
+        }
       }
 
-      let payload: JwtPayload;
-      try {
-        payload = verifyJwt<JwtPayload>(rawToken);
-      } catch (err: any) {
-        return reply.code(401).send({
-          statusCode: 401,
-          error: 'UNAUTHORIZED',
-          message: `Token inválido ou expirado: ${err.message}`,
-        });
-      }
-
-      const tenantId = (payload.tenantId || payload.tenant_id) as string;
       if (!tenantId || typeof tenantId !== 'string') {
         return reply.code(403).send({
           statusCode: 403,
           error: 'FORBIDDEN',
-          message: 'Token não possui associação com uma oficina/tenant.',
+          message: 'Token ou slug não possui associação com uma oficina ativa.',
         });
       }
-
-      const userId = (payload.userId || payload.sub) as string | undefined;
 
       // 2. Registro da conexão no Hub SSE isolado por tenant
       realtimeHub.registerClient(tenantId, request, reply, userId);

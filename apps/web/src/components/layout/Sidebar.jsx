@@ -20,11 +20,15 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useBrand } from '../../contexts/BrandContext';
 import { useNavigate } from 'react-router-dom';
+import { getStoredTenantSlug } from '../../services/api';
 
 const Sidebar = ({ activePage, setActivePage, isOpen, setIsOpen }) => {
   const { profile, signOut } = useAuth();
-  const { name: lojaName, logoUrl } = useBrand();
+  const { name: lojaName, logoUrl, slug: brandSlug } = useBrand();
   const navigate = useNavigate();
+
+  const tenantSlug = brandSlug || getStoredTenantSlug() || '';
+  const tvUrl = tenantSlug ? `/${tenantSlug}/tv` : '/tv';
 
   const menuItems = [
     { id: 'dashboard', label: 'Painel', icon: LayoutDashboard, roles: ['ADM', 'GESTOR'] },
@@ -128,9 +132,9 @@ const Sidebar = ({ activePage, setActivePage, isOpen, setIsOpen }) => {
 
       {/* Bottom Section */}
       <div className="p-3 border-t border-[#1B2129] bg-[#0A0D12] space-y-2">
-        {/* Monitor TV Link */}
+        {/* Monitor TV Link com Slug Multitenant */}
         <a 
-          href="/tv" 
+          href={tvUrl} 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-white/90 font-medium transition-all group"

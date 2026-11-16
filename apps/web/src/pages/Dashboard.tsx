@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../services/api';
+import { api, getStoredTenantSlug } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Wrench,
@@ -217,7 +217,10 @@ const Dashboard: React.FC = () => {
           </button>
 
           <button
-            onClick={() => navigate('/tv')}
+            onClick={() => {
+              const slug = getStoredTenantSlug();
+              navigate(slug ? `/${slug}/tv` : '/tv');
+            }}
             className="carx-pill"
           >
             <Tv size={16} className="text-[#0E1116]" />

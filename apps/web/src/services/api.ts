@@ -1032,9 +1032,22 @@ export const api = {
 
   // --- TEMPO REAL SSE ---
   realtime: {
-    getEventsUrl: () => {
+    getEventsUrl: (slug?: string) => {
       const token = getStoredToken();
-      return `${API_BASE_URL}/realtime/events?token=${encodeURIComponent(token || '')}`;
+      if (token) {
+        return `${API_BASE_URL}/realtime/events?token=${encodeURIComponent(token)}`;
+      }
+      if (slug) {
+        return `${API_BASE_URL}/realtime/events?slug=${encodeURIComponent(slug)}`;
+      }
+      return `${API_BASE_URL}/realtime/events`;
+    },
+  },
+
+  // --- MONITOR TV MULTITENANT ---
+  tv: {
+    getBySlug: async (slug: string) => {
+      return fetchClient<any>(`/public/tv/${encodeURIComponent(slug)}`);
     },
   },
 

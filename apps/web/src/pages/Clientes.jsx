@@ -590,25 +590,29 @@ const ClientesView = () => {
                       }
                       try {
                         const res = await api.vehicles.lookupPlate(clean);
-                        toast.success(`Veículo localizado: ${res.brand} ${res.model}`);
-                        const form = input.closest('form');
-                        if (form) {
-                          if (form.marca) form.marca.value = res.brand;
-                          if (form.modelo) form.modelo.value = res.model;
-                          if (form.ano && res.year) form.ano.value = res.year;
-                          if (form.porte && res.sizeClass) {
-                            const sc = res.sizeClass.toLowerCase();
-                            const mapPorte = {
-                              hatch: 'Hatch',
-                              sedan: 'Sedan',
-                              suv: 'SUV',
-                              pickup: 'Pickup',
-                              van: 'Van',
-                              moto: 'Moto',
-                              esportivo: 'Esportivo',
-                            };
-                            form.porte.value = mapPorte[sc] || 'Hatch';
+                        if (res && res.source !== 'not_found' && res.brand) {
+                          toast.success(`Veículo localizado: ${res.brand} ${res.model}`);
+                          const form = input.closest('form');
+                          if (form) {
+                            if (form.marca) form.marca.value = res.brand;
+                            if (form.modelo) form.modelo.value = res.model;
+                            if (form.ano && res.year) form.ano.value = res.year;
+                            if (form.porte && res.sizeClass) {
+                              const sc = res.sizeClass.toLowerCase();
+                              const mapPorte = {
+                                hatch: 'Hatch',
+                                sedan: 'Sedan',
+                                suv: 'SUV',
+                                pickup: 'Pickup',
+                                van: 'Van',
+                                moto: 'Moto',
+                                esportivo: 'Esportivo',
+                              };
+                              form.porte.value = mapPorte[sc] || 'Hatch';
+                            }
                           }
+                        } else {
+                          toast.info('Placa não encontrada no catálogo. Digite os dados do veículo.');
                         }
                       } catch {
                         toast.error('Não foi possível consultar a placa.');

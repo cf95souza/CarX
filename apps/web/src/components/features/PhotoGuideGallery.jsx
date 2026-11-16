@@ -10,11 +10,40 @@ import {
   Sparkles, 
   Download, 
   CheckCircle2,
-  X
+  X,
+  Wrench,
+  Layers,
+  Car,
+  Focus,
+  SlidersHorizontal
 } from 'lucide-react';
 import { PHOTO_PHASES, PHOTO_ANGLES, getPhaseInfo, getAngleInfo } from '../../utils/photoConstants';
 import PhotoComparisonModal from './PhotoComparisonModal';
 import { compressImageClientSide } from '../../utils/imageCompressor';
+
+// Helper para ícones vetoriais modernos de cada fase
+function getPhaseIcon(phaseId) {
+  switch (phaseId) {
+    case 'antes':
+      return Camera;
+    case 'durante':
+      return Wrench;
+    case 'depois':
+      return Sparkles;
+    default:
+      return Camera;
+  }
+}
+
+// Helper para ícones de ângulos
+function getAngleIcon(angleId) {
+  switch (angleId) {
+    case 'livre':
+      return Focus;
+    default:
+      return Car;
+  }
+}
 
 const PhotoGuideGallery = ({
   photos = [],
@@ -56,6 +85,9 @@ const PhotoGuideGallery = ({
     }
   };
 
+  const activePhaseInfo = getPhaseInfo(activePhase);
+  const ActiveIcon = getPhaseIcon(activePhase);
+
   return (
     <div className="space-y-6 animate-fade-in">
       
@@ -77,40 +109,48 @@ const PhotoGuideGallery = ({
 
         {/* Botão de Comparação Antes x Depois */}
         <button
+          type="button"
           onClick={() => setIsComparing(true)}
           disabled={!hasComparison}
-          className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm shrink-0 ${
+          className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-sm shrink-0 ${
             hasComparison
               ? 'bg-[#C8F52E] text-[#0E1116] hover:bg-[#b8e520] cursor-pointer'
               : 'bg-[#0E1116] text-[#8A9BA8] border border-[#2E3744] cursor-not-allowed opacity-60'
           }`}
           title={hasComparison ? 'Abra o comparador visual' : 'Registre ao menos uma foto ANTES e DEPOIS do mesmo ângulo para ativar o comparador'}
         >
-          <span className="text-sm">⚖️</span>
+          <Layers size={16} className={hasComparison ? 'text-[#0E1116]' : 'text-[#8A9BA8]'} />
           <span>Comparar Antes x Depois</span>
           {!hasComparison && <span className="text-[9px] font-bold opacity-75">(Pendente)</span>}
         </button>
       </div>
 
-      {/* Abas de Fase (Antes | Durante | Depois) */}
-      <div className="flex flex-wrap justify-center gap-2 bg-[#0E1116] p-1.5 rounded-xl border border-[#2E3744]">
+      {/* Botões das Fases da Vistoria (Antes | Durante | Depois) - Segmented Control Dark */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#0E1116] p-2 rounded-2xl border border-[#2E3744]">
         {PHOTO_PHASES.map((ph) => {
           const count = photos.filter(p => p.fase_execucao === ph.id).length;
           const isActive = activePhase === ph.id;
+          const PhaseIcon = getPhaseIcon(ph.id);
+
           return (
             <button
               key={ph.id}
+              type="button"
               onClick={() => setActivePhase(ph.id)}
-              className={`flex-1 min-w-[95px] py-2.5 px-3 rounded-lg text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
                 isActive
-                  ? 'bg-[#171C24] text-[#C8F52E] border border-[#2E3744] shadow-sm'
-                  : 'text-[#8A9BA8] hover:text-[#F2F5F8]'
+                  ? 'bg-[#171C24] text-[#C8F52E] border-[#C8F52E]/50 shadow-md ring-1 ring-[#C8F52E]/30'
+                  : 'bg-[#131820]/60 text-[#8A9BA8] border-transparent hover:text-[#F2F5F8] hover:bg-[#171C24]'
               }`}
             >
-              <span className="text-sm">{ph.icon}</span>
-              <span>{ph.label}</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
-                isActive ? 'bg-[#C8F52E]/20 text-[#C8F52E]' : 'bg-[#171C24] text-[#8A9BA8]'
+              <div className="flex items-center gap-2.5">
+                <PhaseIcon size={16} className={isActive ? 'text-[#C8F52E]' : 'text-[#8A9BA8]'} />
+                <span>{ph.label}</span>
+              </div>
+              <span className={`h-5 min-w-[22px] px-1.5 flex items-center justify-center rounded-full text-[11px] font-mono font-bold ${
+                isActive
+                  ? 'bg-[#C8F52E] text-[#0E1116]'
+                  : 'bg-[#1E2530] text-[#8A9BA8]'
               }`}>
                 {count}
               </span>
@@ -119,12 +159,13 @@ const PhotoGuideGallery = ({
         })}
       </div>
 
-      {/* Descrição da Fase Ativa */}
+      {/* Descrição da Fase Ativa com Ícone Vetorial */}
       <div className="px-1 flex items-center justify-between text-xs">
         <span className="font-bold text-[#8A9BA8] uppercase tracking-wider flex items-center gap-2">
-          {getPhaseInfo(activePhase).icon} {getPhaseInfo(activePhase).description}
+          <ActiveIcon size={14} className="text-[#C8F52E]" />
+          <span>{activePhaseInfo.description}</span>
         </span>
-        <span className="text-[10px] font-medium text-[#8A9BA8]">
+        <span className="text-[10px] font-medium text-[#8A9BA8] hidden sm:inline">
           Toque no card para fotografar ou enviar
         </span>
       </div>
@@ -142,6 +183,7 @@ const PhotoGuideGallery = ({
             const mainPhoto = slotPhotos[0];
             const slotKey = `${activePhase}:${ang.id}`;
             const isUploadingThis = uploadingSlot === slotKey;
+            const AngleIcon = getAngleIcon(ang.id);
 
             return (
               <div
@@ -154,8 +196,9 @@ const PhotoGuideGallery = ({
               >
                 {/* Header do Cartão */}
                 <div className="p-3 flex items-center justify-between z-10 bg-gradient-to-b from-black/80 via-black/40 to-transparent absolute top-0 inset-x-0 pointer-events-none">
-                  <span className="text-xs font-black text-[#F2F5F8] uppercase tracking-wider flex items-center gap-1.5 drop-shadow">
-                    <span>{ang.icon}</span> <span>{ang.label}</span>
+                  <span className="text-xs font-black text-[#F2F5F8] uppercase tracking-wider flex items-center gap-2 drop-shadow">
+                    <AngleIcon size={14} className="text-[#C8F52E]" />
+                    <span>{ang.label}</span>
                   </span>
                   {mainPhoto && (
                     <span className="w-5 h-5 rounded-full bg-[#C8F52E] text-[#0E1116] flex items-center justify-center shadow font-black">
@@ -190,10 +233,12 @@ const PhotoGuideGallery = ({
                       )}
                     </>
                   ) : (
-                    /* Dropzone Vazia */
-                    <div className="text-center p-5 flex flex-col items-center justify-center gap-1.5">
-                      <span className="text-2xl opacity-40 group-hover:scale-110 transition-transform duration-300">{ang.icon}</span>
-                      <p className="text-[10px] font-bold text-[#8A9BA8] max-w-[120px] leading-tight">
+                    /* Dropzone Vazia sem Emojis */
+                    <div className="text-center p-5 flex flex-col items-center justify-center gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#8A9BA8] group-hover:text-[#C8F52E] group-hover:border-[#C8F52E]/30 transition-all">
+                        <AngleIcon size={20} />
+                      </div>
+                      <p className="text-[10px] font-bold text-[#8A9BA8] max-w-[130px] leading-tight">
                         {ang.description}
                       </p>
                       {!isReadOnly && (
@@ -223,6 +268,7 @@ const PhotoGuideGallery = ({
                 {mainPhoto && (
                   <div className="p-2 bg-[#0E1116] border-t border-[#2E3744] flex items-center justify-between relative z-20">
                     <button
+                      type="button"
                       onClick={() => setLightboxPhoto(mainPhoto)}
                       className="text-[10px] font-bold uppercase tracking-wider text-[#8A9BA8] hover:text-[#F2F5F8] flex items-center gap-1 px-2 py-1 rounded-lg transition-colors"
                     >
@@ -247,6 +293,7 @@ const PhotoGuideGallery = ({
                       {/* Botão de Deletar */}
                       {!isReadOnly && onDelete && (
                         <button
+                          type="button"
                           onClick={() => onDelete(mainPhoto.id, mainPhoto.url)}
                           className="p-1.5 text-[#8A9BA8] hover:text-rose-400 rounded-lg transition-colors"
                           title="Excluir esta foto"
@@ -267,11 +314,13 @@ const PhotoGuideGallery = ({
       {photos.filter(p => p.fase_execucao === activePhase).length > 5 && (
         <div className="space-y-3 pt-4 border-t border-[#2E3744]">
           <h5 className="text-xs font-bold uppercase tracking-wider text-[#8A9BA8] flex items-center gap-2">
-            📷 Todas as Fotos Registradas na Fase — {getPhaseInfo(activePhase).label}
+            <Camera size={14} className="text-[#C8F52E]" />
+            <span>Todas as Fotos Registradas na Fase — {activePhaseInfo.label}</span>
           </h5>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2.5">
             {photos.filter(p => p.fase_execucao === activePhase).map((p, idx) => {
               const angInfo = getAngleInfo(p.angulo);
+              const AngleIcon = getAngleIcon(p.angulo);
               return (
                 <div
                   key={p.id || idx}
@@ -279,8 +328,9 @@ const PhotoGuideGallery = ({
                   onClick={() => setLightboxPhoto(p)}
                 >
                   <img src={p.url} alt={angInfo.label} className="w-full h-full object-cover" />
-                  <span className="absolute bottom-1 left-1 right-1 bg-black/80 text-[#F2F5F8] text-[8px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded truncate text-center">
-                    {angInfo.icon} {angInfo.label}
+                  <span className="absolute bottom-1 left-1 right-1 bg-black/80 text-[#F2F5F8] text-[8px] font-bold uppercase tracking-tight px-1.5 py-0.5 rounded truncate text-center flex items-center justify-center gap-1">
+                    <AngleIcon size={10} className="text-[#C8F52E]" />
+                    <span>{angInfo.label}</span>
                   </span>
                 </div>
               );
@@ -296,7 +346,9 @@ const PhotoGuideGallery = ({
             
             <div className="w-full flex items-center justify-between p-4 text-[#F2F5F8]">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{getAngleInfo(lightboxPhoto.angulo).icon}</span>
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[#C8F52E]">
+                  <Camera size={20} />
+                </div>
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#C8F52E] block">
                     Fase: {getPhaseInfo(lightboxPhoto.fase_execucao).label}
@@ -319,6 +371,7 @@ const PhotoGuideGallery = ({
                 </a>
                 {!isReadOnly && onDelete && (
                   <button
+                    type="button"
                     onClick={() => { onDelete(lightboxPhoto.id, lightboxPhoto.url); setLightboxPhoto(null); }}
                     className="p-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-all border border-rose-500/20"
                     title="Excluir imagem"
@@ -327,6 +380,7 @@ const PhotoGuideGallery = ({
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => setLightboxPhoto(null)}
                   className="p-3 bg-[#171C24] hover:bg-[#2E3744] border border-[#2E3744] rounded-xl text-[#F2F5F8] transition-all"
                 >

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Car,
@@ -17,7 +18,7 @@ import {
   User,
 } from 'lucide-react';
 import { Card, Badge, Button } from '@carx/ui';
-import { api } from '../services/api';
+import { api, getStoredTenantSlug } from '../services/api';
 
 function formatTimeBR(date: Date): string {
   return date.toLocaleTimeString('pt-BR', {
@@ -53,6 +54,8 @@ function getYouTubeEmbedUrl(idOrUrl: string): string {
 }
 
 export const MonitorTV: React.FC = () => {
+  const { slug: routeSlug } = useParams<{ slug?: string }>();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -60,32 +63,50 @@ export const MonitorTV: React.FC = () => {
   const [customVideoEnabled, setCustomVideoEnabled] = useState<boolean>(true);
   const eventSourceRef = useRef<EventSource | null>(null);
 
+  // Se a rota for acessada sem slug (/tv) mas o gestor já estiver logado, redireciona para a URL canônica com slug
+  useEffect(() => {
+    if (!routeSlug) {
+      const stored = getStoredTenantSlug();
+      if (stored) {
+        navigate(`/${stored}/tv`, { replace: true });
+      }
+    }
+  }, [routeSlug, navigate]);
+
+  const activeSlug = routeSlug || getStoredTenantSlug() || '';
+
   // Relógio ao vivo atualizado a cada segundo
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Busca dados de branding da oficina
-  const { data: branding } = useQuery({
-    queryKey: ['tenant-branding'],
-    queryFn: () => api.branding.get().catch(() => null),
-    staleTime: 1000 * 60 * 5, // 5 min
-  });
-
-  // Busca ordens de serviço ativas para a TV
+  // Busca dados completos do Monitor TV da oficina (se houver slug, usa o endpoint isolado multitenant)
   const {
-    data: workOrdersResponse,
+    data: tvData,
     isLoading: loadingOrders,
   } = useQuery({
-    queryKey: ['tv-work-orders'],
-    queryFn: () => api.workOrders.list({ limit: 100 }),
-    refetchInterval: 30000, // Polling de contingência a cada 30 segundos
+    queryKey: ['tv-data', activeSlug],
+    queryFn: async () => {
+      if (activeSlug) {
+        return api.tv.getBySlug(activeSlug);
+      }
+      // Fallback para quando aberto internamente no gestor sem slug na rota
+      const [brandData, ordersData] = await Promise.all([
+        api.branding.get().catch(() => null),
+        api.workOrders.list({ limit: 100 }).catch(() => []),
+      ]);
+      return {
+        tenant: brandData,
+        workOrders: Array.isArray(ordersData) ? ordersData : ordersData?.workOrders || [],
+      };
+    },
+    refetchInterval: 20000, // Polling de contingência a cada 20 segundos
   });
 
   // Conexão Server-Sent Events (SSE) para atualização em tempo real sem reload
   useEffect(() => {
-    const sseUrl = api.realtime.getEventsUrl();
+    const sseUrl = api.realtime.getEventsUrl(activeSlug);
     try {
       const es = new EventSource(sseUrl);
       eventSourceRef.current = es;
@@ -103,10 +124,10 @@ export const MonitorTV: React.FC = () => {
             parsed.type === 'work_order.created'
           ) {
             // Invalidação imediata do cache para re-render suave dos cards
-            queryClient.invalidateQueries({ queryKey: ['tv-work-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['tv-data', activeSlug] });
           }
         } catch {
-          queryClient.invalidateQueries({ queryKey: ['tv-work-orders'] });
+          queryClient.invalidateQueries({ queryKey: ['tv-data', activeSlug] });
         }
       };
 
@@ -120,11 +141,12 @@ export const MonitorTV: React.FC = () => {
     } catch {
       setIsSseConnected(false);
     }
-  }, [queryClient]);
+  }, [queryClient, activeSlug]);
 
-  const rawOrders: any[] = Array.isArray(workOrdersResponse)
-    ? workOrdersResponse
-    : workOrdersResponse?.workOrders || [];
+  const branding = tvData?.tenant;
+  const rawOrders: any[] = Array.isArray(tvData?.workOrders)
+    ? tvData.workOrders
+    : tvData?.workOrders?.workOrders || [];
 
   // Filtra as ordens em produção: CHECKED_IN, IN_PROGRESS, QA, READY
   // Ordena com prioridade: Retrabalhos primeiro, depois Em Execução, depois QA, depois Prontos

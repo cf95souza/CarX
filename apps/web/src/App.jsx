@@ -463,6 +463,8 @@ function App() {
 
               {/* Rotas por Slug da Oficina (Padrão OperaBeauty) */}
               <Route path="/:slug/login" element={<LoginPage />} />
+              <Route path="/:slug/tv" element={<MonitorTV />} />
+              <Route path="/:slug/monitor-tv" element={<MonitorTV />} />
               <Route path="/:slug/meuportal" element={<ClientPortal />} />
               <Route path="/:slug/portal" element={<ClientPortal />} />
               <Route path="/:slug/agendar" element={<SelfBooking />} />

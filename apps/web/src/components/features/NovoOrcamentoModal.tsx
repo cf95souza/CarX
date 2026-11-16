@@ -83,6 +83,11 @@ export const NovoOrcamentoModal: React.FC<NovoOrcamentoModalProps> = ({
             };
             if (mapPorte[sc]) setNewSizeClass(mapPorte[sc]);
           }
+        } else {
+          // Placa livre: limpa para digitação manual sem dados herdados
+          setNewBrand('');
+          setNewModel('');
+          setNewColor('');
         }
       } catch (err) {
         // Nova placa: digitação limpa sem forçar valores estáticos

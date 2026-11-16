@@ -1,18 +1,39 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { 
-  ArrowLeft, 
-  Camera, 
-  Mic, 
-  MicOff, 
-  Trash2, 
-  Check, 
-  AlertTriangle, 
-  ShieldCheck, 
-  Sparkles,
-  Car
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Camera,
+  Check,
+  Fuel,
+  Mic,
+  MicOff,
+  ShieldCheck,
+  Trash2,
+  X,
+  Eraser,
+  Gauge,
+  ChevronRight,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { toast } from '../../utils/toast';
+import { compressImageClientSide } from '../../utils/imageCompressor';
+import VehicleStage, { type StagePin } from './inspection/VehicleStage';
+import {
+  DAMAGE_SEVERITIES,
+  DAMAGE_TYPES,
+  FUEL_LEVELS,
+  INSPECTION_ANGLES,
+  VEHICLE_CATEGORIES,
+  detectPart,
+  getAngleImage,
+  getAngleOption,
+  getDamageTypeLabel,
+  getSeverityLabel,
+  resolveVehicleCategory,
+  type DamageSeverity,
+  type DamageTypeId,
+  type FuelLevel,
+  type InspectionAngle,
+  type VehicleCategory,
+} from './inspection/inspectionCatalog';
 
 export interface OperadorLaudoInspecaoProps {
   os: any;
@@ -20,286 +41,439 @@ export interface OperadorLaudoInspecaoProps {
   onComplete: () => void;
 }
 
-type CarViewType = 'superior' | 'frente' | 'traseira' | 'laterais';
-type DamageType = 'Risco' | 'Amassado' | 'Pedra' | 'Mancha';
-
 interface DamagePoint {
   id: string;
-  number: number;
-  view: CarViewType;
+  angle: InspectionAngle;
   xPercent: number;
   yPercent: number;
-  damageType: DamageType;
-  description: string;
-  photoUrl?: string;
+  damageType: DamageTypeId;
+  severity: DamageSeverity;
+  part: string;
+  photoFile?: File;
+  photoPreview?: string;
 }
 
+const createId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const formatKm = (raw: string) => {
+  const digits = raw.replace(/\D/g, '').slice(0, 7);
+  return digits ? Number(digits).toLocaleString('pt-BR') : '';
+};
+
+const parseKm = (formatted: string) => parseInt(formatted.replace(/\D/g, ''), 10) || 0;
+
+/**
+ * Laudo de Inspeção 360° do Operador — Redesenho de Alta Fidelidade (Item 43).
+ *
+ * Etapa 1: vistoria guiada nos 5 ângulos oficiais sobre clay renders por categoria,
+ *          com marcação tátil de avarias (tipo, severidade, peça e foto de evidência).
+ * Etapa 2: resumo do laudo, termo de entrada e assinatura digital do cliente.
+ */
 export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
   os,
   onBack,
   onComplete,
 }) => {
   const [step, setStep] = useState<1 | 2>(1);
-  const [activeView, setActiveView] = useState<CarViewType>('superior');
-  const [selectedDamageType, setSelectedDamageType] = useState<DamageType>('Risco');
-  const [damagePoints, setDamagePoints] = useState<DamagePoint[]>([]);
-  const [currentKm, setCurrentKm] = useState<string>(
-    String(os?.vehicle?.currentKm || os?.current_km || '45000')
+  const [category, setCategory] = useState<VehicleCategory>(() =>
+    resolveVehicleCategory(os?.vehicle?.sizeClass || os?.veiculo_tipo || os?.porte)
   );
+  const [activeAngle, setActiveAngle] = useState<InspectionAngle>('principal');
+  const [visitedAngles, setVisitedAngles] = useState<Set<InspectionAngle>>(
+    () => new Set<InspectionAngle>(['principal'])
+  );
+  const [points, setPoints] = useState<DamagePoint[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [defaultType, setDefaultType] = useState<DamageTypeId>('scratch');
+  const [defaultSeverity, setDefaultSeverity] = useState<DamageSeverity>('low');
+
+  const initialKm = os?.vehicle?.currentKm ?? os?.current_km ?? '';
+  const [currentKm, setCurrentKm] = useState<string>(initialKm ? formatKm(String(initialKm)) : '');
+  const [fuelLevel, setFuelLevel] = useState<FuelLevel>('1/2');
+  const [notes, setNotes] = useState('');
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [voiceNotes, setVoiceNotes] = useState('');
+  const recognitionRef = useRef<any>(null);
+
+  const [customerName, setCustomerName] = useState<string>(
+    os?.customer?.name || os?.cliente_nome || ''
+  );
+  const [hasSignature, setHasSignature] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Assinatura do cliente
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [hasSignature, setHasSignature] = useState(false);
-  const [isDrawing, setIsDrawing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [activePhotoPointId, setActivePhotoPointId] = useState<string | null>(null);
+  const kmInputRef = useRef<HTMLInputElement | null>(null);
+  const photoTargetRef = useRef<string | null>(null);
 
-  const workOrderId = os.workOrderId || os.id;
-  const vehicleDesc = os.veiculo_desc || `${os.vehicle?.brand || ''} ${os.vehicle?.model || 'Veículo'}`.trim();
-  const vehiclePlate = os.veiculo_placa || os.vehicle?.plate || 'SEM PLACA';
+  const workOrderId: string = os?.workOrderId || os?.id;
+  const vehicleDesc =
+    os?.veiculo_desc || `${os?.vehicle?.brand || ''} ${os?.vehicle?.model || 'Veículo'}`.trim();
+  const vehiclePlate = os?.veiculo_placa || os?.vehicle?.plate || 'SEM PLACA';
 
-  // Configuração das visões
-  const views: { id: CarViewType; label: string }[] = [
-    { id: 'superior', label: 'Superior' },
-    { id: 'frente', label: 'Frente' },
-    { id: 'traseira', label: 'Traseira' },
-    { id: 'laterais', label: 'Laterais' },
-  ];
+  // Pré-carrega os 5 renders da categoria para troca instantânea de ângulo
+  useEffect(() => {
+    INSPECTION_ANGLES.forEach((a) => {
+      const img = new Image();
+      img.src = getAngleImage(category, a.id);
+    });
+  }, [category]);
 
-  const damageTypeOptions: DamageType[] = ['Risco', 'Amassado', 'Pedra', 'Mancha'];
+  // Libera object URLs das fotos ao desmontar
+  const pointsRef = useRef(points);
+  pointsRef.current = points;
+  useEffect(
+    () => () => {
+      pointsRef.current.forEach((p) => p.photoPreview && URL.revokeObjectURL(p.photoPreview));
+      recognitionRef.current?.stop?.();
+    },
+    []
+  );
 
-  // Ponto de clique na silhueta do carro
-  const handleCarClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * 100);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * 100);
+  const numberById = useMemo(() => {
+    const map = new Map<string, number>();
+    points.forEach((p, idx) => map.set(p.id, idx + 1));
+    return map;
+  }, [points]);
 
-    const nextNumber = damagePoints.length + 1;
-    let autoPart = 'lataria';
-    if (activeView === 'superior') {
-      if (y < 28) autoPart = 'capô dianteiro';
-      else if (y > 72) autoPart = 'porta-malas / traseira';
-      else autoPart = 'teto / teto solar';
-    } else if (activeView === 'frente') {
-      if (y < 45) autoPart = 'capô / para-brisa';
-      else if (y <= 68) autoPart = 'grade / faróis dianteiros';
-      else autoPart = 'para-choque dianteiro';
-    } else if (activeView === 'traseira') {
-      if (y < 45) autoPart = 'vidro traseiro';
-      else if (y <= 68) autoPart = 'tampa do porta-malas / lanternas';
-      else autoPart = 'para-choque traseiro';
-    } else {
-      if (x < 28) autoPart = 'para-lama / roda dianteira';
-      else if (x < 52) autoPart = 'porta dianteira / retrovisor';
-      else if (x < 76) autoPart = 'porta traseira';
-      else autoPart = 'para-lama / roda traseira';
-    }
+  const stagePins: StagePin[] = useMemo(
+    () =>
+      points
+        .filter((p) => p.angle === activeAngle)
+        .map((p) => ({
+          id: p.id,
+          number: numberById.get(p.id) ?? 0,
+          xPercent: p.xPercent,
+          yPercent: p.yPercent,
+          severity: p.severity,
+        })),
+    [points, activeAngle, numberById]
+  );
 
-    const newPoint: DamagePoint = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      number: nextNumber,
-      view: activeView,
-      xPercent: x,
-      yPercent: y,
-      damageType: selectedDamageType,
-      description: `${selectedDamageType} · ${autoPart}`,
-    };
+  const selectedPoint = points.find((p) => p.id === selectedId) ?? null;
+  const allAnglesVisited = visitedAngles.size === INSPECTION_ANGLES.length;
+  const nextUnvisited = INSPECTION_ANGLES.find((a) => !visitedAngles.has(a.id));
 
-    setDamagePoints((prev) => [...prev, newPoint]);
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate?.([30]);
-    }
+  // ---------------------------------------------------------------------------
+  // Navegação entre ângulos
+  // ---------------------------------------------------------------------------
+  const goToAngle = useCallback((angle: InspectionAngle) => {
+    setActiveAngle(angle);
+    setVisitedAngles((prev) => {
+      if (prev.has(angle)) return prev;
+      const next = new Set(prev);
+      next.add(angle);
+      return next;
+    });
+  }, []);
+
+  const shiftAngle = useCallback(
+    (delta: 1 | -1) => {
+      const idx = INSPECTION_ANGLES.findIndex((a) => a.id === activeAngle);
+      const nextIdx = (idx + delta + INSPECTION_ANGLES.length) % INSPECTION_ANGLES.length;
+      setSelectedId(null);
+      goToAngle(INSPECTION_ANGLES[nextIdx].id);
+    },
+    [activeAngle, goToAngle]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Marcação de avarias
+  // ---------------------------------------------------------------------------
+  const handleStageTap = useCallback(
+    (xPercent: number, yPercent: number) => {
+      const point: DamagePoint = {
+        id: createId(),
+        angle: activeAngle,
+        xPercent,
+        yPercent,
+        damageType: defaultType,
+        severity: defaultSeverity,
+        part: detectPart(category, activeAngle, xPercent, yPercent),
+      };
+      setPoints((prev) => [...prev, point]);
+      setSelectedId(point.id);
+      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+        navigator.vibrate?.(25);
+      }
+    },
+    [activeAngle, category, defaultSeverity, defaultType]
+  );
+
+  const updatePoint = (id: string, patch: Partial<DamagePoint>) => {
+    setPoints((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
+
+  const handleSelectType = (type: DamageTypeId) => {
+    setDefaultType(type);
+    if (selectedPoint) updatePoint(selectedPoint.id, { damageType: type });
+  };
+
+  const handleSelectSeverity = (severity: DamageSeverity) => {
+    setDefaultSeverity(severity);
+    if (selectedPoint) updatePoint(selectedPoint.id, { severity });
   };
 
   const handleRemovePoint = (id: string) => {
-    setDamagePoints((prev) =>
-      prev
-        .filter((p) => p.id !== id)
-        .map((p, idx) => ({ ...p, number: idx + 1 }))
-    );
+    setPoints((prev) => {
+      const target = prev.find((p) => p.id === id);
+      if (target?.photoPreview) URL.revokeObjectURL(target.photoPreview);
+      return prev.filter((p) => p.id !== id);
+    });
+    if (selectedId === id) setSelectedId(null);
   };
 
-  // Upload de Foto para o ponto de avaria
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFocusPoint = (point: DamagePoint) => {
+    goToAngle(point.angle);
+    setSelectedId(point.id);
+  };
+
+  const handleCategoryChange = (next: VehicleCategory) => {
+    if (next === category) return;
+    setCategory(next);
+    if (points.length > 0) {
+      toast.info('Categoria alterada. As marcações existentes foram mantidas.');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Foto de evidência por avaria
+  // ---------------------------------------------------------------------------
+  const requestPhoto = (pointId: string) => {
+    photoTargetRef.current = pointId;
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !activePhotoPointId) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      setDamagePoints((prev) =>
-        prev.map((p) => (p.id === activePhotoPointId ? { ...p, photoUrl: base64 } : p))
-      );
-      toast.success('Foto da avaria anexada com sucesso!');
-    };
-    reader.readAsDataURL(file);
+    const targetId = photoTargetRef.current;
     e.target.value = '';
+    if (!file || !targetId) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Selecione um arquivo de imagem válido.');
+      return;
+    }
+
+    const compressed = await compressImageClientSide(file, 1280, 1280, 0.8);
+    const preview = URL.createObjectURL(compressed);
+    setPoints((prev) =>
+      prev.map((p) => {
+        if (p.id !== targetId) return p;
+        if (p.photoPreview) URL.revokeObjectURL(p.photoPreview);
+        return { ...p, photoFile: compressed, photoPreview: preview };
+      })
+    );
+    toast.success('Foto de evidência anexada.');
   };
 
-  // Reconhecimento de Voz / Relato por Voz
+  // ---------------------------------------------------------------------------
+  // Relato por voz (Web Speech API) — anexa ao campo de observações
+  // ---------------------------------------------------------------------------
   const handleToggleVoice = () => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      toast.info('Reconhecimento de voz não suportado pelo navegador. Digite as observações.');
-      const manual = window.prompt('Digite seu relato por voz ou observação técnica:');
-      if (manual) {
-        setVoiceNotes((prev) => (prev ? `${prev}. ${manual}` : manual));
-      }
+      toast.info('Ditado por voz indisponível neste navegador. Digite as observações no campo.');
       return;
     }
 
     if (isRecordingVoice) {
+      recognitionRef.current?.stop?.();
       setIsRecordingVoice(false);
       return;
     }
 
     try {
       const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
       recognition.lang = 'pt-BR';
       recognition.continuous = false;
       recognition.interimResults = false;
-
-      recognition.onstart = () => {
-        setIsRecordingVoice(true);
-        toast.info('Ouvindo relato técnico... Fale agora.');
-      };
-
+      recognition.onstart = () => setIsRecordingVoice(true);
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          setVoiceNotes((prev) => (prev ? `${prev}. ${transcript}` : transcript));
-          toast.success(`Relato capturado: "${transcript}"`);
-        }
+        const transcript: string = event.results?.[0]?.[0]?.transcript ?? '';
+        if (transcript) setNotes((prev) => (prev ? `${prev.trim()} ${transcript}` : transcript));
       };
-
-      recognition.onerror = () => {
-        setIsRecordingVoice(false);
-      };
-
-      recognition.onend = () => {
-        setIsRecordingVoice(false);
-      };
-
+      recognition.onerror = () => setIsRecordingVoice(false);
+      recognition.onend = () => setIsRecordingVoice(false);
       recognition.start();
     } catch {
       setIsRecordingVoice(false);
     }
   };
 
-  // Canvas de assinatura tátil
-  const startDrawing = (e: any) => {
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    ctx.beginPath();
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
-    setIsDrawing(true);
+  // ---------------------------------------------------------------------------
+  // Avanço de etapa
+  // ---------------------------------------------------------------------------
+  const handlePrimaryAction = () => {
+    if (!allAnglesVisited && nextUnvisited) {
+      setSelectedId(null);
+      goToAngle(nextUnvisited.id);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (parseKm(currentKm) <= 0) {
+      toast.warning('Informe a quilometragem atual do veículo.');
+      kmInputRef.current?.focus();
+      return;
+    }
+    setSelectedId(null);
+    setStep(2);
+    window.scrollTo({ top: 0 });
   };
 
-  const draw = (e: any) => {
-    if (!isDrawing) return;
-    e.preventDefault();
+  // ---------------------------------------------------------------------------
+  // Assinatura do cliente (papel claro, tinta escura, PNG opaco para o PDF)
+  // ---------------------------------------------------------------------------
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const drawingRef = useRef(false);
+
+  const prepareCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
-    ctx.strokeStyle = '#C8F52E';
-    ctx.lineWidth = 3;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.strokeStyle = '#0E1116';
+    ctx.lineWidth = 2.6;
     ctx.lineCap = 'round';
-    ctx.stroke();
-    setHasSignature(true);
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const handleClearSignature = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineJoin = 'round';
     setHasSignature(false);
+  }, []);
+
+  useEffect(() => {
+    if (step !== 2) return;
+    prepareCanvas();
+    window.addEventListener('resize', prepareCanvas);
+    return () => window.removeEventListener('resize', prepareCanvas);
+  }, [step, prepareCanvas]);
+
+  const getCanvasPoint = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  // Concluir e Iniciar Serviço Oficial
+  const handleSignStart = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const ctx = e.currentTarget.getContext('2d');
+    if (!ctx) return;
+    const { x, y } = getCanvasPoint(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    drawingRef.current = true;
+  };
+
+  const handleSignMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawingRef.current) return;
+    const ctx = e.currentTarget.getContext('2d');
+    if (!ctx) return;
+    const { x, y } = getCanvasPoint(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    if (!hasSignature) setHasSignature(true);
+  };
+
+  const handleSignEnd = () => {
+    drawingRef.current = false;
+  };
+
+  // ---------------------------------------------------------------------------
+  // Persistência do laudo
+  // ---------------------------------------------------------------------------
   const handleFinalizeInspection = async () => {
+    if (!hasSignature) {
+      toast.warning('Colete a assinatura do cliente para concluir o laudo.');
+      return;
+    }
+    if (customerName.trim().length < 2) {
+      toast.warning('Informe o nome de quem está assinando.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      let signatureBase64 = '';
-      if (canvasRef.current && hasSignature) {
-        signatureBase64 = canvasRef.current.toDataURL('image/png');
-      }
+      const signatureBase64 = canvasRef.current?.toDataURL('image/png') ?? '';
+      const categoryLabel = VEHICLE_CATEGORIES.find((c) => c.id === category)?.label ?? category;
 
-      // 1. Inicia checklist de entrada no backend Fastify
       await api.technician.startWithChecklist(workOrderId, {
-        currentKm: parseInt(currentKm.replace(/\D/g, ''), 10) || 45000,
-        fuelLevel: '1/2',
-        notes: voiceNotes || 'Laudo de inspeção 360° realizado pelo operador.',
+        currentKm: parseKm(currentKm),
+        fuelLevel,
+        notes: notes.trim() || 'Laudo de inspeção 360° realizado pelo operador.',
         checklistItems: [
-          { id: '1', label: 'Documentos e estepe conferidos', checked: true },
-          { id: '2', label: 'Inspeção visual de lataria e vidros', checked: true },
+          { id: 'vistoria_360', label: `Vistoria 360° · 5 ângulos verificados (${categoryLabel})`, checked: true },
+          { id: 'avarias', label: `Avarias registradas: ${points.length}`, checked: true },
+          { id: 'combustivel', label: `Nível de combustível: ${fuelLevel}`, checked: true },
         ],
       });
 
-      // 2. Se houver danos registrados, salva na inspeção
-      try {
-        const inspRes = await api.inspections.getByWorkOrder(workOrderId);
-        const inspId = inspRes?.inspections?.[0]?.id;
-        if (inspId) {
-          for (const dmg of damagePoints) {
-            await api.inspections.addDamagePoint(inspId, {
-              view: dmg.view,
-              damageType: dmg.damageType.toLowerCase(),
-              description: dmg.description,
-              xPercent: dmg.xPercent,
-              yPercent: dmg.yPercent,
-              photoUrl: dmg.photoUrl || undefined,
-            }).catch(() => {});
-          }
-
-          if (signatureBase64) {
-            await api.inspections.sign(inspId, {
-              customerSignatureName: os.customer?.name || 'Cliente',
-              signatureBase64,
-            }).catch(() => {});
-          }
-        }
-      } catch {
-        // Fallback resiliente
+      const inspRes = await api.inspections.getByWorkOrder(workOrderId);
+      const inspectionId: string | undefined = inspRes?.inspections?.[0]?.id;
+      if (!inspectionId) {
+        throw new Error('Inspeção não localizada após iniciar o checklist.');
       }
 
-      toast.success('Laudo de inspeção concluído! Serviço iniciado no cronômetro oficial.');
+      let failed = 0;
+      for (const point of points) {
+        try {
+          let photoFileId: string | undefined;
+          if (point.photoFile) {
+            const uploaded = await api.storage.upload(point.photoFile, {
+              category: 'inspection',
+              entityId: inspectionId,
+            });
+            photoFileId = uploaded?.id;
+          }
+          await api.inspections.addDamagePoint(inspectionId, {
+            part: point.part.trim() || 'lataria',
+            damageType: point.damageType,
+            severity: point.severity,
+            xPercent: point.xPercent,
+            yPercent: point.yPercent,
+            view: getAngleOption(point.angle).apiView,
+            photoFileId,
+            notes: `${getDamageTypeLabel(point.damageType)} ${getSeverityLabel(point.severity).toLowerCase()} · ${point.part} (${getAngleOption(point.angle).label})`,
+          });
+        } catch {
+          failed += 1;
+        }
+      }
+
+      await api.inspections.sign(inspectionId, {
+        customerSignatureName: customerName.trim(),
+        signatureBase64,
+      });
+
+      if (failed > 0) {
+        toast.warning(`Laudo salvo, mas ${failed} avaria(s) não foram registradas. Revise no painel.`);
+      } else {
+        toast.success('Laudo de inspeção concluído! Serviço iniciado no cronômetro oficial.');
+      }
       onComplete();
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao registrar laudo de inspeção.');
+      toast.error(err?.message || 'Erro ao registrar laudo de inspeção.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const currentViewPoints = useMemo(() => {
-    return damagePoints.filter((p) => p.view === activeView);
-  }, [damagePoints, activeView]);
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+  const activeTypeId = selectedPoint?.damageType ?? defaultType;
+  const activeSeverity = selectedPoint?.severity ?? defaultSeverity;
+  const angleIndex = INSPECTION_ANGLES.findIndex((a) => a.id === activeAngle);
 
   return (
-    <div className="min-h-screen bg-[#0E1116] text-[#F2F5F8] font-sans flex flex-col p-4 md:p-6 max-w-md mx-auto">
-      {/* Input oculto para anexar fotos de avarias */}
+    <div className="min-h-screen bg-[#0E1116] text-[#F2F5F8] font-sans flex flex-col px-4 pt-4 pb-6 md:px-6 max-w-md mx-auto">
       <input
         type="file"
         ref={fileInputRef}
@@ -309,417 +483,538 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
         className="hidden"
       />
 
-      {/* 1. Header do Laudo (Fiel ao Rebraind) */}
-      <div className="flex items-center gap-3.5 mb-4">
+      {/* Cabeçalho */}
+      <header className="flex items-center gap-3 mb-4">
         <button
           type="button"
           aria-label="Voltar"
-          onClick={() => {
-            if (step === 2) setStep(1);
-            else onBack();
-          }}
-          className="w-12 h-12 rounded-full border border-[#2E3744] bg-[#171C24] text-[#F2F5F8] text-xl flex items-center justify-center hover:border-[#9AA7B8]/40 transition-colors shrink-0"
+          onClick={() => (step === 2 ? setStep(1) : onBack())}
+          className="w-11 h-11 rounded-full border border-[#2E3744] bg-[#171C24] text-[#F2F5F8] text-xl flex items-center justify-center hover:border-[#9AA7B8]/40 transition-colors duration-150 shrink-0"
         >
           ‹
         </button>
-
         <div className="flex-1 min-w-0">
-          <div className="text-[13px] text-[#9AA7B8] font-medium leading-none mb-1">
+          <div className="text-[12px] text-[#9AA7B8] font-medium leading-none mb-1">
             Laudo de inspeção · etapa {step} de 2
           </div>
-          <div className="font-grotesk text-xl md:text-2xl font-bold text-[#F2F5F8] truncate leading-tight">
+          <div className="font-grotesk text-xl font-bold text-[#F2F5F8] truncate leading-tight">
             {vehicleDesc}
           </div>
         </div>
-
-        <div className="border border-[#2E3744] bg-[#171C24] text-[#F2F5F8] rounded-xl px-3 py-1.5 font-mono text-xs font-bold shrink-0">
+        <div className="border border-[#2E3744] bg-[#171C24] text-[#F2F5F8] rounded-lg px-2.5 py-1.5 font-mono text-xs font-bold shrink-0">
           {vehiclePlate}
         </div>
-      </div>
+      </header>
 
       {step === 1 ? (
         <>
-          {/* 2. Abas de Visão do Carro (Pills) */}
-          <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar py-1">
-            {views.map((v) => {
-              const isActive = activeView === v.id;
-              const countInView = damagePoints.filter((p) => p.view === v.id).length;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => setActiveView(v.id)}
-                  className={`flex-1 min-w-[76px] h-10 rounded-full font-sans text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
-                    isActive
-                      ? 'bg-[#C8F52E] text-[#0E1116] font-bold shadow-md shadow-[#C8F52E]/15'
-                      : 'bg-[#171C24] border border-[#2E3744] text-[#9AA7B8] hover:text-[#F2F5F8]'
-                  }`}
-                >
-                  <span>{v.label}</span>
-                  {countInView > 0 && (
-                    <span
-                      className={`w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center ${
-                        isActive ? 'bg-[#0E1116] text-[#C8F52E]' : 'bg-[#FF9500] text-[#0E1116]'
-                      }`}
-                    >
-                      {countInView}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 3. Card do Diagrama do Carro com Mapeamento Interativo */}
-          <div className="bg-[#131820] border border-[#2E3744] rounded-3xl p-5 relative flex flex-col items-center justify-center min-h-[280px] select-none overflow-hidden">
-            <div
-              onClick={handleCarClick}
-              className="relative w-full h-56 flex items-center justify-center cursor-crosshair touch-manipulation"
-            >
-              {/* Silhueta Vetorial Específica por Ângulo */}
-              {activeView === 'superior' && (
-                <svg
-                  viewBox="0 0 200 320"
-                  className="w-44 h-56 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
-                >
-                  {/* Retrovisores */}
-                  <path d="M22 100 Q15 95 18 85 Q25 80 32 90 Z" fill="#2E3744" stroke="#4B586E" />
-                  <path d="M178 100 Q185 95 182 85 Q175 80 168 90 Z" fill="#2E3744" stroke="#4B586E" />
-                  {/* Rodas laterais */}
-                  <rect x="20" y="55" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
-                  <rect x="168" y="55" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
-                  <rect x="20" y="215" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
-                  <rect x="168" y="215" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
-                  {/* Carroceria principal */}
-                  <path d="M50 25 Q100 15 150 25 Q172 45 170 95 L170 225 Q172 275 150 295 Q100 305 50 295 Q28 275 30 225 L30 95 Q28 45 50 25 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
-                  {/* Capô - vincos */}
-                  <path d="M60 40 L68 85 M140 40 L132 85" stroke="#2E3744" strokeWidth="1.5" />
-                  {/* Para-brisa dianteiro */}
-                  <path d="M52 88 Q100 80 148 88 L142 120 Q100 115 58 120 Z" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
-                  {/* Teto */}
-                  <rect x="56" y="125" width="88" height="65" rx="6" fill="#1C232E" stroke="#3A4657" strokeWidth="1.5" />
-                  {/* Vidros laterais */}
-                  <path d="M42 125 L52 125 L52 190 L42 190 Z M158 125 L148 125 L148 190 L158 190 Z" fill="#0E1116" stroke="#3A4657" />
-                  {/* Para-brisa traseiro */}
-                  <path d="M58 195 Q100 190 142 195 L148 228 Q100 234 52 228 Z" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
-                  {/* Tampa do porta-malas */}
-                  <path d="M62 245 Q100 250 138 245" stroke="#3A4657" strokeWidth="1.5" />
-                </svg>
-              )}
-
-              {activeView === 'frente' && (
-                <svg
-                  viewBox="0 0 280 200"
-                  className="w-56 h-48 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
-                >
-                  {/* Pneus no chão */}
-                  <rect x="36" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
-                  <rect x="214" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
-                  {/* Retrovisores externos */}
-                  <path d="M38 90 Q22 88 20 80 Q22 72 38 75 Z" fill="#1C232E" stroke="#4B586E" />
-                  <path d="M242 90 Q258 88 260 80 Q258 72 242 75 Z" fill="#1C232E" stroke="#4B586E" />
-                  {/* Cabine / Teto e colunas A */}
-                  <path d="M80 35 Q140 30 200 35 L225 90 L55 90 Z" fill="#1C232E" stroke="#4B586E" strokeWidth="2.5" />
-                  {/* Para-brisa com retrovisor interno */}
-                  <path d="M85 42 Q140 38 195 42 L215 85 L65 85 Z" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
-                  <rect x="135" y="44" width="10" height="6" rx="2" fill="#4B586E" />
-                  {/* Carroceria dianteira */}
-                  <path d="M40 90 Q140 85 240 90 L248 140 Q248 165 235 170 Q140 175 45 170 Q32 165 32 140 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
-                  {/* Faróis Dianteiros LED */}
-                  <path d="M45 102 L95 106 L90 120 L42 114 Z" fill="#232A36" stroke="#C8F52E" strokeWidth="2" />
-                  <path d="M235 102 L185 106 L190 120 L238 114 Z" fill="#232A36" stroke="#C8F52E" strokeWidth="2" />
-                  {/* Grade Central do Radiador */}
-                  <rect x="105" y="112" width="70" height="30" rx="6" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
-                  <line x1="105" y1="122" x2="175" y2="122" stroke="#2E3744" strokeWidth="1.5" />
-                  <line x1="105" y1="132" x2="175" y2="132" stroke="#2E3744" strokeWidth="1.5" />
-                  {/* Suporte de Placa */}
-                  <rect x="115" y="148" width="50" height="15" rx="3" fill="#0E1116" stroke="#C8F52E" strokeWidth="1" />
-                  <text x="140" y="159" fill="#C8F52E" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">CARX</text>
-                  {/* Para-choque / Spoilers inferiores */}
-                  <path d="M45 160 L65 172 M235 160 L215 172" stroke="#3A4657" strokeWidth="2" />
-                </svg>
-              )}
-
-              {activeView === 'traseira' && (
-                <svg
-                  viewBox="0 0 280 200"
-                  className="w-56 h-48 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
-                >
-                  {/* Pneus traseiros */}
-                  <rect x="36" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
-                  <rect x="214" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
-                  {/* Retrovisores traseiros (verso) */}
-                  <path d="M38 88 Q22 86 20 80 Q22 74 38 76 Z" fill="#1C232E" stroke="#3A4657" />
-                  <path d="M242 88 Q258 86 260 80 Q258 74 242 76 Z" fill="#1C232E" stroke="#3A4657" />
-                  {/* Teto e colunas traseiras */}
-                  <path d="M80 35 Q140 30 200 35 L225 85 L55 85 Z" fill="#1C232E" stroke="#4B586E" strokeWidth="2.5" />
-                  {/* Vigia / Vidro traseiro com linhas de desembaçador */}
-                  <path d="M85 42 Q140 38 195 42 L215 80 L65 80 Z" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
-                  <line x1="88" y1="55" x2="192" y2="55" stroke="#2E3744" strokeWidth="1" strokeDasharray="3 3" />
-                  <line x1="82" y1="65" x2="198" y2="65" stroke="#2E3744" strokeWidth="1" strokeDasharray="3 3" />
-                  {/* Tampa do porta-malas / Traseira */}
-                  <path d="M42 85 Q140 82 238 85 L248 140 Q248 165 235 170 Q140 175 45 170 Q32 165 32 140 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
-                  {/* Lanternas Traseiras Vermelhas */}
-                  <path d="M42 100 L95 104 L90 120 L40 115 Z" fill="#3D181A" stroke="#EF4444" strokeWidth="2" />
-                  <path d="M238 100 L185 104 L190 120 L240 115 Z" fill="#3D181A" stroke="#EF4444" strokeWidth="2" />
-                  {/* Barra de conexão das lanternas */}
-                  <line x1="95" y1="108" x2="185" y2="108" stroke="#EF4444" strokeWidth="1.5" strokeOpacity="0.7" />
-                  {/* Vinco da placa */}
-                  <rect x="110" y="125" width="60" height="22" rx="4" fill="#0E1116" stroke="#3A4657" strokeWidth="1.5" />
-                  <text x="140" y="139" fill="#F2F5F8" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">{vehiclePlate}</text>
-                  {/* Difusor e Escapamentos */}
-                  <rect x="52" y="162" width="22" height="8" rx="3" fill="#0E1116" stroke="#4B586E" strokeWidth="1.5" />
-                  <rect x="206" y="162" width="22" height="8" rx="3" fill="#0E1116" stroke="#4B586E" strokeWidth="1.5" />
-                </svg>
-              )}
-
-              {activeView === 'laterais' && (
-                <svg
-                  viewBox="0 0 340 160"
-                  className="w-64 h-44 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
-                >
-                  {/* Linha de solo */}
-                  <line x1="10" y1="135" x2="330" y2="135" stroke="#232A36" strokeWidth="2" strokeDasharray="6 4" />
-                  {/* Carroceria lateral */}
-                  <path d="M20 105 Q35 70 85 68 L130 35 Q210 32 235 50 L275 75 Q315 78 322 105 Q325 125 305 125 L275 125 Q270 100 240 100 Q210 100 205 125 L135 125 Q130 100 100 100 Q70 100 65 125 L35 125 Q20 125 20 105 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
-                  {/* Vidros laterais (Cabine) */}
-                  <path d="M135 42 L225 42 Q235 55 255 70 L135 70 Z" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
-                  {/* Coluna B */}
-                  <line x1="190" y1="42" x2="190" y2="70" stroke="#2E3744" strokeWidth="3" />
-                  {/* Retrovisor lateral */}
-                  <path d="M130 65 Q120 60 120 54 Q125 50 135 54 Z" fill="#2E3744" stroke="#4B586E" />
-                  {/* Linhas das Portas */}
-                  <path d="M135 70 L130 115" stroke="#2E3744" strokeWidth="1.5" />
-                  <path d="M190 70 L190 115" stroke="#2E3744" strokeWidth="1.5" />
-                  <path d="M255 70 L248 105" stroke="#2E3744" strokeWidth="1.5" />
-                  {/* Maçanetas táteis */}
-                  <rect x="145" y="76" width="16" height="4" rx="2" fill="#4B586E" />
-                  <rect x="200" y="76" width="16" height="4" rx="2" fill="#4B586E" />
-                  {/* Roda Dianteira */}
-                  <circle cx="100" cy="115" r="22" fill="#171C24" stroke="#232A36" strokeWidth="4" />
-                  <circle cx="100" cy="115" r="14" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
-                  <circle cx="100" cy="115" r="4" fill="#C8F52E" />
-                  {/* Roda Traseira */}
-                  <circle cx="240" cy="115" r="22" fill="#171C24" stroke="#232A36" strokeWidth="4" />
-                  <circle cx="240" cy="115" r="14" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
-                  <circle cx="240" cy="115" r="4" fill="#C8F52E" />
-                  {/* Farol dianteiro & Lanterna traseira */}
-                  <path d="M20 95 L32 90 L32 100 Z" fill="#C8F52E" opacity="0.8" />
-                  <path d="M320 92 L310 88 L312 98 Z" fill="#EF4444" opacity="0.8" />
-                </svg>
-              )}
-
-              {/* Pinos Numerados Interativos */}
-              {currentViewPoints.map((p) => (
+          {/* Progresso da vistoria */}
+          <section className="mb-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold tracking-[2px] text-[#9AA7B8] uppercase">
+                Vistoria 360°
+              </span>
+              <span className="text-[11px] font-semibold text-[#F2F5F8] tabular-nums">
+                {visitedAngles.size}/{INSPECTION_ANGLES.length} ângulos
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {INSPECTION_ANGLES.map((a) => (
                 <div
-                  key={p.id}
-                  style={{ left: `${p.xPercent}%`, top: `${p.yPercent}%` }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-[#FF9500] text-[#0E1116] font-bold text-xs flex items-center justify-center shadow-lg border-2 border-[#131820] pointer-events-none animate-scaleUp"
-                >
-                  {p.number}
-                </div>
+                  key={a.id}
+                  className={`h-1 rounded-full transition-colors duration-200 ${
+                    a.id === activeAngle
+                      ? 'bg-[#C8F52E]'
+                      : visitedAngles.has(a.id)
+                        ? 'bg-[#C8F52E]/45'
+                        : 'bg-[#2E3744]'
+                  }`}
+                />
               ))}
             </div>
+          </section>
 
-            <div className="text-[12px] text-[#9AA7B8] text-center font-medium mt-1">
-              {activeView === 'superior' && 'Toque no capô, teto ou porta-malas para marcar a avaria'}
-              {activeView === 'frente' && 'Toque no para-choque, grade, capô ou faróis'}
-              {activeView === 'traseira' && 'Toque na tampa, lanternas ou para-choque traseiro'}
-              {activeView === 'laterais' && 'Toque nas portas, para-lamas ou caixas de roda'}
+          {/* Categoria do veículo */}
+          <section className="mb-3">
+            <div className="grid grid-cols-5 gap-1 rounded-xl border border-[#2E3744] bg-[#171C24] p-1">
+              {VEHICLE_CATEGORIES.map((c) => {
+                const isActive = c.id === category;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => handleCategoryChange(c.id)}
+                    className={`h-8 rounded-lg text-[12px] font-semibold transition-colors duration-150 ${
+                      isActive
+                        ? 'bg-[#F2F5F8] text-[#0E1116]'
+                        : 'text-[#9AA7B8] hover:text-[#F2F5F8]'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
             </div>
-          </div>
+          </section>
 
-          {/* 4. Tipos de Avaria (Pills de Seleção) */}
-          <div className="flex gap-2 my-3">
-            {damageTypeOptions.map((type) => {
-              const isSelected = selectedDamageType === type;
+          {/* Palco de estúdio */}
+          <VehicleStage
+            category={category}
+            angle={activeAngle}
+            pins={stagePins}
+            selectedPinId={selectedId}
+            onTap={handleStageTap}
+            onSelectPin={setSelectedId}
+            onPrev={() => shiftAngle(-1)}
+            onNext={() => shiftAngle(1)}
+          />
+
+          {/* Filmstrip de ângulos */}
+          <nav className="mt-3 -mx-4 px-4 flex gap-2 overflow-x-auto no-scrollbar pb-1" aria-label="Ângulos da vistoria">
+            {INSPECTION_ANGLES.map((a, idx) => {
+              const isActive = a.id === activeAngle;
+              const count = points.filter((p) => p.angle === a.id).length;
+              const visited = visitedAngles.has(a.id);
               return (
                 <button
-                  key={type}
+                  key={a.id}
                   type="button"
-                  onClick={() => setSelectedDamageType(type)}
-                  className={`flex-1 h-11 rounded-2xl font-sans text-xs font-semibold transition-all ${
-                    isSelected
-                      ? 'border-2 border-[#FF9500] text-[#FF9500] bg-[#171C24] font-bold shadow-sm'
-                      : 'border border-[#2E3744] bg-[#171C24] text-[#F2F5F8] hover:border-[#9AA7B8]/40'
+                  onClick={() => {
+                    setSelectedId(null);
+                    goToAngle(a.id);
+                  }}
+                  className={`relative shrink-0 w-[78px] rounded-xl border p-1 text-left transition-colors duration-150 ${
+                    isActive
+                      ? 'border-[#C8F52E] bg-[#171C24]'
+                      : 'border-[#2E3744] bg-[#131820] hover:border-[#9AA7B8]/40'
                   }`}
                 >
-                  {type}
+                  <div
+                    className="relative h-12 w-full overflow-hidden rounded-lg"
+                    style={{ background: 'radial-gradient(circle at 50% 40%, #FFFFFF, #DCE1E7)' }}
+                  >
+                    <img
+                      src={getAngleImage(category, a.id)}
+                      alt=""
+                      draggable={false}
+                      className="h-full w-full object-contain mix-blend-multiply"
+                      onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                    />
+                    {count > 0 && (
+                      <span className="absolute right-1 top-1 min-w-4 h-4 px-1 rounded-full bg-[#FF9500] text-[#0E1116] text-[9px] font-bold flex items-center justify-center tabular-nums">
+                        {count}
+                      </span>
+                    )}
+                    {visited && !isActive && count === 0 && (
+                      <span className="absolute right-1 top-1 h-4 w-4 rounded-full bg-[#0E1116] text-[#C8F52E] flex items-center justify-center">
+                        <Check size={10} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className={`mt-1 px-0.5 text-[10px] font-semibold truncate ${
+                      isActive ? 'text-[#F2F5F8]' : 'text-[#9AA7B8]'
+                    }`}
+                  >
+                    {idx + 1}. {a.shortLabel}
+                  </div>
                 </button>
               );
             })}
-          </div>
+          </nav>
 
-          {/* 5. Lista de AVARIAS REGISTRADAS */}
-          <div className="space-y-2.5 flex-1 mb-4">
-            <div className="text-[11px] font-bold tracking-[2px] text-[#9AA7B8] uppercase px-1">
-              AVARIAS REGISTRADAS · {damagePoints.length}
+          {/* Painel de avaria (edita a selecionada ou define o padrão das próximas) */}
+          <section className="mt-3 rounded-xl border border-[#2E3744] bg-[#171C24] p-3">
+            <div className="flex items-center justify-between mb-2.5">
+              {selectedPoint ? (
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className={`h-6 w-6 shrink-0 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                      selectedPoint.severity === 'high'
+                        ? 'bg-[#FF453A] text-white'
+                        : 'bg-[#FF9500] text-[#0E1116]'
+                    }`}
+                  >
+                    {numberById.get(selectedPoint.id)}
+                  </span>
+                  <span className="text-[13px] font-semibold text-[#F2F5F8] truncate">
+                    Editando avaria
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[10px] font-bold tracking-[2px] text-[#9AA7B8] uppercase">
+                  Próxima marcação
+                </span>
+              )}
+              {selectedPoint && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(null)}
+                  className="h-7 px-2 rounded-md text-[11px] font-semibold text-[#9AA7B8] hover:text-[#F2F5F8] flex items-center gap-1 transition-colors duration-150"
+                >
+                  <X size={13} /> Fechar
+                </button>
+              )}
             </div>
 
-            {damagePoints.length === 0 ? (
-              <div className="p-4 bg-[#171C24] rounded-2xl border border-[#2E3744] text-center text-xs text-[#9AA7B8]">
-                Nenhuma avaria apontada. O veículo está íntegro neste ângulo.
+            <div className="grid grid-cols-3 gap-1.5">
+              {DAMAGE_TYPES.map((t) => {
+                const isActive = activeTypeId === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleSelectType(t.id)}
+                    className={`h-9 rounded-lg text-[12px] font-semibold border transition-colors duration-150 ${
+                      isActive
+                        ? 'border-[#FF9500] text-[#FF9500] bg-[#FF9500]/10'
+                        : 'border-[#2E3744] text-[#F2F5F8] bg-[#131820] hover:border-[#9AA7B8]/40'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-[#131820] border border-[#2E3744] p-1">
+              {DAMAGE_SEVERITIES.map((s) => {
+                const isActive = activeSeverity === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => handleSelectSeverity(s.id)}
+                    className={`h-7 rounded-md text-[11px] font-semibold transition-colors duration-150 ${
+                      isActive
+                        ? s.id === 'high'
+                          ? 'bg-[#FF453A] text-white'
+                          : 'bg-[#2E3744] text-[#F2F5F8]'
+                        : 'text-[#9AA7B8] hover:text-[#F2F5F8]'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedPoint && (
+              <div className="mt-2.5 space-y-2">
+                <label className="block">
+                  <span className="text-[10px] font-bold tracking-[1.5px] text-[#9AA7B8] uppercase">
+                    Peça / região
+                  </span>
+                  <input
+                    type="text"
+                    value={selectedPoint.part}
+                    maxLength={80}
+                    onChange={(e) => updatePoint(selectedPoint.id, { part: e.target.value })}
+                    className="mt-1 w-full h-10 rounded-lg bg-[#131820] border border-[#2E3744] px-3 text-sm text-[#F2F5F8] outline-none focus:border-[#C8F52E]/60 transition-colors duration-150"
+                  />
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => requestPhoto(selectedPoint.id)}
+                    className="flex-1 h-10 rounded-lg bg-[#131820] border border-[#2E3744] text-[12px] font-semibold text-[#F2F5F8] flex items-center justify-center gap-1.5 hover:border-[#9AA7B8]/40 transition-colors duration-150"
+                  >
+                    {selectedPoint.photoPreview ? (
+                      <>
+                        <img src={selectedPoint.photoPreview} alt="" className="h-6 w-6 rounded object-cover" />
+                        Trocar foto
+                      </>
+                    ) : (
+                      <>
+                        <Camera size={15} className="text-[#C8F52E]" /> Foto de evidência
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Excluir avaria"
+                    onClick={() => handleRemovePoint(selectedPoint.id)}
+                    className="h-10 w-10 rounded-lg bg-[#131820] border border-[#2E3744] text-[#9AA7B8] hover:text-[#FF6B5E] hover:border-[#FF6B5E]/40 flex items-center justify-center transition-colors duration-150"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!selectedPoint && (
+              <p className="mt-2 text-[11px] text-[#9AA7B8]">
+                Toque sobre a carroceria no render para registrar. Arraste para os lados para trocar de ângulo.
+              </p>
+            )}
+          </section>
+
+          {/* Avarias registradas */}
+          <section className="mt-4 space-y-2">
+            <div className="text-[10px] font-bold tracking-[2px] text-[#9AA7B8] uppercase px-0.5">
+              Avarias registradas · {points.length}
+            </div>
+            {points.length === 0 ? (
+              <div className="p-3.5 bg-[#131820] rounded-xl border border-dashed border-[#2E3744] text-center text-xs text-[#9AA7B8]">
+                Nenhuma avaria apontada até agora.
               </div>
             ) : (
-              damagePoints.map((p) => (
-                <div
-                  key={p.id}
-                  className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-3 flex items-center justify-between gap-3 animate-fadeIn"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-[#FF9500] text-[#0E1116] font-bold text-xs flex items-center justify-center shrink-0">
-                      {p.number}
-                    </div>
-                    <div className="text-xs font-semibold text-[#F2F5F8] truncate">
-                      {p.description}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {p.photoUrl ? (
-                      <span className="text-[#C8F52E] font-bold text-xs flex items-center gap-1">
-                        Foto ✓
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setActivePhotoPointId(p.id);
-                          fileInputRef.current?.click();
-                        }}
-                        className="px-2.5 py-1 rounded-xl bg-[#232A35] hover:bg-[#2E3744] text-xs font-semibold text-[#9AA7B8] hover:text-[#F2F5F8] flex items-center gap-1"
-                      >
-                        <Camera size={13} /> + Foto
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      aria-label="Excluir avaria"
-                      onClick={() => handleRemovePoint(p.id)}
-                      className="p-1.5 text-[#9AA7B8] hover:text-[#FF6B5E] transition-colors"
+              points.map((p) => {
+                const isSelected = p.id === selectedId;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleFocusPoint(p)}
+                    className={`w-full text-left bg-[#171C24] border rounded-xl p-2.5 flex items-center gap-2.5 transition-colors duration-150 ${
+                      isSelected ? 'border-[#C8F52E]/60' : 'border-[#2E3744] hover:border-[#9AA7B8]/40'
+                    }`}
+                  >
+                    <span
+                      className={`h-7 w-7 shrink-0 rounded-full text-xs font-bold flex items-center justify-center ${
+                        p.severity === 'high' ? 'bg-[#FF453A] text-white' : 'bg-[#FF9500] text-[#0E1116]'
+                      }`}
                     >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                      {numberById.get(p.id)}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[13px] font-semibold text-[#F2F5F8] truncate">
+                        {getDamageTypeLabel(p.damageType)} · {p.part}
+                      </span>
+                      <span className="block text-[11px] text-[#9AA7B8] truncate">
+                        {getAngleOption(p.angle).label} · {getSeverityLabel(p.severity)}
+                      </span>
+                    </span>
+                    {p.photoPreview ? (
+                      <img src={p.photoPreview} alt="Evidência" className="h-9 w-9 rounded-md object-cover border border-[#2E3744] shrink-0" />
+                    ) : (
+                      <span className="h-9 w-9 rounded-md border border-dashed border-[#2E3744] text-[#9AA7B8] flex items-center justify-center shrink-0">
+                        <Camera size={14} />
+                      </span>
+                    )}
+                  </button>
+                );
+              })
             )}
-          </div>
+          </section>
 
-          {/* 6. Rodapé com KM, Relato por Voz e Botão Avançar */}
-          <div className="pt-2 border-t border-[#2E3744] space-y-3 shrink-0">
-            <div className="flex gap-2.5">
-              {/* Input Km atual */}
-              <div className="flex-1 bg-[#171C24] border border-[#2E3744] rounded-2xl px-3.5 py-2.5 flex items-center justify-between">
-                <span className="text-xs text-[#9AA7B8] font-medium">Km atual</span>
+          {/* Dados de entrada */}
+          <section className="mt-4 pt-4 border-t border-[#2E3744] space-y-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <label className="bg-[#171C24] border border-[#2E3744] rounded-xl px-3 py-2 focus-within:border-[#C8F52E]/60 transition-colors duration-150">
+                <span className="flex items-center gap-1 text-[10px] font-bold tracking-[1.5px] text-[#9AA7B8] uppercase">
+                  <Gauge size={12} /> Km atual
+                </span>
                 <input
+                  ref={kmInputRef}
                   type="text"
+                  inputMode="numeric"
                   value={currentKm}
-                  onChange={(e) => setCurrentKm(e.target.value)}
-                  className="w-24 text-right bg-transparent text-sm font-bold text-[#F2F5F8] outline-none font-mono"
-                  placeholder="45.000"
+                  onChange={(e) => setCurrentKm(formatKm(e.target.value))}
+                  placeholder="0"
+                  className="mt-0.5 w-full bg-transparent text-base font-bold text-[#F2F5F8] outline-none font-mono tabular-nums"
                 />
-              </div>
-
-              {/* Botão Relato por voz */}
+              </label>
               <button
                 type="button"
                 onClick={handleToggleVoice}
-                className={`flex-1 bg-[#171C24] border rounded-2xl px-3.5 py-2.5 flex items-center justify-center gap-2 text-xs font-semibold transition-all ${
+                className={`bg-[#171C24] border rounded-xl px-3 py-2 flex items-center justify-center gap-2 text-[12px] font-semibold transition-colors duration-150 ${
                   isRecordingVoice
                     ? 'border-[#FF6B5E] text-[#FF6B5E] animate-pulse'
                     : 'border-[#2E3744] text-[#F2F5F8] hover:border-[#9AA7B8]/40'
                 }`}
               >
                 {isRecordingVoice ? <MicOff size={15} /> : <Mic size={15} className="text-[#C8F52E]" />}
-                <span>{isRecordingVoice ? 'Gravando...' : 'Relato por voz'}</span>
+                {isRecordingVoice ? 'Ouvindo...' : 'Relato por voz'}
               </button>
             </div>
 
-            {voiceNotes && (
-              <div className="text-[11px] text-[#9AA7B8] bg-[#171C24] p-2.5 rounded-xl border border-[#2E3744]">
-                <strong className="text-[#F2F5F8]">Relato gravado:</strong> {voiceNotes}
+            <div className="bg-[#171C24] border border-[#2E3744] rounded-xl px-3 py-2">
+              <span className="flex items-center gap-1 text-[10px] font-bold tracking-[1.5px] text-[#9AA7B8] uppercase mb-1.5">
+                <Fuel size={12} /> Combustível
+              </span>
+              <div className="grid grid-cols-5 gap-1">
+                {FUEL_LEVELS.map((level, idx) => {
+                  const activeIdx = FUEL_LEVELS.indexOf(fuelLevel);
+                  const filled = idx <= activeIdx;
+                  return (
+                    <button
+                      key={level}
+                      type="button"
+                      onClick={() => setFuelLevel(level)}
+                      className="flex flex-col items-center gap-1"
+                      aria-pressed={fuelLevel === level}
+                    >
+                      <span
+                        className={`h-2 w-full rounded-sm transition-colors duration-150 ${
+                          filled ? (activeIdx === 0 ? 'bg-[#FF9500]' : 'bg-[#C8F52E]') : 'bg-[#2E3744]'
+                        }`}
+                      />
+                      <span
+                        className={`text-[10px] font-semibold ${
+                          fuelLevel === level ? 'text-[#F2F5F8]' : 'text-[#9AA7B8]'
+                        }`}
+                      >
+                        {level}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
-            {/* Botão Principal Verde Volt */}
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              maxLength={1000}
+              placeholder="Observações técnicas (objetos no veículo, queixas do cliente...)"
+              className="w-full resize-none rounded-xl bg-[#171C24] border border-[#2E3744] px-3 py-2.5 text-[13px] text-[#F2F5F8] placeholder:text-[#9AA7B8]/70 outline-none focus:border-[#C8F52E]/60 transition-colors duration-150"
+            />
+
             <button
               type="button"
-              onClick={() => setStep(2)}
-              className="w-full h-14 rounded-2xl bg-[#C8F52E] text-[#0E1116] font-sans font-bold text-base flex items-center justify-center gap-2 hover:bg-[#b8e520] transition-all shadow-lg shadow-[#C8F52E]/15 active:scale-[0.99]"
+              onClick={handlePrimaryAction}
+              className="w-full h-14 rounded-xl bg-[#C8F52E] text-[#0E1116] font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#b8e520] transition-colors duration-150 active:scale-[0.99]"
             >
-              Próximo: assinatura do cliente
+              {allAnglesVisited ? (
+                <>Próximo: assinatura do cliente</>
+              ) : (
+                <>
+                  Próximo ângulo: {nextUnvisited?.label}
+                  <ChevronRight size={18} />
+                </>
+              )}
             </button>
-          </div>
+            {!allAnglesVisited && (
+              <p className="text-center text-[11px] text-[#9AA7B8]">
+                Verifique os 5 ângulos para liberar a assinatura · ângulo {angleIndex + 1} de {INSPECTION_ANGLES.length}
+              </p>
+            )}
+          </section>
         </>
       ) : (
-        /* ETAPA 2: ASSINATURA DIGITAL DO CLIENTE */
-        <div className="flex-1 flex flex-col justify-between space-y-4">
-          <div className="space-y-4">
-            <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-4 space-y-2">
-              <div className="flex items-center gap-2 text-[#C8F52E] text-xs font-bold uppercase tracking-wider">
-                <ShieldCheck size={16} /> Termo de Entrada de Veículo
-              </div>
-              <p className="text-xs text-[#9AA7B8] leading-relaxed">
-                Declaro para os devidos fins que o veículo foi entregue à oficina com{' '}
-                <strong className="text-[#F2F5F8]">{damagePoints.length} avaria(s)</strong> apontada(s)
-                na vistoria e com quilometragem <strong className="text-[#F2F5F8]">{currentKm} km</strong>.
-              </p>
+        /* ETAPA 2 — Resumo, termo e assinatura */
+        <div className="flex-1 flex flex-col gap-4">
+          <section className="rounded-xl border border-[#2E3744] bg-[#171C24] p-3">
+            <div className="text-[10px] font-bold tracking-[2px] text-[#9AA7B8] uppercase mb-2">
+              Resumo da vistoria
             </div>
-
-            <div className="space-y-2">
-              <div className="text-[11px] font-bold tracking-[1.5px] text-[#9AA7B8] uppercase">
-                Assinatura do Cliente no Quadro Abaixo
-              </div>
-              <div className="bg-[#171C24] border-2 border-dashed border-[#2E3744] rounded-2xl h-52 relative overflow-hidden flex items-center justify-center">
-                <canvas
-                  ref={canvasRef}
-                  width={380}
-                  height={208}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                  className="w-full h-full cursor-crosshair touch-none"
-                />
-                {!hasSignature && (
-                  <div className="absolute pointer-events-none text-xs text-[#9AA7B8]/60 uppercase tracking-widest font-bold">
-                    Toque ou use o dedo para assinar
+            <div className="grid grid-cols-5 gap-1.5">
+              {INSPECTION_ANGLES.map((a) => {
+                const count = points.filter((p) => p.angle === a.id).length;
+                return (
+                  <div key={a.id} className="text-center">
+                    <div
+                      className="relative h-11 rounded-md overflow-hidden"
+                      style={{ background: 'radial-gradient(circle at 50% 40%, #FFFFFF, #DCE1E7)' }}
+                    >
+                      <img
+                        src={getAngleImage(category, a.id)}
+                        alt=""
+                        className="h-full w-full object-contain mix-blend-multiply"
+                        onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                      />
+                      {count > 0 && (
+                        <span className="absolute right-0.5 top-0.5 min-w-4 h-4 px-1 rounded-full bg-[#FF9500] text-[#0E1116] text-[9px] font-bold flex items-center justify-center">
+                          {count}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 text-[9px] font-semibold text-[#9AA7B8] truncate">{a.shortLabel}</div>
                   </div>
-                )}
+                );
+              })}
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-lg bg-[#131820] border border-[#2E3744] py-2">
+                <div className="font-grotesk text-lg font-bold tabular-nums">{points.length}</div>
+                <div className="text-[10px] text-[#9AA7B8]">Avarias</div>
               </div>
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleClearSignature}
-                  className="text-xs text-[#9AA7B8] hover:text-[#FF6B5E] underline font-medium"
-                >
-                  Limpar assinatura
-                </button>
+              <div className="rounded-lg bg-[#131820] border border-[#2E3744] py-2">
+                <div className="font-grotesk text-lg font-bold tabular-nums">{currentKm || '—'}</div>
+                <div className="text-[10px] text-[#9AA7B8]">Km</div>
+              </div>
+              <div className="rounded-lg bg-[#131820] border border-[#2E3744] py-2">
+                <div className="font-grotesk text-lg font-bold">{fuelLevel}</div>
+                <div className="text-[10px] text-[#9AA7B8]">Combustível</div>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="space-y-3 pt-4 border-t border-[#2E3744]">
+          <section className="rounded-xl border border-[#2E3744] bg-[#171C24] p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[#C8F52E] text-[11px] font-bold uppercase tracking-wider">
+              <ShieldCheck size={15} /> Termo de entrada do veículo
+            </div>
+            <p className="text-xs text-[#9AA7B8] leading-relaxed">
+              Declaro que o veículo <strong className="text-[#F2F5F8]">{vehicleDesc}</strong> (placa{' '}
+              <strong className="text-[#F2F5F8]">{vehiclePlate}</strong>) foi entregue à oficina com{' '}
+              <strong className="text-[#F2F5F8]">{points.length} avaria(s)</strong> apontada(s) na vistoria
+              360°, quilometragem de <strong className="text-[#F2F5F8]">{currentKm} km</strong> e combustível em{' '}
+              <strong className="text-[#F2F5F8]">{fuelLevel}</strong>.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <label className="block">
+              <span className="text-[10px] font-bold tracking-[1.5px] text-[#9AA7B8] uppercase">
+                Nome de quem assina
+              </span>
+              <input
+                type="text"
+                value={customerName}
+                maxLength={120}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Nome completo do cliente"
+                className="mt-1 w-full h-11 rounded-xl bg-[#171C24] border border-[#2E3744] px-3 text-sm text-[#F2F5F8] outline-none focus:border-[#C8F52E]/60 transition-colors duration-150"
+              />
+            </label>
+
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold tracking-[1.5px] text-[#9AA7B8] uppercase">
+                Assinatura do cliente
+              </span>
+              <button
+                type="button"
+                onClick={prepareCanvas}
+                className="text-[11px] font-semibold text-[#9AA7B8] hover:text-[#FF6B5E] flex items-center gap-1 transition-colors duration-150"
+              >
+                <Eraser size={13} /> Limpar
+              </button>
+            </div>
+            <div className="relative h-48 rounded-xl overflow-hidden border border-[#2E3744] bg-white">
+              <canvas
+                ref={canvasRef}
+                onPointerDown={handleSignStart}
+                onPointerMove={handleSignMove}
+                onPointerUp={handleSignEnd}
+                onPointerCancel={handleSignEnd}
+                className="absolute inset-0 h-full w-full cursor-crosshair touch-none"
+              />
+              <div className="pointer-events-none absolute inset-x-6 bottom-9 border-b border-dashed border-[#C3CAD3]" />
+              {!hasSignature && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] text-[#9AA7B8] uppercase tracking-widest font-bold">
+                  Assine com o dedo
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="mt-auto space-y-2 pt-2">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={handleFinalizeInspection}
-              className="w-full h-14 rounded-2xl bg-[#C8F52E] text-[#0E1116] font-sans font-bold text-base flex items-center justify-center gap-2 hover:bg-[#b8e520] transition-all shadow-lg shadow-[#C8F52E]/15 disabled:opacity-60"
+              className="w-full h-14 rounded-xl bg-[#C8F52E] text-[#0E1116] font-bold text-[15px] flex items-center justify-center gap-2 hover:bg-[#b8e520] transition-colors duration-150 disabled:opacity-60"
             >
-              {isSubmitting ? 'Salvando Laudo...' : 'Confirmar e Iniciar Serviço'}
+              {isSubmitting ? 'Salvando laudo...' : 'Confirmar e iniciar serviço'}
             </button>
-
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="w-full h-12 rounded-2xl bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] font-sans font-semibold text-sm hover:border-[#9AA7B8]/40 transition-all"
+              className="w-full h-12 rounded-xl bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] font-semibold text-sm hover:border-[#9AA7B8]/40 transition-colors duration-150"
             >
-              Voltar para Vistoria
+              Voltar para a vistoria
             </button>
           </div>
         </div>
@@ -727,4 +1022,5 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
     </div>
   );
 };
+
 export default OperadorLaudoInspecao;

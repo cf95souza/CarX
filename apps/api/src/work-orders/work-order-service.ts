@@ -64,15 +64,12 @@ export class WorkOrderService {
   private getProgressByStatus(status: WorkOrderStatusType, currentProgress = 0): number {
     switch (status) {
       case WorkOrderStatus.QUOTE:
-        return 0;
       case WorkOrderStatus.APPROVED:
-        return 10;
       case WorkOrderStatus.SCHEDULED:
-        return 20;
       case WorkOrderStatus.CHECKED_IN:
-        return 30;
+        return 0;
       case WorkOrderStatus.IN_PROGRESS:
-        return Math.max(50, currentProgress);
+        return Math.max(10, currentProgress);
       case WorkOrderStatus.PAUSED:
         return currentProgress;
       case WorkOrderStatus.QA:
@@ -1570,6 +1567,145 @@ export class WorkOrderService {
     return {
       success: true,
       message: 'Orçamento cancelado conforme sua solicitação.',
+    };
+  }
+
+  /**
+   * Consulta pública de dados do Monitor TV da oficina por slug (Sem necessidade de autenticação)
+   */
+  async getPublicTvData(slug: string): Promise<any> {
+    const cleanSlug = (slug || '').trim().toLowerCase();
+
+    // 1. Buscar tenant e branding pelo slug
+    const tenantRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        t.id, t.slug, t.trade_name AS "tradeName",
+        tb.logo_url AS "logoUrl",
+        tb.primary_color AS "primaryColor",
+        tb.secondary_color AS "secondaryColor"
+      FROM tenants t
+      LEFT JOIN tenant_branding tb ON tb.tenant_id = t.id
+      WHERE LOWER(t.slug) = $1 AND t.status IN ('active', 'trialing')
+      LIMIT 1;
+      `,
+      [cleanSlug],
+      { bypassRls: true }
+    );
+
+    if (tenantRes.rows.length === 0) {
+      throw new WorkOrderNotFoundError('Oficina não encontrada para exibição da TV.', 404);
+    }
+
+    const tenant = tenantRes.rows[0];
+
+    // 2. Buscar ordens de serviço em produção do tenant (CHECKED_IN, IN_PROGRESS, QA, READY)
+    const ordersRes = await tenantQuery<any>(
+      null,
+      `
+      SELECT 
+        wo.id,
+        wo.os_number AS "osNumber",
+        wo.status,
+        wo.progress,
+        wo.is_rework AS "isRework",
+        wo.started_at AS "startedAt",
+        wo.scheduled_at AS "scheduledAt",
+        wo.estimated_minutes AS "estimatedMinutes",
+        wo.updated_at AS "updatedAt",
+        v.plate AS "vehiclePlate",
+        v.brand AS "vehicleBrand",
+        v.model AS "vehicleModel",
+        v.color AS "vehicleColor",
+        v.size_class AS "vehicleSizeClass",
+        c.name AS "customerName",
+        u.name AS "technicianName"
+      FROM work_orders wo
+      JOIN vehicles v ON v.id = wo.vehicle_id
+      LEFT JOIN customers c ON c.id = wo.customer_id
+      LEFT JOIN users u ON u.id = wo.technician_id
+      WHERE wo.tenant_id = $1
+        AND wo.status IN ('CHECKED_IN', 'IN_PROGRESS', 'QA', 'READY')
+      ORDER BY 
+        CASE WHEN wo.is_rework = true THEN 0 ELSE 1 END,
+        CASE wo.status 
+          WHEN 'IN_PROGRESS' THEN 1
+          WHEN 'QA' THEN 2
+          WHEN 'CHECKED_IN' THEN 3
+          WHEN 'READY' THEN 4
+          ELSE 5
+        END,
+        wo.updated_at DESC
+      LIMIT 50;
+      `,
+      [tenant.id],
+      { bypassRls: true }
+    );
+
+    // Buscar os serviços de cada ordem
+    const orderIds = ordersRes.rows.map((r: any) => r.id);
+    const itemsByOrder: Record<string, string[]> = {};
+
+    if (orderIds.length > 0) {
+      const itemsRes = await tenantQuery<any>(
+        null,
+        `
+        SELECT work_order_id AS "workOrderId", name
+        FROM work_order_items
+        WHERE work_order_id = ANY($1)
+        ORDER BY custom_order ASC, created_at ASC;
+        `,
+        [orderIds],
+        { bypassRls: true }
+      );
+
+      for (const item of itemsRes.rows) {
+        if (!itemsByOrder[item.workOrderId]) {
+          itemsByOrder[item.workOrderId] = [];
+        }
+        itemsByOrder[item.workOrderId].push(item.name);
+      }
+    }
+
+    const workOrders = ordersRes.rows.map((row: any) => ({
+      id: row.id,
+      os_number: row.osNumber,
+      status: row.status,
+      progress: row.progress || 0,
+      is_rework: Boolean(row.isRework),
+      started_at: row.startedAt,
+      scheduled_at: row.scheduledAt,
+      estimated_minutes: row.estimatedMinutes,
+      vehicle: {
+        plate: row.vehiclePlate,
+        brand: row.vehicleBrand,
+        model: row.vehicleModel,
+        color: row.vehicleColor,
+        size: row.vehicleSizeClass,
+      },
+      customer: {
+        name: row.customerName,
+      },
+      technician: row.technicianName ? { name: row.technicianName } : null,
+      services: itemsByOrder[row.id] || [],
+    }));
+
+    return {
+      tenant: {
+        id: tenant.id,
+        slug: tenant.slug,
+        name: tenant.tradeName,
+        trade_name: tenant.tradeName,
+        logoUrl: tenant.logoUrl,
+        logo_url: tenant.logoUrl,
+        youtubeId: null,
+        youtube_id: null,
+        primaryColor: tenant.primaryColor || '#E63946',
+        secondaryColor: tenant.secondaryColor || '#1D3557',
+        monitorBgColor: '#0E1116',
+      },
+      workOrders,
     };
   }
 

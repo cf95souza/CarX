@@ -50,10 +50,17 @@ export const NovaOrdemServico: React.FC = () => {
       try {
         const res = await api.vehicles.lookupPlate(clean);
 
-        // Se a placa for nova ou não encontrada, não forçar valores estáticos ("Veículo" / "Prata")
+        // Se a placa for nova ou não encontrada, limpa campos e não força valores estáticos
         if (res.source === 'not_found' || (!res.brand && !res.model)) {
-          setPlateBadgeText('Nova placa / Digite os dados');
+          setPlateBadgeText('Placa livre / Digite os dados');
           setPlateBadgeColor('neutral');
+          setVehicle((prev) => ({
+            ...prev,
+            plate: clean,
+            brand: '',
+            model: '',
+            color: '',
+          }));
           return;
         }
 

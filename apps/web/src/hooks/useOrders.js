@@ -77,15 +77,17 @@ function normalizeOrder(wo) {
     notes: wo.notes || wo.observacoes || '',
     has_checklist: Boolean(wo.hasChecklist || wo.has_checklist),
     progresso:
-      wo.status === 'DELIVERED'
+      wo.progress !== undefined && wo.progress !== null
+        ? Number(wo.progress)
+        : wo.status === 'DELIVERED'
         ? 100
-        : wo.status === 'COMPLETED'
-        ? 90
+        : wo.status === 'COMPLETED' || wo.status === 'READY'
+        ? 95
+        : wo.status === 'QA'
+        ? 85
         : wo.status === 'IN_PROGRESS'
         ? 50
-        : wo.status === 'CHECKED_IN'
-        ? 25
-        : 10,
+        : 0,
     historico_pagamentos: wo.historico_pagamentos || [],
   };
 }
