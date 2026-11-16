@@ -4463,3 +4463,30 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
       - Aba de Histórico em `App.jsx` e página `Profile.jsx` migradas para o tema escuro Rebraind (`#0E1116`, `#171C24`, `#2E3744`), eliminando qualquer fundo branco destoante.
   14. **Bateria de Testes Visuais Automatizados (Playwright)**:
       - Validada a jornada do Operador e Gestor via script headless em viewport mobile e desktop com captura de evidências visuais em PNG.
+
+
+---
+
+### T8.2c — Refinamentos de Integração, Inspeção e Homologação VPS (Itens 30 a 37) `[CONCLUÍDO]`
+- **Escopo e Entregas Homologadas**:
+  1. **Item 30 — APIs & Webhooks Reais no Cockpit do Gestor**:
+     - Client `api.integrations` no frontend conectado ao Fastify (`/integrations/api-keys`, `/integrations/webhooks`).
+     - Gestão completa de Chaves Secretas (`carx_live_...`) com criptografia SHA-256 no banco e escopos RLS restritos.
+     - Swagger & Docs interativo integrado (`/v1/docs`) com snippets em cURL, JavaScript e Python e testador de rotas ao vivo.
+     - Cadastro e disparo assinado de Webhooks em tempo real com validação HMAC.
+  2. **Item 31 — Silhuetas Gráficas Vetoriais do Veículo por Ângulo no Laudo (`OperadorLaudoInspecao.tsx`)**:
+     - Quatro silhuetas detalhadas em SVG escuro (#171C24 / #2E3744) para as vistas *Superior*, *Frente*, *Traseira* e *Laterais*.
+     - Mapeamento tátil por ângulo com pinos numerados em laranja neon (#FF9500) e registro de avarias específicas.
+  3. **Item 32 — Redução de Bordas e Compactação Client-Side de Fotos (`PhotoGuideGallery.jsx` / `imageCompressor.ts`)**:
+     - Radios proporcionais `rounded-xl` e `rounded-2xl` no padrão CarX Dark.
+     - Rotina em Canvas/WebP que redimensiona fotos client-side para max 1280px e 80% de qualidade (~150KB–300KB), evitando sobrecarga de storage no MinIO e na VPS.
+  4. **Item 33 — Persistência e Sincronização do Cronômetro Oficial**:
+     - `ExecutorView.tsx` atualizado para priorizar o estado oficial `timerData` retornado pelo Fastify sobre o IndexedDB, prevenindo congelamento ou regressão de tempo ao recarregar a tela.
+  5. **Item 34 — Liberação de Acesso ao Ranking de Técnicos (`GET /reports/technicians/ranking`)**:
+     - RBAC do backend ajustado para permitir leitura aos papéis `tecnico` e `operador`.
+  6. **Item 35 — Idempotência e Correção HTTP 400 em Parada do Cronômetro**:
+     - Blindagem do interceptor `fetchClient` em requisições POST vazias e fallback idempotente resiliente no `stopTimer`.
+  7. **Item 36 — Flexibilização de Transição de Status na Esteira (HTTP 422)**:
+     - `ALLOWED_WORK_ORDER_TRANSITIONS` em `@carx/shared` atualizado para permitir transições da esteira (`CHECKED_IN`, `SCHEDULED`, `PAUSED`, `IN_PROGRESS` ➔ `QA` e `READY`), autoatribuindo o operador caso ainda estivesse vago.
+  8. **Item 37 — Conclusão de Serviço e Histórico do Operador**:
+     - Filtro `isClosed` em `OperadorHome.tsx` e `technician-service.ts` excluindo OS em `QA` e `READY` das tarefas a fazer, movendo-as imediatamente para a aba Histórico.

@@ -72,14 +72,15 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
 
   const currentUserId = user?.id;
 
-  // Minhas OS atribuídas (não concluídas/canceladas)
+  // Minhas OS atribuídas (não concluídas/canceladas e não orçamentos)
   const minhasAtribuidas = useMemo(() => {
     return allQueue.filter((item) => {
       const isTech = item.technician?.id === currentUserId;
-      const isClosed = ['DELIVERED', 'CONCLUIDO', 'CONCLUÍDO', 'CANCELADO', 'CANCELED'].includes(
+      const isQuote = String(item.status).toUpperCase() === 'QUOTE';
+      const isClosed = ['DELIVERED', 'CONCLUIDO', 'CONCLUÍDO', 'CANCELADO', 'CANCELED', 'QA', 'READY', 'PRONTO'].includes(
         String(item.status).toUpperCase()
       );
-      return isTech && !isClosed;
+      return isTech && !isClosed && !isQuote;
     });
   }, [allQueue, currentUserId]);
 
@@ -113,9 +114,10 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
     );
   }, [minhasAtribuidas, allQueue, currentUserId]);
 
-  // Próximas OS (excluindo a em execução do topo)
+  // Próximas OS (excluindo orçamentos QUOTE e a OS em execução do topo)
   const nextItems = useMemo(() => {
-    const baseList = activeTab === 'mine' ? minhasAtribuidas : allQueue;
+    const rawList = activeTab === 'mine' ? minhasAtribuidas : allQueue;
+    const baseList = rawList.filter((item) => String(item.status).toUpperCase() !== 'QUOTE');
     if (runningOS) {
       return baseList.filter((item) => item.workOrderId !== runningOS.workOrderId);
     }

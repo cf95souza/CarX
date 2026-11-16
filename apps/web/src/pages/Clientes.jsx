@@ -235,13 +235,21 @@ const ClientesView = () => {
 
       {/* Modal Simplicado para Novo Cliente / Edição */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 zoom-in">
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-scaleUp">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-black text-slate-800 uppercase tracking-tighter">
-                {editingClient ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
-              </h3>
-              <button onClick={() => { setShowAddModal(false); setEditingClient(null); }} className="text-slate-400 hover:text-slate-600 tracking-widest text-xs font-bold">FECHAR</button>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-scaleUp">
+            <div className="p-6 border-b border-[#2E3744] flex items-center justify-between bg-[#0E1116]">
+              <div>
+                <h3 className="font-display font-black text-sm uppercase tracking-wider text-white">
+                  {editingClient ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
+                </h3>
+                <p className="text-[10px] text-[#9AA7B8] font-medium mt-0.5">Preencha os dados de contato do proprietário</p>
+              </div>
+              <button 
+                onClick={() => { setShowAddModal(false); setEditingClient(null); }} 
+                className="w-8 h-8 rounded-lg bg-[#171C24] text-slate-400 hover:text-white flex items-center justify-center border border-[#2E3744] transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault();
@@ -270,162 +278,226 @@ const ClientesView = () => {
                   }
               }
             }} className="p-6 space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Nome Completo</label>
-                <input name="nome" defaultValue={editingClient?.nome || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">Nome Completo *</label>
+                <input 
+                  name="nome" 
+                  defaultValue={editingClient?.nome || ''} 
+                  required 
+                  placeholder="Ex: Carlos Eduardo Silveira"
+                  className="w-full h-11 px-3.5 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white placeholder:text-slate-600" 
+                />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">WhatsApp / Telefone</label>
-                <input name="telefone" defaultValue={editingClient?.telefone || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">WhatsApp / Telefone *</label>
+                <input 
+                  name="telefone" 
+                  defaultValue={editingClient?.telefone || ''} 
+                  required 
+                  placeholder="(11) 99999-9999"
+                  className="w-full h-11 px-3.5 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white placeholder:text-slate-600 font-mono" 
+                />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">E-mail (Opcional)</label>
-                <input name="email" type="email" defaultValue={editingClient?.email || ''} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">E-mail (Opcional)</label>
+                <input 
+                  name="email" 
+                  type="email" 
+                  defaultValue={editingClient?.email || ''} 
+                  placeholder="cliente@email.com"
+                  className="w-full h-11 px-3.5 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white placeholder:text-slate-600" 
+                />
               </div>
-              <button type="submit" className="w-full btn-primary py-4 rounded-2xl shadow-xl shadow-primary/20 mt-4 flex items-center justify-center gap-2">
-                <Plus size={20} /> {editingClient ? 'Atualizar Dados' : 'Salvar Cliente'}
+              <button 
+                type="submit" 
+                className="w-full h-12 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-lg mt-4 flex items-center justify-center gap-2 transition-all"
+              >
+                <Plus size={16} /> {editingClient ? 'Atualizar Dados' : 'Salvar Cliente'}
               </button>
             </form>
           </div>
         </div>
       )}
-      {/* Painel Lateral Perfil do Cliente */}
+
+      {/* Modal Mobile-First Modernizado de Detalhes do Cliente */}
       {selectedClientProfile && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex justify-end">
-          <div className="w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slideInRight">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[150] flex items-center justify-center p-3 sm:p-6">
+          <div className="w-full max-w-2xl bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] rounded-[2rem] shadow-2xl flex flex-col max-h-[92vh] overflow-hidden animate-scaleUp">
             
             {/* Header Perfil */}
-            <div className="p-6 bg-slate-50 flex items-start justify-between border-b border-slate-100">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-primary text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-primary/30">
-                  {selectedClientProfile.nome.charAt(0).toUpperCase()}
+            <div className="p-5 sm:p-6 bg-[#0E1116] flex items-center justify-between border-b border-[#2E3744] shrink-0">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 bg-[#232A35] text-[#C8F52E] border border-[#C8F52E]/30 rounded-2xl flex items-center justify-center font-display font-black text-xl shadow-md">
+                  {selectedClientProfile.nome?.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tighter">{selectedClientProfile.nome}</h3>
-                  <p className="text-xs text-slate-500 font-bold font-mono mt-1">{selectedClientProfile.telefone}</p>
+                  <h3 className="text-base sm:text-lg font-display font-bold text-white tracking-tight">{selectedClientProfile.nome}</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-[#9AA7B8] font-mono">{selectedClientProfile.telefone || 'Sem telefone'}</span>
+                    {selectedClientProfile.email && (
+                      <span className="text-[11px] text-slate-500 hidden sm:inline">• {selectedClientProfile.email}</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {(quotes || []).filter(q => q.cliente_id === selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone).length === 0 && (
                   <button 
                     onClick={() => handleDeleteClient(selectedClientProfile)}
-                    className="p-2 hover:bg-red-50 rounded-full transition-all text-slate-300 hover:text-red-500"
+                    className="w-9 h-9 rounded-xl bg-[#232A35] hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 flex items-center justify-center border border-[#2E3744] transition-colors"
                     title="Excluir Cliente"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} />
                   </button>
                 )}
                 <button 
                    onClick={() => { setEditingClient(selectedClientProfile); setShowAddModal(true); }}
-                   className="p-2 hover:bg-slate-200 rounded-full transition-all text-primary hover:text-primary-dark"
-                   title="Editar Informações Básicas"
+                   className="w-9 h-9 rounded-xl bg-[#232A35] hover:bg-[#2e3745] text-[#C8F52E] flex items-center justify-center border border-[#2E3744] transition-colors"
+                   title="Editar Informações"
                 >
-                  <Edit2 size={18} />
+                  <Edit2 size={16} />
                 </button>
-                <button onClick={() => setSelectedClientProfile(null)} className="p-2 hover:bg-slate-200 rounded-full transition-all text-slate-400 hover:text-slate-700">
-                  <X size={20} />
+                <button 
+                  onClick={() => setSelectedClientProfile(null)} 
+                  className="w-9 h-9 rounded-xl bg-[#232A35] hover:bg-[#2e3745] text-slate-400 hover:text-white flex items-center justify-center border border-[#2E3744] transition-colors"
+                  title="Fechar"
+                >
+                  <X size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Seção de Veículos */}
-            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100">
-               <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    <Car size={14} /> Meus Veículos
+            {/* Conteúdo Rolável */}
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
+              {/* Seção de Veículos */}
+              <div>
+                 <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-[11px] font-display font-bold text-[#9AA7B8] uppercase tracking-wider flex items-center gap-2">
+                      <Car size={14} className="text-[#C8F52E]" /> Veículos Registrados
+                    </h4>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {vehicles?.length || 0} veículo(s)
+                    </span>
+                 </div>
+
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {vehicles && vehicles.length > 0 ? (
+                      vehicles.map(v => (
+                        <div key={v.id} className="bg-[#0E1116] p-3.5 rounded-2xl border border-[#2E3744] flex items-center justify-between group">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-[#171C24] flex items-center justify-center text-[#C8F52E] border border-[#2E3744]">
+                               <Car size={16} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white leading-tight">
+                                {v.marca} {v.modelo}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[11px] font-mono font-bold text-[#C8F52E] uppercase tracking-wider">{v.placa}</span>
+                                <span className="text-[9px] px-1.5 py-0.2 bg-[#232A35] text-slate-300 rounded uppercase font-semibold">
+                                  {v.porte || 'Hatch'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => { setEditingVehicle(v); setShowEditVehicleModal(true); }}
+                            className="p-2 text-slate-500 hover:text-[#C8F52E] hover:bg-[#232A35] rounded-lg transition-all"
+                            title="Editar Veículo"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-4 px-4 bg-[#0E1116] rounded-2xl border border-dashed border-[#2E3744] text-center text-xs text-slate-500">
+                        Nenhum veículo vinculado diretamente ao cliente.
+                      </div>
+                    )}
+                 </div>
+              </div>
+
+              {/* Seção de Histórico de Atendimentos */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-[11px] font-display font-bold text-[#9AA7B8] uppercase tracking-wider flex items-center gap-2">
+                    <History size={14} className="text-[#C8F52E]" /> Histórico de Atendimentos
                   </h4>
-               </div>
+                  <span className="text-[10px] font-mono font-bold text-[#C8F52E] bg-[#C8F52E]/10 px-2 py-0.5 rounded-full border border-[#C8F52E]/20">
+                    {(quotes || []).filter(q => q.cliente_id === selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone).length} Serviços
+                  </span>
+                </div>
 
-               <div className="space-y-2">
-                  {vehicles && vehicles.length > 0 ? (
-                    vehicles.map(v => (
-                      <div key={v.id} className="bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between group/v">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
-                             <Car size={16} />
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-700">{v.marca} {v.modelo} {v.ano ? `(${v.ano})` : ''} <span className="ml-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200/60 rounded text-[9px] uppercase font-black">⚡ {v.porte || 'Hatch'}</span></p>
-                            <p className="text-[10px] font-mono font-black text-primary uppercase">{v.placa}</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => { setEditingVehicle(v); setShowEditVehicleModal(true); }}
-                          className="p-2 text-slate-300 hover:text-primary hover:bg-primary/5 rounded-lg opacity-0 group-hover/v:opacity-100 transition-all"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-[10px] text-slate-400 font-bold italic py-2">Nenhum veículo cadastrado diretamente.</p>
-                  )}
-               </div>
-            </div>
-
-            {/* Conteúdo (Histórico) */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="flex items-center justify-between">
-                <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <History size={14} /> Histórico de Atendimentos
-                </h4>
-                <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-1 rounded-full border border-primary/10 transition-all">
-                  {(quotes || []).filter(q => q.cliente_id === selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone).length} Serviços
-                </span>
-              </div>
-
-              <div className="space-y-3">
-                {quotes?.filter(q => q.cliente_id == selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone).length === 0 ? (
-                  <div className="p-8 text-center bg-slate-50 rounded-[2rem] border border-dashed border-slate-200">
-                    <History className="mx-auto text-slate-300 mb-3" size={32} />
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Nenhum serviço registrado</p>
-                  </div>
-                ) : (
-                  quotes?.filter(q => q.cliente_id == selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone)
-                    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
-                    .map(quote => (
-                    <div 
-                      key={quote.id} 
-                      onClick={() => setSelectedServiceDetails(quote)}
-                      className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-primary/40 hover:shadow-md transition-all group cursor-pointer active:scale-[0.98]"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[9px] font-black px-2 py-1 bg-slate-100 text-slate-500 rounded-md uppercase tracking-wider">#{quote.id}</span>
-                        <span className={`text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-widest ${
-                          quote.status === 'CONCLUIDO' || quote.status === 'ENTREGUE' ? 'bg-emerald-50 text-emerald-600' :
-                          quote.status === 'ORCAMENTO' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
-                        }`}>
-                          {quote.status}
-                        </span>
-                      </div>
-                      <p className="text-sm font-bold text-slate-800 mb-1">{quote.veiculo_desc}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2 line-clamp-1">{quote.servico}</p>
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-50">
-                        <span className="text-xs font-black text-slate-800 text-mono">
-                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quote.valor || 0)}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                            <Clock size={10} /> {formatDateBR(quote.created_at)}
-                          </span>
-                          <div className="w-6 h-6 rounded-full bg-primary/5 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                            <ArrowRight size={12} strokeWidth={3} />
-                          </div>
-                        </div>
-                      </div>
+                <div className="space-y-2.5">
+                  {quotes?.filter(q => q.cliente_id == selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone).length === 0 ? (
+                    <div className="p-8 text-center bg-[#0E1116] rounded-2xl border border-dashed border-[#2E3744]">
+                      <History className="mx-auto text-slate-600 mb-2" size={28} />
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nenhum atendimento registrado</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    quotes?.filter(q => q.cliente_id == selectedClientProfile.id || q.cliente_telefone === selectedClientProfile.telefone)
+                      .sort((a,b) => new Date(b.created_at || b.data || 0) - new Date(a.created_at || a.data || 0))
+                      .map(quote => {
+                        const statusRaw = String(quote.status || 'QUOTE').toUpperCase();
+                        let badgeStyle = 'bg-[#232A35] text-slate-300 border-slate-700';
+                        let label = 'Orçamento';
+                        if (['APPROVED', 'APROVADO'].includes(statusRaw)) {
+                          badgeStyle = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+                          label = 'Aprovado';
+                        } else if (['SCHEDULED', 'AGENDADO'].includes(statusRaw)) {
+                          badgeStyle = 'bg-sky-500/10 text-sky-400 border-sky-500/30';
+                          label = 'Agendado';
+                        } else if (['IN_PROGRESS', 'EXECUCAO', 'EM_ANDAMENTO'].includes(statusRaw)) {
+                          badgeStyle = 'bg-[#C8F52E]/10 text-[#C8F52E] border-[#C8F52E]/30';
+                          label = 'Em Execução';
+                        } else if (['COMPLETED', 'DELIVERED', 'CONCLUIDO', 'ENTREGUE'].includes(statusRaw)) {
+                          badgeStyle = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+                          label = 'Concluído';
+                        }
+                        const osNumberFormatted = quote.os_number || quote.osNumber || (typeof quote.id === 'string' && quote.id.length > 8 ? quote.id.slice(0, 8).toUpperCase() : quote.id);
+
+                        return (
+                          <div 
+                            key={quote.id} 
+                            onClick={() => setSelectedServiceDetails(quote)}
+                            className="bg-[#0E1116] p-4 rounded-2xl border border-[#2E3744] hover:border-[#C8F52E]/50 transition-all cursor-pointer group"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-[#171C24] text-[#C8F52E] rounded-md border border-[#2E3744]">
+                                #{osNumberFormatted}
+                              </span>
+                              <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${badgeStyle}`}>
+                                {label}
+                              </span>
+                            </div>
+                            <p className="text-xs font-bold text-white mb-0.5">{quote.veiculo_desc}</p>
+                            <p className="text-[11px] text-[#9AA7B8] line-clamp-1">{quote.servico || 'Serviço Automotivo'}</p>
+                            <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-[#2E3744]">
+                              <span className="text-xs font-mono font-bold text-white">
+                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(quote.valor || 0)}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-500 flex items-center gap-1">
+                                  <Clock size={10} /> {quote.data_agendamento ? formatDateBR(quote.data_agendamento) : formatDateBR(quote.created_at || quote.data)}
+                                </span>
+                                <ArrowRight size={12} className="text-[#C8F52E] group-hover:translate-x-1 transition-transform" />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Ações (Gatilho para Orçamento) */}
-            <div className="p-6 bg-white border-t border-slate-100 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+            {/* Ações (Gatilho para Novo Orçamento) */}
+            <div className="p-4 sm:p-5 bg-[#0E1116] border-t border-[#2E3744] shrink-0">
               <button 
                 onClick={() => setShowNovoModal(true)}
-                className="w-full btn-primary py-4 rounded-2xl flex items-center justify-center gap-2 shadow-xl shadow-primary/20 hover:-translate-y-1 transition-all"
+                className="w-full h-12 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all"
               >
-                <FilePlus size={18} /> Cadastrar Novo Orçamento
+                <FilePlus size={16} /> Cadastrar Novo Orçamento
               </button>
             </div>
 
@@ -452,11 +524,19 @@ const ClientesView = () => {
 
       {/* Modal Edição de Veículo */}
       {showEditVehicleModal && editingVehicle && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[250] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden animate-scaleUp">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-black text-slate-800 uppercase tracking-tighter">Editar Veículo</h3>
-              <button onClick={() => { setShowEditVehicleModal(false); setEditingVehicle(null); }} className="text-slate-400 hover:text-slate-600 font-bold text-xs uppercase pr-2">X</button>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[250] flex items-center justify-center p-4">
+          <div className="bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden animate-scaleUp">
+            <div className="p-5 border-b border-[#2E3744] flex items-center justify-between bg-[#0E1116]">
+              <div>
+                <h3 className="font-display font-black text-sm uppercase tracking-wider text-white">Editar Veículo</h3>
+                <p className="text-[10px] text-[#9AA7B8] font-medium mt-0.5">Atualize a placa e especificações do carro</p>
+              </div>
+              <button 
+                onClick={() => { setShowEditVehicleModal(false); setEditingVehicle(null); }} 
+                className="w-8 h-8 rounded-lg bg-[#171C24] text-slate-400 hover:text-white flex items-center justify-center border border-[#2E3744] transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
             <form onSubmit={async (e) => {
               e.preventDefault();
@@ -481,11 +561,11 @@ const ClientesView = () => {
                   toast.error('Erro ao atualizar veículo.');
                 }
               }
-            }} className="p-8 space-y-4">
+            }} className="p-5 space-y-3.5">
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Placa</label>
-                  <span className="text-[9px] font-bold text-emerald-600 uppercase flex items-center gap-1">
+                  <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider">Placa *</label>
+                  <span className="text-[9px] font-bold text-[#C8F52E] uppercase flex items-center gap-1">
                     <Sparkles size={11} /> Auto-consulta CarX
                   </span>
                 </div>
@@ -496,7 +576,7 @@ const ClientesView = () => {
                     defaultValue={editingVehicle.placa || ''}
                     required
                     placeholder="ABC1D23"
-                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner font-mono uppercase"
+                    className="flex-1 h-11 px-3 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-bold text-white font-mono uppercase"
                   />
                   <button
                     type="button"
@@ -530,11 +610,11 @@ const ClientesView = () => {
                             form.porte.value = mapPorte[sc] || 'Hatch';
                           }
                         }
-                      } catch (err) {
+                      } catch {
                         toast.error('Não foi possível consultar a placa.');
                       }
                     }}
-                    className="px-3 py-2 bg-slate-900 text-[#C8F52E] rounded-xl text-xs font-bold hover:bg-black transition-all flex items-center gap-1"
+                    className="h-11 px-3.5 bg-[#232A35] text-[#C8F52E] rounded-xl text-xs font-bold hover:bg-[#2e3745] border border-[#2E3744] transition-all flex items-center gap-1"
                     title="Consultar dados do veículo pela placa"
                   >
                     Buscar
@@ -542,27 +622,30 @@ const ClientesView = () => {
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Marca</label>
-                <input name="marca" defaultValue={editingVehicle.marca || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">Marca *</label>
+                <input name="marca" defaultValue={editingVehicle.marca || ''} required className="w-full h-11 px-3 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Modelo</label>
-                <input name="modelo" defaultValue={editingVehicle.modelo || ''} required className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">Modelo *</label>
+                <input name="modelo" defaultValue={editingVehicle.modelo || ''} required className="w-full h-11 px-3 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Ano</label>
-                <input name="ano" defaultValue={editingVehicle.ano || ''} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner" />
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">Ano</label>
+                <input name="ano" defaultValue={editingVehicle.ano || ''} className="w-full h-11 px-3 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white" />
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Porte do Veículo</label>
-                <select name="porte" defaultValue={editingVehicle.porte || 'Hatch'} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-sm font-bold shadow-inner">
+                <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">Porte do Veículo</label>
+                <select name="porte" defaultValue={editingVehicle.porte || 'Hatch'} className="w-full h-11 px-3 bg-[#0E1116] border border-[#2E3744] rounded-xl outline-none focus:border-[#C8F52E] transition-all text-xs font-semibold text-white">
                   {['Hatch', 'Sedan', 'SUV', 'Pickup', 'Esportivo', 'Moto'].map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
               </div>
-              <button type="submit" className="w-full btn-primary py-4 rounded-2xl shadow-xl shadow-primary/20 mt-4 flex items-center justify-center gap-2">
-                <Save size={18} /> Salvar Alterações
+              <button 
+                type="submit" 
+                className="w-full h-11 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black text-xs uppercase tracking-wider rounded-xl shadow-lg mt-3 flex items-center justify-center gap-2 transition-all"
+              >
+                <Save size={16} /> Salvar Alterações
               </button>
             </form>
           </div>

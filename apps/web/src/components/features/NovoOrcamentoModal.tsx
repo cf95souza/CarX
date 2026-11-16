@@ -57,6 +57,40 @@ export const NovoOrcamentoModal: React.FC<NovoOrcamentoModalProps> = ({
   const [newModel, setNewModel] = useState('');
   const [newColor, setNewColor] = useState('');
   const [newSizeClass, setNewSizeClass] = useState('Sedan');
+  const [isSearchingPlate, setIsSearchingPlate] = useState(false);
+
+  const handlePlateChange = async (val: string) => {
+    const clean = val.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    setNewPlate(clean);
+
+    if (clean.length >= 7) {
+      setIsSearchingPlate(true);
+      try {
+        const res = await api.vehicles.lookupPlate(clean);
+        if (res && res.source !== 'not_found' && (res.brand || res.model)) {
+          if (res.brand) setNewBrand(res.brand);
+          if (res.model) setNewModel(res.model);
+          if (res.color) setNewColor(res.color);
+          if (res.sizeClass) {
+            const sc = res.sizeClass.toLowerCase();
+            const mapPorte: Record<string, string> = {
+              hatch: 'Hatch',
+              sedan: 'Sedan',
+              suv: 'SUV',
+              pickup: 'Pickup',
+              esportivo: 'Esportivo',
+              moto: 'Moto',
+            };
+            if (mapPorte[sc]) setNewSizeClass(mapPorte[sc]);
+          }
+        }
+      } catch (err) {
+        // Nova placa: digitação limpa sem forçar valores estáticos
+      } finally {
+        setIsSearchingPlate(false);
+      }
+    }
+  };
 
   // Estados Passo 3: Serviços
   const [selectedServices, setSelectedServices] = useState<
@@ -526,10 +560,10 @@ export const NovoOrcamentoModal: React.FC<NovoOrcamentoModalProps> = ({
                 <form onSubmit={handleCreateVehicle} className="space-y-3 bg-aco/30 p-4 rounded-card border border-linha">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Input
-                      label="Placa *"
+                      label={isSearchingPlate ? "Placa * (Consultando...)" : "Placa *"}
                       required
                       value={newPlate}
-                      onChange={(e) => setNewPlate(e.target.value.toUpperCase())}
+                      onChange={(e) => handlePlateChange(e.target.value)}
                       placeholder="ABC1D23"
                     />
                     <Input

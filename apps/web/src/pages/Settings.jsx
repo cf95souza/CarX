@@ -133,112 +133,105 @@ const SettingsPage = () => {
 
       {activeTab === 'GERAL' && (
       <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Identidade Visual */}
-        <div className="card-premium p-6 space-y-6">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-4">
-            <Palette size={18} className="text-primary" /> Identidade Visual
-          </h3>
+        {/* Identidade da Loja */}
+        <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 space-y-6 shadow-md">
+          <div className="flex items-center justify-between border-b border-[#2E3744] pb-4">
+            <h3 className="font-display font-bold text-white flex items-center gap-2.5 text-base">
+              <Palette size={18} className="text-[#C8F52E]" /> Identidade da Loja
+            </h3>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#C8F52E]/10 text-[#C8F52E] border border-[#C8F52E]/30">
+              Tema Dark Volt Padronizado
+            </span>
+          </div>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Nome da Loja</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">Nome Comercial da Oficina</label>
               <div className="relative">
-                <Type className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Type className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" size={16} />
                 <input 
                   type="text" 
                   value={formData.nome_loja}
                   onChange={(e) => setFormData({...formData, nome_loja: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                  placeholder="Ex: Auto Wrap Pro"
+                  className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors"
+                  placeholder="Ex: Studio Auto Wrap & Detailing"
                 />
               </div>
             </div>
+
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Link da Logomarca (URL)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">Logomarca da Loja (Link / URL)</label>
               <div className="relative">
-                <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <ImageIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" size={16} />
                 <input 
                   type="url" 
                   value={formData.logo_url}
                   onChange={(e) => setFormData({...formData, logo_url: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                  className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors placeholder:text-[#5B6674]"
                   placeholder="Ex: https://meusite.com/logo.png"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-2 italic">Cole a URL de uma imagem para replicar na TV, Link do Cliente e Certificado.</p>
+              <p className="text-xs text-[#9AA7B8] mt-2">
+                A logomarca é replicada automaticamente na TV da Loja, no Portal do Cliente e nos Certificados de Garantia.
+              </p>
               {formData.logo_url && (
-                <div className="mt-4 p-4 border border-slate-100 rounded-2xl bg-white flex items-center justify-center h-24">
-                  <img src={formData.logo_url} alt="Logo Preview" className="max-h-16 object-contain" />
+                <div className="mt-3 p-4 border border-[#2E3744] rounded-xl bg-[#0E1116] flex items-center justify-center h-24">
+                  <img src={formData.logo_url} alt="Prévia da Logo" className="max-h-16 object-contain" />
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Cor Primária</label>
-                <input 
-                  type="color" 
-                  value={formData.primary_color}
-                  onChange={(e) => setFormData({...formData, primary_color: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl p-1 cursor-pointer"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Cor Secundária</label>
-                <input 
-                  type="color" 
-                  value={formData.secondary_color}
-                  onChange={(e) => setFormData({...formData, secondary_color: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl p-1 cursor-pointer"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Cor de Fundo (Monitor TV & Status)</label>
-                <input 
-                  type="color" 
-                  value={formData.monitor_bg_color}
-                  onChange={(e) => setFormData({...formData, monitor_bg_color: e.target.value})}
-                  className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl p-1 cursor-pointer"
-                />
-              </div>
+            {/* Design System Canônico */}
+            <div className="p-4 bg-[#0E1116] border border-[#2E3744] rounded-xl space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block">
+                Paleta de Cores e Contraste
+              </span>
+              <p className="text-xs text-[#9AA7B8] leading-relaxed">
+                O CarX utiliza a paleta corporativa <strong className="text-white">Dark Volt</strong> (#0E1116 e acentos #C8F52E) para garantir legibilidade estrita (WCAG AAA) em tablets com luvas, televisores e smartphones.
+              </p>
             </div>
           </div>
         </div>
 
         {/* Monitor TV Config */}
-        <div className="card-premium p-6 space-y-6">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-4">
-            <Youtube size={18} className="text-primary" /> Conteúdo da TV
-          </h3>
+        <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 space-y-6 shadow-md">
+          <div className="flex items-center justify-between border-b border-[#2E3744] pb-4">
+            <h3 className="font-display font-bold text-white flex items-center gap-2.5 text-base">
+              <Youtube size={18} className="text-[#C8F52E]" /> Monitor TV do Pátio & Recepção
+            </h3>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/5 text-[#9AA7B8] border border-[#2E3744]">
+              Sala de Espera
+            </span>
+          </div>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Link/ID do YouTube (TV)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">ID do Vídeo ou Playlist do YouTube</label>
               <div className="relative">
-                <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" size={16} />
                 <input 
                   type="text" 
                   value={formData.youtube_id}
                   onChange={(e) => setFormData({...formData, youtube_id: e.target.value})}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-                  placeholder="ID do vídeo ou link da playlist"
+                  className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors placeholder:text-[#5B6674]"
+                  placeholder="Ex: dQw4w9WgXcQ ou PL..."
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-2 italic">
-                Dica: O ID de uma playlist geralmente começa com "PL...".
+              <p className="text-xs text-[#9AA7B8] mt-2">
+                O vídeo roda em loop contínuo ao lado do painel de ordens de serviço ativas na TV.
               </p>
             </div>
 
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Pré-visualização do Vídeo</h4>
+            <div className="bg-[#0E1116] rounded-xl p-3 border border-[#2E3744]">
+               <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">Pré-visualização do Monitor TV</h4>
                {formData.youtube_id ? (
                  <iframe 
-                  className="w-full aspect-video rounded-xl bg-black"
+                  className="w-full aspect-video rounded-lg bg-black border border-[#2E3744]"
                   src={`https://www.youtube.com/embed/${formData.youtube_id.includes('v=') ? formData.youtube_id.split('v=')[1] : formData.youtube_id}`}
                  ></iframe>
                ) : (
-                 <div className="aspect-video bg-slate-200 rounded-xl flex items-center justify-center">
-                    <Youtube className="text-slate-400" size={32} />
+                 <div className="aspect-video bg-[#171C24] rounded-lg flex items-center justify-center border border-[#2E3744]">
+                    <Youtube className="text-[#5B6674]" size={32} />
                  </div>
                )}
             </div>
@@ -246,64 +239,67 @@ const SettingsPage = () => {
         </div>
 
         {/* Redes Sociais & Contato */}
-        <div className="card-premium p-6 space-y-6 md:col-span-2">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 border-b border-slate-50 pb-4">
-            <Globe size={18} className="text-primary" /> Redes Sociais & Contato (Tela do Cliente)
-          </h3>
+        <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 space-y-6 shadow-md md:col-span-2">
+          <div className="flex items-center justify-between border-b border-[#2E3744] pb-4">
+            <h3 className="font-display font-bold text-white flex items-center gap-2.5 text-base">
+              <Globe size={18} className="text-[#C8F52E]" /> Canais de Contato & Redes Sociais (Portal do Cliente)
+            </h3>
+            <span className="text-xs text-[#9AA7B8]">Exibidos no portal web do cliente</span>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">WhatsApp (Número)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">WhatsApp Oficial</label>
               <input 
                 type="text" 
                 value={formData.whatsapp}
                 onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 px-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors"
                 placeholder="Ex: 5511999999999"
               />
-              <p className="text-[9px] text-slate-400 mt-1">Apenas números com DDD (ex: 55...)</p>
+              <p className="text-[11px] text-[#5B6674] mt-1">Apenas números com DDD (ex: 55...)</p>
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Instagram (Link)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">Instagram (Link)</label>
               <input 
                 type="url" 
                 value={formData.instagram_url}
                 onChange={(e) => setFormData({...formData, instagram_url: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 px-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors"
                 placeholder="https://instagram.com/perfil"
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">YouTube (Link Social)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">YouTube (Canal)</label>
               <input 
                 type="url" 
                 value={formData.youtube_social_url}
                 onChange={(e) => setFormData({...formData, youtube_social_url: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 px-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors"
                 placeholder="https://youtube.com/@seu-canal"
               />
             </div>
             <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">TikTok (Link)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-[#9AA7B8] mb-2">TikTok (Link)</label>
               <input 
                 type="url" 
                 value={formData.tiktok_url}
                 onChange={(e) => setFormData({...formData, tiktok_url: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-100 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl py-3 px-4 text-sm text-white focus:border-[#C8F52E] focus:outline-none transition-colors"
                 placeholder="https://tiktok.com/@perfil"
               />
             </div>
           </div>
         </div>
 
-        <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+        <div className="md:col-span-2 flex justify-end gap-3 pt-2">
            <button 
               type="submit"
               disabled={saving}
-              className="carx-btn-volt disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#C8F52E] hover:bg-[#b8e520] active:scale-[0.98] text-[#0E1116] font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm transition-all disabled:opacity-50 cursor-pointer"
            >
-             {saving ? <div className="w-4 h-4 border-2 border-[#0E1116]/20 border-t-[#0E1116] rounded-full animate-spin"></div> : <Save size={18} />}
-             Salvar Configurações
+             {saving ? <div className="w-4 h-4 border-2 border-[#0E1116]/20 border-t-[#0E1116] rounded-full animate-spin"></div> : <Save size={16} />}
+             <span>Salvar Configurações</span>
            </button>
         </div>
       </form>

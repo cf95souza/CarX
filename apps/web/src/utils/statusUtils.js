@@ -49,37 +49,37 @@ export const getStatusStyle = (status) => {
   const s = String(status || '').toUpperCase();
   
   if (s.includes('QUOTE') || s.includes('ORCAMENTO') || s.includes('ORÇAMENTO')) {
-    return 'bg-amber-500/10 text-amber-500 border-amber-500/30';
+    return 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700 font-bold';
   }
   if (s.includes('APPROVED') || s.includes('APROVADO')) {
-    return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30';
+    return 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 font-bold';
   }
   if (s.includes('SCHEDULED') || s.includes('AGENDADO') || s.includes('AGUARDA')) {
-    return 'bg-sky-500/10 text-sky-500 border-sky-500/30';
+    return 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-700 font-bold';
   }
   if (s.includes('CHECKED_IN') || s.includes('CHECK_IN')) {
-    return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30';
+    return 'bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-700 font-bold';
   }
   if (s.includes('IN_PROGRESS') || s.includes('EXECU')) {
-    return 'bg-[#C8F52E]/15 text-[#88ab14] dark:text-[#C8F52E] border-[#C8F52E]/40 font-bold';
+    return 'bg-[#C8F52E]/30 text-[#0E1116] border-[#0E1116]/30 dark:bg-[#C8F52E]/20 dark:text-[#C8F52E] dark:border-[#C8F52E]/40 font-bold';
   }
   if (s.includes('PAUSED') || s.includes('PAUSADO')) {
-    return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
+    return 'bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-700 font-bold';
   }
   if (s.includes('QA') || s.includes('QUALITY')) {
-    return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+    return 'bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-700 font-bold';
   }
   if (s.includes('READY') || s.includes('PRONTO')) {
-    return 'bg-teal-500/10 text-teal-400 border-teal-500/30';
+    return 'bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-700 font-bold';
   }
   if (s.includes('DELIVERED') || s.includes('ENTREGUE') || s.includes('CONCLU') || s.includes('COMPLETED')) {
-    return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40';
+    return 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 font-bold';
   }
   if (s.includes('REJEITADO') || s.includes('CANCEL')) {
-    return 'bg-rose-500/10 text-rose-500 border-rose-500/30';
+    return 'bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-700 font-bold';
   }
 
-  return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+  return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 font-bold';
 };
 
 export const formatOsNumber = (val) => {

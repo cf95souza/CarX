@@ -18,7 +18,7 @@ export const Badge: React.FC<BadgeProps> = ({
     alert: 'bg-alert/15 text-alert border-alert/30',
     info: 'bg-info/15 text-info border-info/30',
     error: 'bg-error/15 text-error border-error/30',
-    neutral: 'bg-aco/50 text-muted border-linha',
+    neutral: 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700',
   }[variant];
 
   const dotClasses = {

@@ -4,6 +4,7 @@ import { signJwt } from '../auth/jwt.js';
 import { normalizePhone, PlanFeatures } from '@carx/shared';
 import { planService } from '../plans/plan-service.js';
 import { whatsappService } from '../whatsapp/whatsapp-service.js';
+import { storageService } from '../storage/storage-service.js';
 import type {
   PortalCustomerDto,
   PortalVehicleDto,
@@ -566,7 +567,8 @@ export class CustomerPortalService {
          ip.phase,
          ip.caption,
          ip.created_at,
-         '/storage/files/' || ip.photo_file_id || '/view' as url
+         ip.photo_file_id,
+         '/storage/files/' || ip.photo_file_id || '/view' as fallback_url
        FROM inspection_photos ip
        JOIN inspections i ON i.id = ip.inspection_id
        WHERE i.work_order_id = $1 AND i.tenant_id = $2
@@ -574,14 +576,31 @@ export class CustomerPortalService {
       [workOrderId, tenantId]
     );
 
-    return photosRes.rows.map((p) => ({
-      id: p.id,
-      angle: p.angle,
-      phase: p.phase,
-      caption: p.caption || null,
-      url: p.url,
-      createdAt: new Date(p.created_at).toISOString(),
-    }));
+    const photosWithUrls: PortalPhotoDto[] = await Promise.all(
+      photosRes.rows.map(async (p) => {
+        let finalUrl = p.fallback_url;
+        if (p.photo_file_id) {
+          try {
+            const presigned = await storageService.getPresignedDownloadUrl(tenantId, p.photo_file_id, 3600);
+            if (presigned?.downloadUrl) {
+              finalUrl = presigned.downloadUrl;
+            }
+          } catch {
+            // fallback para a rota proxy /view
+          }
+        }
+        return {
+          id: p.id,
+          angle: p.angle,
+          phase: p.phase,
+          caption: p.caption || null,
+          url: finalUrl,
+          createdAt: new Date(p.created_at).toISOString(),
+        };
+      })
+    );
+
+    return photosWithUrls;
   }
 
   /**

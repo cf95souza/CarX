@@ -6,6 +6,7 @@ const BrandContext = createContext();
 export const BrandProvider = ({ children }) => {
   const [brand, setBrand] = useState({
     name: import.meta.env.VITE_APP_NAME || 'CarX Oficina',
+    slug: '',
     primaryColor: import.meta.env.VITE_PRIMARY_COLOR || '#E63946',
     secondaryColor: import.meta.env.VITE_SECONDARY_COLOR || '#1D3557',
     accentColor: import.meta.env.VITE_ACCENT_COLOR || '#457B9D',
@@ -31,6 +32,7 @@ export const BrandProvider = ({ children }) => {
           setBrand((prev) => ({
             ...prev,
             name: data.trade_name || data.name || prev.name,
+            slug: data.slug || prev.slug || '',
             primaryColor: data.primary_color || data.primaryColor || prev.primaryColor,
             secondaryColor: data.secondary_color || data.secondaryColor || prev.secondaryColor,
             accentColor: data.accent_color || data.accentColor || prev.accentColor,

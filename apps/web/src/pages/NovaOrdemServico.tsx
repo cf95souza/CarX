@@ -49,17 +49,26 @@ export const NovaOrdemServico: React.FC = () => {
       setPlateBadgeText('Consultando placa...');
       try {
         const res = await api.vehicles.lookupPlate(clean);
-        const modelStr = `${res.brand || ''} ${res.model || ''} ${res.year || ''}`.trim();
-        const sizeClassStr = res.sizeClass ? res.sizeClass.toUpperCase() : 'SEDAN';
 
-        setVehicle({
-          id: (res as any).id || '',
-          plate: res.plate,
-          brand: res.brand || '',
-          model: modelStr || 'Veículo',
-          color: res.color || 'Prata',
+        // Se a placa for nova ou não encontrada, não forçar valores estáticos ("Veículo" / "Prata")
+        if (res.source === 'not_found' || (!res.brand && !res.model)) {
+          setPlateBadgeText('Nova placa / Digite os dados');
+          setPlateBadgeColor('neutral');
+          return;
+        }
+
+        const modelStr = res.model ? `${res.brand ? res.brand + ' ' : ''}${res.model}`.trim() : (res.brand || '');
+        const sizeClassStr = res.sizeClass ? res.sizeClass.toUpperCase() : vehicle.sizeClass || 'SEDAN';
+
+        setVehicle((prev) => ({
+          ...prev,
+          id: (res as any).id || prev.id || '',
+          plate: res.plate || clean,
+          brand: res.brand || prev.brand || '',
+          model: modelStr || prev.model || '',
+          color: res.color || prev.color || '',
           sizeClass: sizeClassStr,
-        });
+        }));
 
         if (res.existingCustomer) {
           setCustomer({
@@ -72,11 +81,11 @@ export const NovaOrdemServico: React.FC = () => {
         } else if (res.source === 'cache') {
           setPlateBadgeText('Placa identificada');
         } else {
-          setPlateBadgeText('Preenchido pela placa');
+          setPlateBadgeText('Placa identificada');
         }
         setPlateBadgeColor('volt');
       } catch (err: any) {
-        setPlateBadgeText('Nova placa');
+        setPlateBadgeText('Nova placa / Digite os dados');
         setPlateBadgeColor('neutral');
       } finally {
         setIsSearchingPlate(false);
@@ -164,16 +173,30 @@ export const NovaOrdemServico: React.FC = () => {
       if (!vehicle.plate.trim()) {
         throw new Error('Informe a placa do veículo.');
       }
+      let rawBrand = (vehicle.brand || '').trim();
+      let rawModel = (vehicle.model || '').trim();
+
+      // Se o usuário digitou marca e modelo juntos (ex: "Honda Civic") e a marca ficou vazia
+      if (!rawBrand && rawModel) {
+        const words = rawModel.split(/\s+/);
+        if (words.length > 1) {
+          rawBrand = words[0];
+          rawModel = words.slice(1).join(' ');
+        } else {
+          rawBrand = words[0];
+        }
+      }
+
       const createdVeh: any = await api.vehicles.create({
         customerId: finalCustomerId,
         plate: vehicle.plate.trim().toUpperCase(),
-        brand: vehicle.brand?.trim() || 'Geral',
-        model: vehicle.model?.trim() || 'Veículo',
+        brand: rawBrand || rawModel || 'Veículo',
+        model: rawModel || rawBrand || 'Veículo',
         color: vehicle.color?.trim() || 'Padrão',
         sizeClass: (vehicle.sizeClass?.toLowerCase() as any) || 'sedan',
       });
       finalVehicleId = String(createdVeh.id);
-      setVehicle((prev) => ({ ...prev, id: finalVehicleId }));
+      setVehicle((prev) => ({ ...prev, id: finalVehicleId, brand: rawBrand, model: rawModel }));
     }
 
     return { customerId: finalCustomerId, vehicleId: finalVehicleId };
@@ -539,14 +562,29 @@ export const NovaOrdemServico: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Marca (ex: Honda)"
+                  value={vehicle.brand || ''}
+                  onChange={(e) => setVehicle((prev) => ({ ...prev, brand: e.target.value }))}
+                  style={{
+                    flex: '1 1 120px',
+                    height: '38px',
+                    padding: '0 10px',
+                    border: '1px solid #E1E6EC',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
                 <input
                   type="text"
                   placeholder="Modelo (ex: Civic)"
                   value={vehicle.model}
                   onChange={(e) => setVehicle((prev) => ({ ...prev, model: e.target.value }))}
                   style={{
-                    flex: 2,
+                    flex: '1.5 1 160px',
                     height: '38px',
                     padding: '0 10px',
                     border: '1px solid #E1E6EC',

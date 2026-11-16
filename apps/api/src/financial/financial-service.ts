@@ -601,9 +601,9 @@ export class FinancialService {
     const endDate = filters.endDate ? new Date(filters.endDate).toISOString() : '2099-12-31T23:59:59.999Z';
 
     // 1. Busca os técnicos ativos ou com histórico de OS
-    const techsRes = await tenantQuery<{ id: string; name: string }>(
+    const techsRes = await tenantQuery<{ id: string; name: string; member_since: string }>(
       tenantId,
-      `SELECT DISTINCT u.id, u.name
+      `SELECT DISTINCT u.id, u.name, m.created_at as member_since
        FROM users u
        JOIN memberships m ON m.user_id = u.id
        WHERE m.tenant_id = $1
@@ -647,7 +647,7 @@ export class FinancialService {
            AND qa.score IS NOT NULL;`,
         [tenantId, tech.id]
       );
-      const averageQaScore = parseFloat(qaRes.rows[0]?.average_qa_score || '0');
+      const averageQaScore = parseFloat(qaRes.rows[0]?.average_qa_score || '5.0');
 
       // 4. CÁLCULO FUNDAMENTAL DO STREAK REAL DE DIAS SEM RETRABALHO
       // Fatos auditados:
@@ -695,9 +695,10 @@ export class FinancialService {
         lastReworkDate = new Date(lastReworkAt).toISOString();
         const diffMs = now - new Date(lastReworkAt).getTime();
         streakDaysWithoutRework = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-      } else if (firstWoAt) {
-        // Nunca teve retrabalho ou falha de QA: streak conta desde a primeira OS
-        const diffMs = now - new Date(firstWoAt).getTime();
+      } else if (firstWoAt || tech.member_since) {
+        // Nunca teve retrabalho ou falha de QA: streak conta desde a primeira OS ou data de admissão
+        const baseDate = firstWoAt || tech.member_since;
+        const diffMs = now - new Date(baseDate).getTime();
         streakDaysWithoutRework = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       } else {
         streakDaysWithoutRework = 0;

@@ -58,7 +58,7 @@ export async function financialRoutes(app: FastifyInstance) {
       preHandler: [
         authenticateBearer,
         requireTenantContext,
-        requireRole([UserRole.OWNER, UserRole.GESTOR]),
+        requireRole([UserRole.OWNER, UserRole.GESTOR, UserRole.TECNICO, UserRole.ATENDENTE]),
         requireFeature(PlanFeatures.FINANCIAL),
       ],
     },

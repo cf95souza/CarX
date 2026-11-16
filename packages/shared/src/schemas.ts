@@ -417,43 +417,57 @@ export const ALLOWED_WORK_ORDER_TRANSITIONS: Record<WorkOrderStatusType, readonl
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.APPROVED]: [
+    WorkOrderStatus.QUOTE,
     WorkOrderStatus.SCHEDULED,
     WorkOrderStatus.CHECKED_IN,
     WorkOrderStatus.IN_PROGRESS,
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.SCHEDULED]: [
+    WorkOrderStatus.QUOTE,
+    WorkOrderStatus.APPROVED,
     WorkOrderStatus.CHECKED_IN,
     WorkOrderStatus.IN_PROGRESS,
+    WorkOrderStatus.QA,
+    WorkOrderStatus.READY,
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.CHECKED_IN]: [
     WorkOrderStatus.IN_PROGRESS,
     WorkOrderStatus.PAUSED,
+    WorkOrderStatus.QA,
+    WorkOrderStatus.READY,
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.IN_PROGRESS]: [
     WorkOrderStatus.QA,
+    WorkOrderStatus.READY,
     WorkOrderStatus.PAUSED,
+    WorkOrderStatus.CHECKED_IN,
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.PAUSED]: [
     WorkOrderStatus.IN_PROGRESS,
     WorkOrderStatus.QA,
+    WorkOrderStatus.READY,
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.QA]: [
     WorkOrderStatus.READY,
     WorkOrderStatus.IN_PROGRESS, // Se reprovado no QA, volta para correções
+    WorkOrderStatus.DELIVERED,
     WorkOrderStatus.CANCELED,
   ],
   [WorkOrderStatus.READY]: [
     WorkOrderStatus.DELIVERED,
+    WorkOrderStatus.QA,
     WorkOrderStatus.IN_PROGRESS, // Retorno pontual antes da saída
     WorkOrderStatus.CANCELED,
   ],
-  [WorkOrderStatus.DELIVERED]: [],
-  [WorkOrderStatus.CANCELED]: [],
+  [WorkOrderStatus.DELIVERED]: [
+    WorkOrderStatus.READY,
+  ],
+  [WorkOrderStatus.CANCELED]: [WorkOrderStatus.QUOTE],
 } as const;
 
 export function isValidWorkOrderTransition(

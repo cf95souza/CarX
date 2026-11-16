@@ -70,31 +70,90 @@ function formatDateBR(dateStr?: string | null): string {
   }
 }
 
+function getVehicleDisplay(veh?: any) {
+  if (!veh) return 'Veículo';
+  const brand = veh.brand && veh.brand.toLowerCase() !== 'geral' ? veh.brand.trim() : '';
+  const model = (veh.model || '').trim();
+  if (brand && model.toLowerCase().startsWith(brand.toLowerCase())) {
+    return model;
+  }
+  return `${brand ? brand + ' ' : ''}${model}`.trim() || 'Veículo';
+}
+
 function getStatusBadge(status: string) {
   const s = String(status || '').toUpperCase();
   switch (s) {
     case 'IN_PROGRESS':
-      return <Badge variant="info" dot>Em Execução</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-[#C8F52E]/30 text-[#0E1116] border-[#0E1116]/30 dark:bg-[#C8F52E]/20 dark:text-[#C8F52E] dark:border-[#C8F52E]/40">
+          <span className="w-2 h-2 rounded-full bg-[#0E1116] dark:bg-[#C8F52E] animate-pulse" />
+          <span>Em Execução</span>
+        </span>
+      );
     case 'QA':
-      return <Badge variant="alert" dot>Vistoria QA</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-700">
+          <span className="w-2 h-2 rounded-full bg-purple-600 dark:bg-purple-400" />
+          <span>Vistoria QA</span>
+        </span>
+      );
     case 'READY':
-      return <Badge variant="volt" dot>Pronto p/ Entrega</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-teal-100 text-teal-900 border-teal-300 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-700">
+          <span className="w-2 h-2 rounded-full bg-teal-600 dark:bg-teal-400" />
+          <span>Pronto p/ Entrega</span>
+        </span>
+      );
     case 'DELIVERED':
-      return <Badge variant="volt">Entregue</Badge>;
+    case 'COMPLETED':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700">
+          <span>Entregue</span>
+        </span>
+      );
     case 'CHECKED_IN':
-      return <Badge variant="neutral" dot>No Pátio</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-indigo-100 text-indigo-900 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-700">
+          <span className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+          <span>No Pátio</span>
+        </span>
+      );
     case 'SCHEDULED':
-      return <Badge variant="neutral">Agendado</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-700">
+          <span>Agendado</span>
+        </span>
+      );
     case 'APPROVED':
-      return <Badge variant="neutral">Aprovado</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700">
+          <span>Aprovado</span>
+        </span>
+      );
     case 'QUOTE':
-      return <Badge variant="neutral">Orçamento</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-700">
+          <span>Orçamento</span>
+        </span>
+      );
     case 'PAUSED':
-      return <Badge variant="alert">Pausado</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-orange-100 text-orange-900 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-700">
+          <span>Pausado</span>
+        </span>
+      );
     case 'CANCELED':
-      return <Badge variant="error">Cancelado</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-700">
+          <span>Cancelado</span>
+        </span>
+      );
     default:
-      return <Badge variant="neutral">{status}</Badge>;
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+          <span>{status}</span>
+        </span>
+      );
   }
 }
 
@@ -353,6 +412,7 @@ export const OrdensServico: React.FC = () => {
     queryFn: () =>
       api.workOrders.list({
         status: selectedStatus === 'TODOS' ? undefined : selectedStatus,
+        excludeQuote: selectedStatus === 'TODOS',
         search: searchTerm || undefined,
         limit: 20,
         offset: (page - 1) * 20,
@@ -529,20 +589,28 @@ export const OrdensServico: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1">
-          {['TODOS', 'QUOTE', 'APPROVED', 'IN_PROGRESS', 'QA', 'READY', 'DELIVERED'].map((st) => (
+          {[
+            { key: 'TODOS', label: 'Todos os Status' },
+            { key: 'QUOTE', label: 'Orçamentos' },
+            { key: 'APPROVED', label: 'Aprovadas' },
+            { key: 'IN_PROGRESS', label: 'Em Execução' },
+            { key: 'QA', label: 'Controle QA' },
+            { key: 'READY', label: 'Prontos' },
+            { key: 'DELIVERED', label: 'Entregues' },
+          ].map((st) => (
             <button
-              key={st}
+              key={st.key}
               onClick={() => {
-                setSelectedStatus(st);
+                setSelectedStatus(st.key);
                 setPage(1);
               }}
               className={`h-10 px-3.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors ${
-                selectedStatus === st
+                selectedStatus === st.key
                   ? 'bg-[#0E1116] text-white shadow-sm'
                   : 'bg-white border border-[#E1E6EC] text-[#5B6674] hover:text-[#0E1116]'
               }`}
             >
-              {st === 'TODOS' ? 'Todos os Status' : st}
+              {st.label}
             </button>
           ))}
         </div>
@@ -596,7 +664,7 @@ export const OrdensServico: React.FC = () => {
 
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-[#0E1116]">
-                          {os.vehicle ? `${os.vehicle.brand} ${os.vehicle.model}` : 'Veículo'}
+                          {getVehicleDisplay(os.vehicle)}
                         </div>
                         <span className="text-[11px] text-[#0E1116] font-mono font-bold tracking-wider">
                           {os.vehicle?.plate || 'SEM PLACA'}
@@ -660,22 +728,14 @@ export const OrdensServico: React.FC = () => {
                           </button>
 
                           {balanceCents > 0 && (
-                            <>
-                              <button
-                                onClick={() => handleOpenPaymentModal(os)}
-                                className="p-1.5 text-[#0E1116] bg-[#C8F52E]/30 hover:bg-[#C8F52E] rounded-lg transition-colors"
-                                title="Receber via Pix Dinâmico no Caixa"
-                              >
-                                <QrCode size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleOpenPaymentModal(os)}
-                                className="p-1.5 text-[#E5484D] hover:bg-[#FEE2E2] rounded-lg transition-colors"
-                                title="Registrar Pagamento Manual"
-                              >
-                                <DollarSign size={16} />
-                              </button>
-                            </>
+                            <button
+                              onClick={() => handleOpenPaymentModal(os)}
+                              className="px-2 py-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-all font-bold flex items-center gap-1 shadow-sm text-xs"
+                              title="Receber Pagamento no Caixa (Pix Dinâmico, Cartão ou Dinheiro)"
+                            >
+                              <DollarSign size={14} />
+                              <span>Receber</span>
+                            </button>
                           )}
 
                           {os.status === 'APPROVED' && (
@@ -763,7 +823,7 @@ export const OrdensServico: React.FC = () => {
                   </span>
                 </div>
                 <p className="text-xs text-[#5B6674] mt-0.5">
-                  {selectedOrder.customer?.name} · {selectedOrder.vehicle ? `${selectedOrder.vehicle.brand} ${selectedOrder.vehicle.model} (${selectedOrder.vehicle.plate})` : ''}
+                  {selectedOrder.customer?.name} · {selectedOrder.vehicle ? `${getVehicleDisplay(selectedOrder.vehicle)} (${selectedOrder.vehicle.plate})` : ''}
                 </p>
               </div>
               <button
@@ -1020,7 +1080,7 @@ export const OrdensServico: React.FC = () => {
                   <Car size={18} className="text-[#0E1116]" />
                   <div>
                     <h5 className="font-bold text-sm text-[#0E1116]">
-                      {selectedOrder.vehicle ? `${selectedOrder.vehicle.brand} ${selectedOrder.vehicle.model}` : 'Veículo'}
+                      {getVehicleDisplay(selectedOrder.vehicle)}
                     </h5>
                     <span className="text-[#5B6674] font-mono">{selectedOrder.vehicle?.plate}</span>
                   </div>

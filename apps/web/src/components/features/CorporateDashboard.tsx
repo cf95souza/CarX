@@ -208,13 +208,13 @@ export function CorporateDashboard() {
         </div>
 
         {/* CONTROLES DO TOPO: SELETOR DE UNIDADE E AÇÕES */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-            <MapPin className="w-4 h-4 text-slate-400" />
+        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex-1 sm:flex-initial min-w-[200px]">
+            <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
             <select
               value={selectedUnitId}
               onChange={(e) => setSelectedUnitId(e.target.value)}
-              className="bg-transparent text-sm font-medium text-slate-700 focus:outline-none cursor-pointer"
+              className="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer w-full"
             >
               <option value="ALL">🌐 Todas as Unidades (Rede Consolidada)</option>
               {units.map((u) => (
@@ -225,60 +225,61 @@ export function CorporateDashboard() {
             </select>
           </div>
 
-          <Button
-            variant="outline"
+          <button
+            type="button"
             onClick={() => setIsTransferModalOpen(true)}
-            className="flex items-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2 border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-bold text-xs rounded-xl transition-all shadow-sm flex-1 sm:flex-initial shrink-0 active:scale-[0.98] cursor-pointer"
           >
-            <ArrowRightLeft className="w-4 h-4 text-emerald-600" />
-            <span>Transferir Insumos</span>
-          </Button>
+            <ArrowRightLeft className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="whitespace-nowrap">Transferir Insumos</span>
+          </button>
 
-          <Button
+          <button
+            type="button"
             onClick={() => setIsNewUnitModalOpen(true)}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex-1 sm:flex-initial shrink-0 active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
-            <span>Nova Filial</span>
-          </Button>
+            <Plus className="w-4 h-4 shrink-0" />
+            <span className="whitespace-nowrap">Nova Filial</span>
+          </button>
         </div>
       </div>
 
       {/* NAVEGAÇÃO POR ABAS */}
-      <div className="flex items-center border-b border-slate-200 gap-2">
+      <div className="flex items-center border-b border-slate-200 gap-2 overflow-x-auto no-scrollbar pb-0.5">
         <button
           onClick={() => setActiveTab('OVERVIEW')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
             activeTab === 'OVERVIEW'
               ? 'border-emerald-600 text-slate-900'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          <TrendingUp className="w-4 h-4" />
+          <TrendingUp className="w-4 h-4 shrink-0" />
           <span>Visão Consolidada & Ranking</span>
         </button>
 
         <button
           onClick={() => setActiveTab('UNITS')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
             activeTab === 'UNITS'
               ? 'border-emerald-600 text-slate-900'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          <Building2 className="w-4 h-4" />
+          <Building2 className="w-4 h-4 shrink-0" />
           <span>Gestão de Filiais ({units.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('TRANSFERS')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors border-b-2 -mb-px whitespace-nowrap shrink-0 ${
             activeTab === 'TRANSFERS'
               ? 'border-emerald-600 text-slate-900'
               : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
           }`}
         >
-          <ArrowRightLeft className="w-4 h-4" />
+          <ArrowRightLeft className="w-4 h-4 shrink-0" />
           <span>Logística Inter-Lojas ({transfers.length})</span>
         </button>
       </div>
@@ -501,13 +502,14 @@ export function CorporateDashboard() {
                 Lojas físicas que operam dentro da sua conta corporativa
               </p>
             </div>
-            <Button
+            <button
+              type="button"
               onClick={() => setIsNewUnitModalOpen(true)}
-              className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-all shrink-0 active:scale-[0.98] cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Adicionar Filial</span>
-            </Button>
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -573,13 +575,14 @@ export function CorporateDashboard() {
                 Rastreabilidade de bobinas de PPF, insulfilm e insumos movimentados entre lojas
               </p>
             </div>
-            <Button
+            <button
+              type="button"
               onClick={() => setIsTransferModalOpen(true)}
-              className="flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-bold text-xs rounded-xl shadow-sm transition-all shrink-0 active:scale-[0.98] cursor-pointer"
             >
-              <ArrowRightLeft className="w-4 h-4 text-emerald-400" />
+              <ArrowRightLeft className="w-4 h-4" />
               <span>Nova Transferência</span>
-            </Button>
+            </button>
           </div>
 
           <div className="overflow-x-auto">

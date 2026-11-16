@@ -203,22 +203,22 @@ export const CrmRetentionDashboard: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header Executivo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-6 rounded-2xl shadow-xl">
+    <div className="space-y-6 font-sans text-[#F2F5F8]">
+      {/* Header Executivo - CarX Design System */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#171C24] border border-[#2E3744] p-6 rounded-2xl shadow-xl">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400">
+            <div className="p-2.5 bg-[#232A35] border border-[#C8F52E]/30 rounded-xl text-[#C8F52E]">
               <Users className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-2xl font-display font-bold text-white tracking-tight flex items-center gap-2">
                 CRM de Retenção & Pós-Venda
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#C8F52E]/10 text-[#C8F52E] font-bold border border-[#C8F52E]/30 uppercase tracking-wider">
                   Retenção Ativa
                 </span>
               </h1>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[#9AA7B8] mt-0.5">
                 Fidelização inteligente, revisões periódicas de PPF e vitrificação, cupons dinâmicos e prevenção de churn.
               </p>
             </div>
@@ -229,14 +229,14 @@ export const CrmRetentionDashboard: React.FC = () => {
           <button
             onClick={loadData}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-medium transition"
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#232A35] hover:bg-[#2E3744] text-[#F2F5F8] border border-[#2E3744] text-xs font-bold transition"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#C8F52E]' : ''}`} />
             Atualizar
           </button>
           <button
             onClick={() => setRuleModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-semibold shadow-lg shadow-emerald-500/20 transition"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] text-xs font-display font-black uppercase tracking-wider shadow-lg transition"
           >
             <Plus className="w-4 h-4" />
             Nova Régua
@@ -247,81 +247,81 @@ export const CrmRetentionDashboard: React.FC = () => {
       {/* 4 Cards de Métricas Estratégicas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Taxa de Recompra */}
-        <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-emerald-500/30 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Taxa de Recompra</span>
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+        <div className="bg-[#171C24] border border-[#2E3744] p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-[#C8F52E]/40 transition">
+          <div className="flex items-center justify-between text-[#9AA7B8] mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Taxa de Recompra</span>
+            <div className="p-2 rounded-lg bg-[#C8F52E]/10 text-[#C8F52E]">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-white">
+          <div className="text-3xl font-display font-black text-white">
             {overview?.repurchaseRatePercent ?? 0}%
           </div>
-          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
-            <span className="text-emerald-400 font-semibold">Recorrência Anual</span> de clientes na oficina
+          <p className="text-xs text-[#9AA7B8] mt-2 flex items-center gap-1.5">
+            <span className="text-[#C8F52E] font-semibold">Recorrência Anual</span> de clientes na loja
           </p>
         </div>
 
         {/* Revisões de Garantia Pendentes */}
-        <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-amber-500/30 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Revisões Preventivas</span>
+        <div className="bg-[#171C24] border border-[#2E3744] p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-amber-500/40 transition">
+          <div className="flex items-center justify-between text-[#9AA7B8] mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Revisões Preventivas</span>
             <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
               <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-amber-400">
+          <div className="text-3xl font-display font-black text-amber-400">
             {overview?.pendingWarrantyRevisionsCount ?? 0}
           </div>
-          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+          <p className="text-xs text-[#9AA7B8] mt-2 flex items-center gap-1.5">
             PPF e Vitrificação vencendo em 30d
           </p>
         </div>
 
         {/* Radar Anti-Churn / Inativos */}
-        <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-rose-500/30 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Radar Anti-Churn</span>
+        <div className="bg-[#171C24] border border-[#2E3744] p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-rose-500/40 transition">
+          <div className="flex items-center justify-between text-[#9AA7B8] mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Radar Anti-Churn</span>
             <div className="p-2 rounded-lg bg-rose-500/10 text-rose-400">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-rose-400">
+          <div className="text-3xl font-display font-black text-rose-400">
             {(overview?.inactiveCustomersCount ?? 0) + (overview?.dormantCustomersCount ?? 0)}
           </div>
-          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+          <p className="text-xs text-[#9AA7B8] mt-2 flex items-center gap-1.5">
             Clientes sem visita há mais de 180 dias
           </p>
         </div>
 
         {/* Receita Recuperada via Retenção */}
-        <div className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-sky-500/30 transition">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-semibold uppercase tracking-wider">Receita por Retenção</span>
-            <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400">
+        <div className="bg-[#171C24] border border-[#2E3744] p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:border-[#5CC8FF]/40 transition">
+          <div className="flex items-center justify-between text-[#9AA7B8] mb-2">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Receita por Retenção</span>
+            <div className="p-2 rounded-lg bg-[#5CC8FF]/10 text-[#5CC8FF]">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <div className="text-3xl font-extrabold text-sky-400">
+          <div className="text-3xl font-display font-black text-[#5CC8FF]">
             {((overview?.convertedRevenueCents ?? 0) / 100).toLocaleString('pt-BR', {
               style: 'currency',
               currency: 'BRL',
             })}
           </div>
-          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
-            <span className="text-sky-400 font-semibold">{overview?.convertedContactsCount ?? 0} retornos</span> convertidos ({overview?.conversionRatePercent ?? 0}%)
+          <p className="text-xs text-[#9AA7B8] mt-2 flex items-center gap-1.5">
+            <span className="text-[#5CC8FF] font-semibold">{overview?.convertedContactsCount ?? 0} retornos</span> convertidos ({overview?.conversionRatePercent ?? 0}%)
           </p>
         </div>
       </div>
 
       {/* Navegação por Abas */}
-      <div className="flex border-b border-slate-800 gap-2">
+      <div className="flex border-b border-[#2E3744] gap-2">
         <button
           onClick={() => setActiveTab('warranties')}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition flex items-center gap-2 ${
             activeTab === 'warranties'
-              ? 'border-emerald-500 text-emerald-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#C8F52E] text-[#C8F52E]'
+              : 'border-transparent text-[#9AA7B8] hover:text-white'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />
@@ -330,10 +330,10 @@ export const CrmRetentionDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('inactive')}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition flex items-center gap-2 ${
             activeTab === 'inactive'
-              ? 'border-emerald-500 text-emerald-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#C8F52E] text-[#C8F52E]'
+              : 'border-transparent text-[#9AA7B8] hover:text-white'
           }`}
         >
           <Clock className="w-4 h-4" />
@@ -342,10 +342,10 @@ export const CrmRetentionDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('rules')}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition flex items-center gap-2 ${
             activeTab === 'rules'
-              ? 'border-emerald-500 text-emerald-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#C8F52E] text-[#C8F52E]'
+              : 'border-transparent text-[#9AA7B8] hover:text-white'
           }`}
         >
           <Sparkles className="w-4 h-4" />
@@ -354,10 +354,10 @@ export const CrmRetentionDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`px-4 py-3 font-medium text-sm border-b-2 transition flex items-center gap-2 ${
+          className={`px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition flex items-center gap-2 ${
             activeTab === 'history'
-              ? 'border-emerald-500 text-emerald-400 font-semibold'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-[#C8F52E] text-[#C8F52E]'
+              : 'border-transparent text-[#9AA7B8] hover:text-white'
           }`}
         >
           <MessageCircle className="w-4 h-4" />
@@ -367,31 +367,31 @@ export const CrmRetentionDashboard: React.FC = () => {
 
       {/* ABA 1: Revisões de Garantia Periódica */}
       {activeTab === 'warranties' && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl overflow-hidden shadow-xl">
+          <div className="p-5 border-b border-[#2E3744] flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-white">Revisões Preventivas de Garantia</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="text-sm font-display font-bold text-white uppercase tracking-wider">Revisões Preventivas de Garantia</h2>
+              <p className="text-xs text-[#9AA7B8] mt-0.5">
                 Garantias ativas de PPF (6m) e Vitrificação Cerâmica (12m) que necessitam de inspeção técnica preventiva.
               </p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[#0E1116] text-[#C8F52E] border border-[#2E3744] font-mono font-bold">
               {revisions.length} veículo(s) no radar
             </span>
           </div>
 
           {revisions.length === 0 ? (
             <div className="p-12 text-center text-slate-500">
-              <ShieldCheck className="w-12 h-12 mx-auto mb-3 opacity-30 text-emerald-400" />
-              <p className="text-sm">Nenhuma revisão preventiva com vencimento próximo identificada.</p>
+              <ShieldCheck className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#C8F52E]" />
+              <p className="text-sm font-semibold text-slate-400">Nenhuma revisão preventiva com vencimento próximo identificada.</p>
               <p className="text-xs text-slate-600 mt-1">
                 À medida que as aplicações completarem 6 ou 12 meses, os veículos aparecerão automaticamente aqui.
               </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="bg-slate-950/60 text-xs uppercase text-slate-400 border-b border-slate-800">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-[#0E1116] text-[10px] uppercase text-[#9AA7B8] font-bold border-b border-[#2E3744] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Cliente</th>
                     <th className="px-5 py-3.5">Veículo</th>
@@ -401,31 +401,31 @@ export const CrmRetentionDashboard: React.FC = () => {
                     <th className="px-5 py-3.5 text-right">Ação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#2E3744]/60">
                   {revisions.map((rev) => (
-                    <tr key={rev.warrantyId} className="hover:bg-slate-800/30 transition">
-                      <td className="px-5 py-4 font-medium text-white">
+                    <tr key={rev.warrantyId} className="hover:bg-[#232A35]/40 transition-colors">
+                      <td className="px-5 py-4 font-bold text-white">
                         <div>{rev.customerName}</div>
-                        <div className="text-xs text-slate-500">{rev.customerPhone || 'Sem telefone'}</div>
+                        <div className="text-[11px] font-mono text-[#9AA7B8]">{rev.customerPhone || 'Sem telefone'}</div>
                       </td>
                       <td className="px-5 py-4">
                         <div className="font-semibold text-slate-200">{rev.vehicleModel}</div>
-                        <div className="text-xs font-mono text-emerald-400">{rev.vehiclePlate}</div>
+                        <div className="text-[11px] font-mono font-bold text-[#C8F52E]">{rev.vehiclePlate}</div>
                       </td>
                       <td className="px-5 py-4 text-xs font-medium text-slate-300">
                         {rev.serviceName}
                       </td>
-                      <td className="px-5 py-4 text-xs text-slate-400">
+                      <td className="px-5 py-4 text-xs text-[#9AA7B8] font-mono">
                         {new Date(rev.revisionDueDate).toLocaleDateString('pt-BR')}
                       </td>
                       <td className="px-5 py-4">
                         {rev.isOverdue ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 uppercase tracking-wider">
                             <AlertTriangle className="w-3 h-3" />
                             Atrasada ({Math.abs(rev.daysRemainingOrOverdue)}d)
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider">
                             <Clock className="w-3 h-3" />
                             Vence em {rev.daysRemainingOrOverdue}d
                           </span>
@@ -445,7 +445,7 @@ export const CrmRetentionDashboard: React.FC = () => {
                               suggestedDiscount: 10,
                             })
                           }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-semibold transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C8F52E]/10 text-[#C8F52E] hover:bg-[#C8F52E]/20 border border-[#C8F52E]/30 text-xs font-bold transition"
                         >
                           <Send className="w-3.5 h-3.5" />
                           Chamar no WhatsApp
@@ -462,24 +462,24 @@ export const CrmRetentionDashboard: React.FC = () => {
 
       {/* ABA 2: Radar de Clientes Inativos (Anti-Churn) */}
       {activeTab === 'inactive' && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl overflow-hidden shadow-xl">
+          <div className="p-5 border-b border-[#2E3744] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-semibold text-white">Radar de Clientes Inativos</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="text-sm font-display font-bold text-white uppercase tracking-wider">Radar de Clientes Inativos</h2>
+              <p className="text-xs text-[#9AA7B8] mt-0.5">
                 Identifique clientes em risco de abandono e dispare incentivos com cupons dinâmicos.
               </p>
             </div>
 
             {/* Filtros de Inatividade */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 flex items-center gap-1">
+              <span className="text-xs text-[#9AA7B8] flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5" /> Faixa:
               </span>
               <select
                 value={inactivityFilter}
                 onChange={(e) => setInactivityFilter(e.target.value as any)}
-                className="bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 px-3 py-1.5 focus:outline-none focus:border-emerald-500"
+                className="bg-[#0E1116] border border-[#2E3744] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:border-[#C8F52E]"
               >
                 <option value="all">Todas as Faixas</option>
                 <option value="90_days">Atenção (90 - 180 dias)</option>
@@ -491,13 +491,13 @@ export const CrmRetentionDashboard: React.FC = () => {
 
           {filteredInactive.length === 0 ? (
             <div className="p-12 text-center text-slate-500">
-              <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30 text-emerald-400" />
-              <p className="text-sm">Nenhum cliente inativo localizado para a faixa selecionada.</p>
+              <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#C8F52E]" />
+              <p className="text-sm font-semibold text-slate-400">Nenhum cliente inativo localizado para a faixa selecionada.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="bg-slate-950/60 text-xs uppercase text-slate-400 border-b border-slate-800">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-[#0E1116] text-[10px] uppercase text-[#9AA7B8] font-bold border-b border-[#2E3744] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Cliente</th>
                     <th className="px-5 py-3.5">Último Veículo</th>
@@ -508,23 +508,23 @@ export const CrmRetentionDashboard: React.FC = () => {
                     <th className="px-5 py-3.5 text-right">Ação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#2E3744]/60">
                   {filteredInactive.map((c) => (
-                    <tr key={c.customerId} className="hover:bg-slate-800/30 transition">
-                      <td className="px-5 py-4 font-medium text-white">
+                    <tr key={c.customerId} className="hover:bg-[#232A35]/40 transition-colors">
+                      <td className="px-5 py-4 font-bold text-white">
                         <div>{c.customerName}</div>
-                        <div className="text-xs text-slate-500">{c.customerPhone || 'Sem telefone'}</div>
+                        <div className="text-[11px] font-mono text-[#9AA7B8]">{c.customerPhone || 'Sem telefone'}</div>
                       </td>
                       <td className="px-5 py-4 text-xs">
                         <div className="font-semibold text-slate-200">{c.lastVehicleModel || 'N/A'}</div>
-                        <div className="font-mono text-emerald-400">{c.lastVehiclePlate || ''}</div>
+                        <div className="font-mono font-bold text-[#C8F52E]">{c.lastVehiclePlate || ''}</div>
                       </td>
                       <td className="px-5 py-4 text-xs text-slate-300">
                         {c.lastServiceName || 'Serviço Automotivo'}
                       </td>
                       <td className="px-5 py-4">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                             c.inactivityTier === '365_days_plus'
                               ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
                               : c.inactivityTier === '180_days'
@@ -536,14 +536,14 @@ export const CrmRetentionDashboard: React.FC = () => {
                           {c.daysInactive} dias
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-xs font-semibold text-emerald-400">
+                      <td className="px-5 py-4 text-xs font-mono font-bold text-[#C8F52E]">
                         {(c.lifetimeValueCents / 100).toLocaleString('pt-BR', {
                           style: 'currency',
                           currency: 'BRL',
                         })}
                       </td>
                       <td className="px-5 py-4 text-xs">
-                        <span className="px-2 py-1 rounded bg-slate-800 text-slate-200 border border-slate-700 font-mono">
+                        <span className="px-2.5 py-1 rounded-lg bg-[#0E1116] text-[#C8F52E] border border-[#2E3744] font-mono font-bold">
                           {c.suggestedDiscountPercent}% OFF
                         </span>
                       </td>
@@ -560,7 +560,7 @@ export const CrmRetentionDashboard: React.FC = () => {
                               suggestedDiscount: c.suggestedDiscountPercent,
                             })
                           }
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition shadow-sm"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] text-xs font-display font-black uppercase tracking-wider transition shadow-sm"
                         >
                           <Send className="w-3.5 h-3.5" />
                           Reativar Cliente
@@ -579,10 +579,10 @@ export const CrmRetentionDashboard: React.FC = () => {
       {activeTab === 'rules' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">Réguas de Retenção Ativas no SaaS</h2>
+            <h2 className="text-sm font-display font-bold text-white uppercase tracking-wider">Réguas de Retenção Ativas no SaaS</h2>
             <button
               onClick={() => setRuleModalOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-xs font-semibold hover:bg-emerald-400 transition"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#C8F52E] text-[#0E1116] text-xs font-display font-black uppercase tracking-wider hover:bg-[#b8e520] transition shadow-md"
             >
               <Plus className="w-3.5 h-3.5" /> Criar Régua
             </button>
@@ -592,33 +592,33 @@ export const CrmRetentionDashboard: React.FC = () => {
             {rules.map((rule) => (
               <div
                 key={rule.id}
-                className="bg-slate-900/90 border border-slate-800 p-5 rounded-2xl shadow-lg relative flex flex-col justify-between"
+                className="bg-[#171C24] border border-[#2E3744] p-5 rounded-2xl shadow-lg relative flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700 uppercase tracking-wider">
+                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#0E1116] text-[#C8F52E] border border-[#2E3744] uppercase tracking-wider font-mono">
                       {rule.serviceCategory}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <span className="text-xs text-[#9AA7B8] flex items-center gap-1">
                       <Clock className="w-3 h-3 text-slate-500" />
                       {rule.intervalDays} dias
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-white mb-1.5">{rule.name}</h3>
-                  <p className="text-xs text-slate-400 italic line-clamp-3 bg-slate-950 p-3 rounded-xl border border-slate-800/80 mb-4">
+                  <h3 className="text-sm font-bold text-white mb-1.5">{rule.name}</h3>
+                  <p className="text-xs text-slate-400 italic line-clamp-3 bg-[#0E1116] p-3 rounded-xl border border-[#2E3744] mb-4 font-mono">
                     "{rule.messageTemplate}"
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between text-xs pt-3 border-t border-slate-800/80">
-                  <span className="text-slate-400">
+                <div className="flex items-center justify-between text-xs pt-3 border-t border-[#2E3744]">
+                  <span className="text-[#9AA7B8]">
                     Desconto sugerido:{' '}
-                    <strong className="text-emerald-400">
+                    <strong className="text-[#C8F52E] font-bold">
                       {rule.discountValue}% OFF
                     </strong>
                   </span>
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <span className="flex items-center gap-1.5 text-[#C8F52E] font-semibold text-xs">
                     <CheckCircle className="w-3.5 h-3.5" /> Ativa
                   </span>
                 </div>
@@ -630,28 +630,28 @@ export const CrmRetentionDashboard: React.FC = () => {
 
       {/* ABA 4: Histórico de Disparos e Conversões */}
       {activeTab === 'history' && (
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl overflow-hidden shadow-xl">
+          <div className="p-5 border-b border-[#2E3744] flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-white">Histórico de Disparos de Retenção</h2>
-              <p className="text-xs text-slate-400">
+              <h2 className="text-sm font-display font-bold text-white uppercase tracking-wider">Histórico de Disparos de Retenção</h2>
+              <p className="text-xs text-[#9AA7B8] mt-0.5">
                 Acompanhe o engajamento, cupons resgatados e marque retornos convertidos em novas ordens de serviço.
               </p>
             </div>
-            <span className="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+            <span className="text-xs px-2.5 py-1 rounded-full bg-[#0E1116] text-[#C8F52E] border border-[#2E3744] font-mono font-bold">
               {contacts.length} disparo(s)
             </span>
           </div>
 
           {contacts.length === 0 ? (
             <div className="p-12 text-center text-slate-500">
-              <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30 text-emerald-400" />
-              <p className="text-sm">Nenhum contato de retenção registrado ainda.</p>
+              <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#C8F52E]" />
+              <p className="text-sm font-semibold text-slate-400">Nenhum contato de retenção registrado ainda.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-slate-300">
-                <thead className="bg-slate-950/60 text-xs uppercase text-slate-400 border-b border-slate-800">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-[#0E1116] text-[10px] uppercase text-[#9AA7B8] font-bold border-b border-[#2E3744] tracking-wider">
                   <tr>
                     <th className="px-5 py-3.5">Cliente</th>
                     <th className="px-5 py-3.5">Veículo</th>
@@ -662,37 +662,37 @@ export const CrmRetentionDashboard: React.FC = () => {
                     <th className="px-5 py-3.5 text-right">Ação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-[#2E3744]/60">
                   {contacts.map((cnt) => (
-                    <tr key={cnt.id} className="hover:bg-slate-800/30 transition">
-                      <td className="px-5 py-4 font-medium text-white">
+                    <tr key={cnt.id} className="hover:bg-[#232A35]/40 transition-colors">
+                      <td className="px-5 py-4 font-bold text-white">
                         <div>{cnt.customerName}</div>
-                        <div className="text-xs text-slate-500">{cnt.customerPhone}</div>
+                        <div className="text-[11px] font-mono text-[#9AA7B8]">{cnt.customerPhone}</div>
                       </td>
                       <td className="px-5 py-4 text-xs">
                         <div className="font-semibold text-slate-200">{cnt.vehicleModel || 'N/A'}</div>
-                        <div className="font-mono text-emerald-400">{cnt.vehiclePlate || ''}</div>
+                        <div className="font-mono font-bold text-[#C8F52E]">{cnt.vehiclePlate || ''}</div>
                       </td>
                       <td className="px-5 py-4 text-xs">
-                        <span className="px-2 py-1 rounded bg-slate-800 text-emerald-400 border border-slate-700 font-mono font-semibold">
+                        <span className="px-2.5 py-1 rounded-lg bg-[#0E1116] text-[#C8F52E] border border-[#2E3744] font-mono font-bold">
                           {cnt.couponCode || 'N/A'}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-xs text-slate-400">
+                      <td className="px-5 py-4 text-xs text-[#9AA7B8] font-mono">
                         {new Date(cnt.createdAt).toLocaleString('pt-BR')}
                       </td>
                       <td className="px-5 py-4">
                         {cnt.status === 'converted' ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
                             <CheckCircle className="w-3 h-3" /> Convertido
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30 uppercase tracking-wider">
                             <Send className="w-3 h-3" /> Enviado
                           </span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-xs font-semibold text-emerald-400">
+                      <td className="px-5 py-4 text-xs font-mono font-bold text-[#C8F52E]">
                         {cnt.status === 'converted'
                           ? (cnt.conversionRevenueCents / 100).toLocaleString('pt-BR', {
                               style: 'currency',
@@ -707,7 +707,7 @@ export const CrmRetentionDashboard: React.FC = () => {
                               setSelectedContactId(cnt.id);
                               setConvertModalOpen(true);
                             }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#232A35] hover:bg-[#2e3745] text-[#C8F52E] border border-[#C8F52E]/30 text-xs font-bold transition"
                           >
                             <DollarSign className="w-3.5 h-3.5" />
                             Marcar Venda
@@ -727,21 +727,21 @@ export const CrmRetentionDashboard: React.FC = () => {
 
       {/* MODAL 1: Disparo WhatsApp com Cupom Dinâmico */}
       {contactModalOpen && targetCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
-            <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-              <MessageCircle className="w-5 h-5 text-emerald-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] rounded-2xl w-full max-w-lg p-6 shadow-2xl relative">
+            <h3 className="text-base font-display font-bold text-white mb-1 flex items-center gap-2">
+              <MessageCircle className="w-5 h-5 text-[#C8F52E]" />
               Disparar Mensagem de Retenção
             </h3>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-[#9AA7B8] mb-4">
               Cliente: <strong className="text-white">{targetCustomer.name}</strong> • Veículo:{' '}
-              <strong className="text-emerald-400">{targetCustomer.model} ({targetCustomer.plate})</strong>
+              <strong className="text-[#C8F52E]">{targetCustomer.model} ({targetCustomer.plate})</strong>
             </p>
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                     Desconto do Cupom (%)
                   </label>
                   <input
@@ -750,11 +750,11 @@ export const CrmRetentionDashboard: React.FC = () => {
                     max="50"
                     value={discountPercent}
                     onChange={(e) => setDiscountPercent(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E] font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                     Validade (Dias)
                   </label>
                   <input
@@ -763,13 +763,13 @@ export const CrmRetentionDashboard: React.FC = () => {
                     max="90"
                     value={couponDaysValid}
                     onChange={(e) => setCouponDaysValid(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E] font-bold"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                   Mensagem Adicional / Ajuste Personalizado (Opcional)
                 </label>
                 <textarea
@@ -777,25 +777,25 @@ export const CrmRetentionDashboard: React.FC = () => {
                   value={customMessage}
                   onChange={(e) => setCustomMessage(e.target.value)}
                   placeholder="Deixe em branco para usar o template inteligente automático com as tags do cliente..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 resize-none"
+                  className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-[#C8F52E] resize-none"
                 />
               </div>
 
               {lastGeneratedCoupon && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                  <div className="text-xs text-slate-400">Cupom Dinâmico Criado no CarX:</div>
-                  <div className="text-lg font-mono font-bold text-emerald-400 mt-0.5">
+                <div className="p-3 bg-[#0E1116] border border-[#C8F52E]/30 rounded-xl">
+                  <div className="text-[10px] text-[#9AA7B8] font-bold uppercase tracking-wider">Cupom Dinâmico Criado no CarX:</div>
+                  <div className="text-base font-mono font-black text-[#C8F52E] mt-0.5">
                     {lastGeneratedCoupon}
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#2E3744]">
               <button
                 type="button"
                 onClick={() => setContactModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm transition"
+                className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-semibold transition"
               >
                 Fechar
               </button>
@@ -803,7 +803,7 @@ export const CrmRetentionDashboard: React.FC = () => {
                 type="button"
                 onClick={handleSendContact}
                 disabled={sendingContact}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black text-xs uppercase tracking-wider shadow-lg transition disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />
                 {sendingContact ? 'Gerando...' : 'Gerar e Abrir WhatsApp'}
@@ -815,47 +815,47 @@ export const CrmRetentionDashboard: React.FC = () => {
 
       {/* MODAL 2: Converter Contato em Venda */}
       {convertModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
-            <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <h3 className="text-base font-display font-bold text-white mb-1 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-[#C8F52E]" />
               Registrar Conversão de Retorno
             </h3>
-            <p className="text-xs text-slate-400 mb-4">
+            <p className="text-xs text-[#9AA7B8] mb-4">
               Informe o valor faturado com o retorno do cliente para contabilizar o ROI da retenção.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                   Receita Gerada (R$)
                 </label>
                 <input
                   type="text"
                   value={conversionRevenue}
                   onChange={(e) => setConversionRevenue(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+                  className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-[#C8F52E] font-mono font-bold focus:outline-none focus:border-[#C8F52E]"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                   Observações do Retorno
                 </label>
                 <input
                   type="text"
                   value={conversionNotes}
                   onChange={(e) => setConversionNotes(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E]"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#2E3744]">
               <button
                 type="button"
                 onClick={() => setConvertModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm transition"
+                className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-semibold transition"
               >
                 Cancelar
               </button>
@@ -863,7 +863,7 @@ export const CrmRetentionDashboard: React.FC = () => {
                 type="button"
                 onClick={handleConvertContact}
                 disabled={converting}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black text-xs uppercase tracking-wider shadow-lg transition disabled:opacity-50"
               >
                 <Check className="w-4 h-4" />
                 {converting ? 'Gravando...' : 'Confirmar Conversão'}
@@ -875,19 +875,19 @@ export const CrmRetentionDashboard: React.FC = () => {
 
       {/* MODAL 3: Criar Nova Régua */}
       {ruleModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
           <form
             onSubmit={handleCreateRule}
-            className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4"
+            className="bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4"
           >
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Plus className="w-5 h-5 text-emerald-400" />
+            <h3 className="text-base font-display font-bold text-white flex items-center gap-2">
+              <Plus className="w-5 h-5 text-[#C8F52E]" />
               Criar Nova Régua de Retenção
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Nome da Régua
+              <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
+                Nome da Régua *
               </label>
               <input
                 type="text"
@@ -895,19 +895,19 @@ export const CrmRetentionDashboard: React.FC = () => {
                 value={newRuleName}
                 onChange={(e) => setNewRuleName(e.target.value)}
                 placeholder="Ex: Revisão Semestral de Insulfilm & Película"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E]"
               />
             </div>
 
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                   Categoria
                 </label>
                 <select
                   value={newRuleCategory}
                   onChange={(e) => setNewRuleCategory(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E]"
                 >
                   <option value="ppf">PPF</option>
                   <option value="vitrificacao">Vitrificação</option>
@@ -919,7 +919,7 @@ export const CrmRetentionDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                   Intervalo (Dias)
                 </label>
                 <input
@@ -928,12 +928,12 @@ export const CrmRetentionDashboard: React.FC = () => {
                   max="730"
                   value={newRuleDays}
                   onChange={(e) => setNewRuleDays(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E] font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                   Desconto (%)
                 </label>
                 <input
@@ -942,13 +942,13 @@ export const CrmRetentionDashboard: React.FC = () => {
                   max="50"
                   value={newRuleDiscount}
                   onChange={(e) => setNewRuleDiscount(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full h-11 bg-[#0E1116] border border-[#2E3744] rounded-xl px-3 text-xs text-white focus:outline-none focus:border-[#C8F52E] font-bold"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
+              <label className="block text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider mb-1">
                 Template da Mensagem (tags: {'{cliente}'}, {'{veiculo}'}, {'{servico}'}, {'{cupom_codigo}'}, {'{cupom_beneficio}'})
               </label>
               <textarea
@@ -956,22 +956,22 @@ export const CrmRetentionDashboard: React.FC = () => {
                 required
                 value={newRuleTemplate}
                 onChange={(e) => setNewRuleTemplate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 resize-none font-mono"
+                className="w-full bg-[#0E1116] border border-[#2E3744] rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-[#C8F52E] resize-none font-mono"
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2E3744]">
               <button
                 type="button"
                 onClick={() => setRuleModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-sm transition"
+                className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-semibold transition"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={savingRule}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black text-xs uppercase tracking-wider shadow-lg transition disabled:opacity-50"
               >
                 <Check className="w-4 h-4" />
                 {savingRule ? 'Salvando...' : 'Salvar Régua'}

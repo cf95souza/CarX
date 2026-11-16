@@ -42,7 +42,8 @@ export class TechnicianService {
     // 1. Retrabalhos têm prioridade máxima (is_rework = true)
     // 2. OS em andamento (IN_PROGRESS)
     // 3. Ordem de prazo prometido ou criação
-    let whereClause = `wo.tenant_id = $1 AND wo.status NOT IN ('${WorkOrderStatus.DELIVERED}', '${WorkOrderStatus.CANCELED}')`;
+    // 4. Orçamentos pendentes (QUOTE) nunca entram na fila de execução do técnico
+    let whereClause = `wo.tenant_id = $1 AND wo.status NOT IN ('${WorkOrderStatus.DELIVERED}', '${WorkOrderStatus.CANCELED}', '${WorkOrderStatus.QUOTE}', '${WorkOrderStatus.QA}', '${WorkOrderStatus.READY}')`;
     const params: any[] = [tenantId];
 
     if (scope === 'mine') {
@@ -418,7 +419,8 @@ export class TechnicianService {
     workOrderId: string,
     technicianId: string
   ): Promise<WorkOrderTimerDto> {
-    const timerRes = await tenantQuery<{
+    // 1. Tenta encontrar timer ativo do técnico; se não achar, busca qualquer timer ativo da OS
+    let timerRes = await tenantQuery<{
       id: string;
       status: string;
     }>(
@@ -430,7 +432,48 @@ export class TechnicianService {
     );
 
     if (timerRes.rows.length === 0) {
-      throw new TechnicianError('Nenhum cronômetro ativo ou pausado encontrado.', 404, 'NO_TIMER_TO_STOP');
+      timerRes = await tenantQuery<{
+        id: string;
+        status: string;
+      }>(
+        tenantId,
+        `SELECT id, status FROM work_order_timers
+         WHERE tenant_id = $1 AND work_order_id = $2 AND status IN ('running', 'paused')
+         ORDER BY created_at DESC LIMIT 1;`,
+        [tenantId, workOrderId]
+      );
+    }
+
+    if (timerRes.rows.length === 0) {
+      // Idempotência: se nenhum timer estiver rodando ou pausado, retorna o último registrado
+      const lastCompleted = await tenantQuery<any>(
+        tenantId,
+        `SELECT * FROM work_order_timers
+         WHERE tenant_id = $1 AND work_order_id = $2
+         ORDER BY created_at DESC LIMIT 1;`,
+        [tenantId, workOrderId]
+      );
+      if (lastCompleted.rows.length > 0) {
+        return this.mapTimerDto(lastCompleted.rows[0]);
+      }
+      return {
+        id: 'timer-completed',
+        tenantId,
+        workOrderId,
+        serviceItemId: null,
+        technicianId,
+        status: 'completed',
+        startedAt: new Date().toISOString(),
+        pausedAt: null,
+        stoppedAt: new Date().toISOString(),
+        accumulatedSeconds: 0,
+        elapsedSeconds: 0,
+        isRunning: false,
+        pauseReason: null,
+        notes: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
     }
 
     const t = timerRes.rows[0];

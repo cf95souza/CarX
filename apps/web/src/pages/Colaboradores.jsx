@@ -157,38 +157,79 @@ const ColaboradoresView = () => {
       {activeTab === 'MEMBROS' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {profiles.map((colab) => (
-          <div key={colab.id} className={`carx-card p-6 text-center transition-all duration-300 ${!colab.status ? 'opacity-50 grayscale' : 'hover:border-[#0E1116]'}`}>
-            <div className="relative inline-block mb-6">
-              <div className={`w-24 h-24 rounded-[2rem] mx-auto flex items-center justify-center text-slate-300 group-hover:bg-primary group-hover:text-white transition-all duration-500 border border-slate-100 shadow-inner bg-slate-50 uppercase font-black text-2xl`}>
-                {colab.nome?.charAt(0) || 'U'}
+          <div 
+            key={colab.id} 
+            className={`bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 flex flex-col justify-between transition-all duration-200 shadow-md ${
+              !colab.status ? 'opacity-50 grayscale' : 'hover:border-[#5B6674]'
+            }`}
+          >
+            <div>
+              {/* Topo do Card: Avatar, Status e Badge de Cargo */}
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-2xl bg-[#0E1116] border border-[#2E3744] flex items-center justify-center text-white font-display font-bold text-xl uppercase shadow-inner">
+                      {colab.nome?.charAt(0) || 'U'}
+                    </div>
+                    <span 
+                      className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-[#171C24] ${
+                        colab.status ? 'bg-emerald-500' : 'bg-slate-500'
+                      }`}
+                      title={colab.status ? 'Colaborador Ativo' : 'Colaborador Inativo'}
+                    />
+                  </div>
+                  <div>
+                    <h4 className="font-display font-bold text-white text-base leading-snug">{colab.nome}</h4>
+                    <p className="text-xs text-[#9AA7B8] truncate max-w-[170px] mt-0.5">{colab.email}</p>
+                  </div>
+                </div>
+
+                <div className="shrink-0">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg border ${
+                    colab.cargo === 'ADM' 
+                      ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                      : colab.cargo === 'GESTOR'
+                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                      : 'bg-[#C8F52E]/10 text-[#C8F52E] border-[#C8F52E]/30'
+                  }`}>
+                    {colab.cargo}
+                  </span>
+                </div>
               </div>
-              <div className={`absolute -bottom-1 -right-1 w-8 h-8 ${colab.status ? 'bg-emerald-500' : 'bg-slate-400'} border-4 border-white rounded-full shadow-lg flex items-center justify-center`}>
-                {colab.cargo === 'ADM' && <Lock size={12} className="text-white" />}
+
+              {/* Contatos e Informações */}
+              <div className="space-y-1.5 mb-5 bg-[#0E1116] border border-[#2E3744] rounded-xl p-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[#9AA7B8] flex items-center gap-1.5">
+                    <Phone size={13} className="text-[#5B6674]" /> Telefone/WhatsApp:
+                  </span>
+                  <span className="font-mono text-white font-medium">
+                    {colab.telefone || 'Não cadastrado'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-[#2E3744]/60">
+                  <span className="text-[#9AA7B8] flex items-center gap-1.5">
+                    <Star size={13} className="text-amber-400 fill-amber-400" /> Desempenho QA:
+                  </span>
+                  <span className="font-bold text-white">
+                    5.0 <span className="text-[#9AA7B8] font-normal text-[11px]">(100% aprovado)</span>
+                  </span>
+                </div>
               </div>
-            </div>
-            
-            <h4 className="font-black text-slate-800 text-lg leading-tight mb-1">{colab.nome}</h4>
-            <div className="flex flex-col items-center gap-2 mb-6">
-              <span className="text-[10px] font-black uppercase text-primary tracking-[0.2em] bg-primary/5 px-3 py-1 rounded-full">{colab.cargo}</span>
-              <p className="text-[11px] text-slate-400 font-bold truncate max-w-full">{colab.email}</p>
-            </div>
-            
-            <div className="flex items-center justify-center gap-1.5 mb-8 bg-slate-50 py-3 rounded-2xl border border-slate-100/50">
-              <Star size={16} className="text-amber-400 fill-amber-400" />
-              <span className="text-sm font-black text-slate-700">5.0</span>
-              <span className="text-[10px] text-slate-400 font-bold ml-1 uppercase tracking-widest">• 0 serviços</span>
             </div>
 
+            {/* Ações Administrativas de Rodapé */}
             {isAdmin && (
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2 pt-4 border-t border-[#2E3744]">
                 <button 
                   onClick={() => toggleStatus(colab)}
                   disabled={updatingId === colab.id}
-                  className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border ${
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all border ${
                     colab.status 
-                      ? 'bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-500 border-slate-100 hover:border-red-100' 
-                      : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-100'
+                      ? 'bg-[#0E1116] hover:bg-rose-500/10 text-[#9AA7B8] hover:text-rose-400 border-[#2E3744] hover:border-rose-500/30' 
+                      : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   }`}
+                  title={colab.status ? 'Inativar Colaborador' : 'Ativar Colaborador'}
                 >
                   {updatingId === colab.id ? (
                     <Loader2 className="animate-spin" size={14} />
@@ -199,38 +240,54 @@ const ColaboradoresView = () => {
                   )}
                 </button>
                 
-                <div className="relative group/menu ml-2">
-                  <button className="p-3 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-xl border border-slate-100 transition-all">
-                    <UserCog size={18} />
+                {/* Menu de Cargo */}
+                <div className="relative group/menu">
+                  <button 
+                    className="p-2 bg-[#0E1116] hover:bg-[#202734] text-[#9AA7B8] hover:text-white rounded-xl border border-[#2E3744] transition-colors"
+                    title="Alterar Permissão / Cargo"
+                  >
+                    <UserCog size={16} />
                   </button>
-                  <div className="absolute right-full bottom-0 mr-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 hidden group-hover/menu:block animate-in fade-in slide-in-from-right-2 z-50">
-                     <p className="px-3 py-2 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-1">Trocar Cargo</p>
-                     {['ADM', 'GESTOR', 'OPERADOR'].map(role => (
-                       <button
-                         key={role}
-                         onClick={() => changeRole(colab, role)}
-                         className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all ${colab.cargo === role ? 'bg-primary text-white' : 'text-slate-600 hover:bg-slate-50'}`}
-                       >
-                         {role}
-                       </button>
-                     ))}
+                  <div className="absolute right-0 bottom-full mb-2 w-44 bg-[#171C24] border border-[#2E3744] rounded-xl shadow-2xl p-1.5 hidden group-hover/menu:block animate-in fade-in zoom-in-95 duration-150 z-50">
+                    <p className="px-2.5 py-1.5 text-[9px] font-bold text-[#9AA7B8] uppercase tracking-wider border-b border-[#2E3744] mb-1">
+                      Definir Cargo
+                    </p>
+                    {['ADM', 'GESTOR', 'OPERADOR'].map(role => (
+                      <button
+                        key={role}
+                        onClick={() => changeRole(colab, role)}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          colab.cargo === role 
+                            ? 'bg-[#C8F52E] text-[#0E1116]' 
+                            : 'text-[#9AA7B8] hover:text-white hover:bg-[#202734]'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
+                {/* Editar Perfil */}
                 <button 
                   onClick={() => { setEditingColab(colab); setShowEditModal(true); }}
-                  className="p-3 bg-slate-50 hover:text-primary hover:bg-primary/10 text-slate-500 rounded-xl border border-slate-100 transition-all ml-2"
+                  className="p-2 bg-[#0E1116] hover:bg-[#202734] text-[#9AA7B8] hover:text-[#C8F52E] rounded-xl border border-[#2E3744] transition-colors"
                   title="Editar Perfil (Nome/Telefone)"
                 >
-                  <Edit2 size={18} />
+                  <Edit2 size={16} />
                 </button>
 
+                {/* Reset de Senha */}
                 <button 
-                  onClick={() => { setResetingColab(colab); setNewManualPassword(Math.random().toString(36).slice(-8)); setShowResetModal(true); }}
-                  className="p-3 bg-slate-50 hover:text-amber-600 hover:bg-amber-50 text-slate-500 rounded-xl border border-slate-100 transition-all ml-2"
+                  onClick={() => { 
+                    setResetingColab(colab); 
+                    setNewManualPassword(Math.random().toString(36).slice(-8)); 
+                    setShowResetModal(true); 
+                  }}
+                  className="p-2 bg-[#0E1116] hover:bg-[#202734] text-[#9AA7B8] hover:text-amber-400 rounded-xl border border-[#2E3744] transition-colors"
                   title="Gerenciar Acesso & Redefinir Senha"
                 >
-                  <Key size={18} />
+                  <Key size={16} />
                 </button>
               </div>
             )}
@@ -238,9 +295,9 @@ const ColaboradoresView = () => {
         ))}
 
         {profiles.length === 0 && (
-          <div className="col-span-full py-20 text-center opacity-30">
-            <Users size={48} className="mx-auto mb-3" />
-            <p className="font-black uppercase tracking-widest text-xs">Nenhum colaborador encontrado</p>
+          <div className="col-span-full py-20 text-center opacity-40">
+            <Users size={48} className="mx-auto mb-3 text-[#9AA7B8]" />
+            <p className="font-bold uppercase tracking-widest text-xs text-[#9AA7B8]">Nenhum colaborador encontrado</p>
           </div>
         )}
       </div>
@@ -250,10 +307,19 @@ const ColaboradoresView = () => {
         <ComissoesExtrato profiles={profiles} orders={orders} />
       )}
 
+      {/* Modal Editar Perfil (Dark Card) */}
       {showEditModal && editingColab && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-scaleUp">
-            <h3 className="text-xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Editar Perfil</h3>
+        <div className="fixed inset-0 bg-[#0E1116]/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 sm:p-7 w-full max-w-sm text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#2E3744]">
+              <h3 className="text-base font-display font-bold text-white uppercase tracking-tight">Editar Perfil</h3>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="text-[#9AA7B8] hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={async (e) => {
               e.preventDefault();
               const nome = e.target.nome.value;
@@ -262,54 +328,86 @@ const ColaboradoresView = () => {
               setShowEditModal(false);
               await updateProfile(editingColab.id, { nome, telefone });
               setUpdatingId(null);
-            }} className="space-y-5">
+            }} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">E-mail (Login Protegido)</label>
-                <div className="flex items-center gap-2 mt-1 p-4 bg-slate-100 border border-slate-200 rounded-2xl text-slate-400 font-bold opacity-70">
-                   <Lock size={14} />
-                   <span className="text-sm">{editingColab.email}</span>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">
+                  E-mail (Login Protegido)
+                </label>
+                <div className="flex items-center gap-2 p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-[#9AA7B8] font-mono text-xs opacity-80">
+                   <Lock size={13} />
+                   <span className="truncate">{editingColab.email}</span>
                 </div>
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">Nome Completo</label>
-                <input name="nome" defaultValue={editingColab.nome || ''} required className="w-full mt-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 font-bold transition-all" placeholder="Ex: Lucas Henrique" />
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">
+                  Nome Completo
+                </label>
+                <input 
+                  name="nome" 
+                  defaultValue={editingColab.nome || ''} 
+                  required 
+                  className="w-full p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 
+                  placeholder="Ex: Lucas Henrique" 
+                />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">WhatsApp</label>
-                <input name="telefone" defaultValue={editingColab.telefone || ''} className="w-full mt-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 font-bold transition-all" placeholder="(11) 99999-9999" />
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">
+                  WhatsApp / Telefone
+                </label>
+                <input 
+                  name="telefone" 
+                  defaultValue={editingColab.telefone || ''} 
+                  className="w-full p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 
+                  placeholder="(11) 99999-9999" 
+                />
               </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase text-[10px] hover:bg-slate-100 tracking-widest">Cancelar</button>
-                <button type="submit" className="flex-1 py-4 bg-primary text-white rounded-xl font-black uppercase text-[10px] shadow-lg shadow-primary/20 hover:bg-emerald-600 tracking-widest">Salvar</button>
+
+              <div className="flex gap-2.5 pt-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowEditModal(false)} 
+                  className="flex-1 py-2.5 bg-[#0E1116] hover:bg-[#202734] text-[#9AA7B8] rounded-xl font-bold uppercase text-xs tracking-wider transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-2.5 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-bold uppercase text-xs tracking-wider rounded-xl shadow-sm transition-all active:scale-[0.98]"
+                >
+                  Salvar
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-
-      {/* Modal Redefinir Senha & Acesso do Operador */}
+      {/* Modal Redefinir Senha & Acesso do Operador (Dark Card) */}
       {showResetModal && resetingColab && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl animate-scaleUp space-y-6 border border-slate-100 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="fixed inset-0 bg-[#0E1116]/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 sm:p-7 w-full max-w-md text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[#2E3744] pb-4">
                <div>
-                  <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter flex items-center gap-2">
-                     <Key className="text-amber-500" size={22} />
+                  <h3 className="text-lg font-display font-bold text-white tracking-tight flex items-center gap-2">
+                     <Key className="text-amber-400" size={18} />
                      Redefinir Acesso
                   </h3>
-                  <p className="text-xs text-slate-500 font-bold mt-1">Colaborador: <span className="text-slate-800">{resetingColab.nome}</span></p>
+                  <p className="text-xs text-[#9AA7B8] mt-0.5">Colaborador: <strong className="text-white">{resetingColab.nome}</strong></p>
                </div>
-               <span className="px-2.5 py-1 bg-amber-50 text-amber-700 font-black text-[10px] rounded-xl uppercase tracking-wider">Segurança</span>
+               <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold text-[10px] rounded-lg uppercase tracking-wider">
+                 Segurança
+               </span>
             </div>
 
             {/* Opção 1: E-mail Oficial */}
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200/60 space-y-3">
-               <div className="flex items-center gap-2 font-black text-xs text-slate-700 uppercase tracking-wider">
-                  <Mail size={16} className="text-primary" />
+            <div className="bg-[#0E1116] p-4 rounded-xl border border-[#2E3744] space-y-2.5">
+               <div className="flex items-center gap-2 font-bold text-xs text-white uppercase tracking-wider">
+                  <Mail size={14} className="text-[#C8F52E]" />
                   <span>Opção 1: Link Oficial por E-mail</span>
                </div>
-               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">O sistema enviará um link de recuperação para <strong className="text-slate-700">{resetingColab.email}</strong> alterar a senha com segurança.</p>
+               <p className="text-xs text-[#9AA7B8] leading-relaxed">
+                 O sistema enviará as instruções de recuperação para <strong className="text-white">{resetingColab.email}</strong>.
+               </p>
                <button
                   type="button"
                   disabled={isSendingReset}
@@ -326,35 +424,37 @@ const ColaboradoresView = () => {
                         setIsSendingReset(false);
                      }
                   }}
-                  className="w-full py-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-[#171C24] hover:bg-[#202734] text-white border border-[#2E3744] rounded-xl font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
                >
                   {isSendingReset ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-                  <span>Disparar Link de Redefinição</span>
+                  <span>Disparar Link por E-mail</span>
                </button>
             </div>
 
             {/* Opção 2: Senha Temporária / WhatsApp */}
-            <div className="bg-amber-50/60 p-5 rounded-2xl border border-amber-200/60 space-y-3">
-               <div className="flex items-center gap-2 font-black text-xs text-amber-900 uppercase tracking-wider">
-                  <MessageCircle size={16} className="text-emerald-600" />
-                  <span>Opção 2: Senha de Oficina & WhatsApp</span>
+            <div className="bg-[#0E1116] p-4 rounded-xl border border-[#2E3744] space-y-2.5">
+               <div className="flex items-center gap-2 font-bold text-xs text-amber-400 uppercase tracking-wider">
+                  <MessageCircle size={14} className="text-[#C8F52E]" />
+                  <span>Opção 2: Senha de Bancada & WhatsApp</span>
                </div>
-               <p className="text-[11px] text-amber-800 font-medium leading-relaxed">Para técnicos na bancada que perderam o e-mail: defina uma senha temporária de contingência e envie pelo WhatsApp.</p>
+               <p className="text-xs text-[#9AA7B8] leading-relaxed">
+                 Defina uma senha provisória e envie instantaneamente para o WhatsApp do técnico.
+               </p>
                
                <div>
-                  <label className="text-[9px] font-black uppercase text-amber-700 px-1 tracking-widest">Nova Senha Temporária</label>
-                  <div className="flex gap-2 mt-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">Nova Senha Temporária</label>
+                  <div className="flex gap-2">
                      <input
                         type="text"
                         value={newManualPassword}
                         onChange={(e) => setNewManualPassword(e.target.value)}
-                        className="flex-1 p-3 bg-white border border-amber-300 rounded-xl font-mono font-black text-sm text-slate-800 outline-none focus:ring-2 focus:ring-amber-500/30"
+                        className="flex-1 p-2.5 bg-[#171C24] border border-[#2E3744] rounded-xl font-mono font-bold text-xs text-white focus:border-[#C8F52E] focus:outline-none"
                         placeholder="Ex: oficina123"
                      />
                      <button
                         type="button"
                         onClick={() => setNewManualPassword(Math.random().toString(36).slice(-8))}
-                        className="px-3 bg-amber-200/70 hover:bg-amber-300/80 text-amber-900 rounded-xl font-black text-xs transition-all"
+                        className="px-3 bg-[#171C24] hover:bg-[#202734] text-white border border-[#2E3744] rounded-xl font-bold text-xs transition-colors"
                         title="Gerar outra senha aleatória"
                      >
                         🎲 Gerar
@@ -381,7 +481,7 @@ const ColaboradoresView = () => {
                         
                         const tel = (resetingColab.telefone || '').replace(/\D/g, '');
                         const texto = encodeURIComponent(
-                           `Olá *${resetingColab.nome}*! 🛠️\n\nSua senha de acesso ao sistema *OsSystem* foi redefinida pela gerência.\n\n🔐 *E-mail de Login:* ${resetingColab.email}\n🔑 *Nova Senha Temporária:* ${newManualPassword}\n\nAcesse o sistema com estes dados!`
+                           `Olá *${resetingColab.nome}*! 🛠️\n\nSua senha de acesso ao sistema *CarX* foi redefinida pela gerência.\n\n🔐 *E-mail de Login:* ${resetingColab.email}\n🔑 *Nova Senha Temporária:* ${newManualPassword}\n\nAcesse o sistema com estes dados!`
                         );
                         if (tel) {
                            window.open(`https://api.whatsapp.com/send?phone=55${tel}&text=${texto}`, '_blank');
@@ -394,24 +494,17 @@ const ColaboradoresView = () => {
                         toast.error('Erro ao registrar senha temporária.');
                      }
                   }}
-                  className="w-full py-3 bg-[#0E1116] hover:bg-slate-800 text-[#C8F52E] rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-xs flex items-center justify-center gap-2"
+                  className="w-full py-2.5 bg-[#C8F52E] hover:bg-[#b8e520] active:scale-[0.98] text-[#0E1116] font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm transition-all flex items-center justify-center gap-2"
                >
-                  <MessageCircle size={15} className="text-[#C8F52E]" />
+                  <MessageCircle size={15} />
                   <span>Salvar & Notificar no WhatsApp</span>
                </button>
-            </div>
-
-            {/* Dica de Suporte */}
-            <div className="bg-slate-100/80 p-4 rounded-xl border border-slate-200/50">
-               <p className="text-[10px] text-slate-500 font-bold leading-relaxed text-center">
-                  💡 <strong>Dica de Suporte:</strong> Se o operador trocou de e-mail e não consegue logar nem com o e-mail antigo, você pode inativar o perfil antigo e criar um login novo na aba "+ Novo Usuário".
-               </p>
             </div>
 
             <button
                type="button"
                onClick={() => setShowResetModal(false)}
-               className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all"
+               className="w-full py-2.5 bg-[#0E1116] hover:bg-[#202734] text-[#9AA7B8] rounded-xl font-bold uppercase text-xs tracking-wider transition-colors"
             >
                Fechar
             </button>
@@ -419,12 +512,19 @@ const ColaboradoresView = () => {
         </div>
       )}
 
-
-      {/* Modal Novo Usuário */}
+      {/* Modal Novo Usuário (Dark Card) */}
       {showAddModal && !editingColab && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl animate-scaleUp">
-            <h3 className="text-xl font-black text-slate-800 uppercase mb-6 tracking-tighter">Novo Colaborador</h3>
+        <div className="fixed inset-0 bg-[#0E1116]/80 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+          <div className="bg-[#171C24] border border-[#2E3744] rounded-2xl p-6 sm:p-7 w-full max-w-sm text-white shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#2E3744]">
+              <h3 className="text-base font-display font-bold text-white uppercase tracking-tight">Novo Colaborador</h3>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="text-[#9AA7B8] hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={async (e) => {
               e.preventDefault();
               setIsCreating(true);
@@ -454,63 +554,63 @@ const ColaboradoresView = () => {
               }
             }} className="space-y-4">
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">Nome Completo</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">Nome Completo</label>
                 <input 
                   required 
                   value={newUser.nome}
                   onChange={(e) => setNewUser({...newUser, nome: e.target.value})}
-                  className="w-full mt-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 font-bold transition-all" 
+                  className="w-full p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 
                   placeholder="Ex: Carlos Silva" 
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">E-mail Corporativo</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">E-mail Corporativo</label>
                 <input 
                   type="email" 
                   required 
                   value={newUser.email}
                   onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                  className="w-full mt-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 font-bold transition-all" 
+                  className="w-full p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 
                   placeholder="carlos@detailing.com" 
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">Senha Temporária</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">Senha Provisória</label>
                 <input 
                   type="password" 
                   required 
                   minLength={6}
                   value={newUser.password}
                   onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                  className="w-full mt-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 font-bold transition-all" 
+                  className="w-full p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 
                   placeholder="••••••••" 
                 />
               </div>
               <div>
-                <label className="text-[10px] font-black uppercase text-slate-400 px-1 tracking-widest">Cargo / Permissão</label>
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#9AA7B8] block mb-1">Cargo / Função RBAC</label>
                 <select 
                   value={newUser.cargo}
                   onChange={(e) => setNewUser({...newUser, cargo: e.target.value})}
-                  className="w-full mt-1 p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 font-bold transition-all"
+                  className="w-full p-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors cursor-pointer"
                 >
-                  <option value="OPERADOR">OPERADOR</option>
-                  <option value="GESTOR">GESTOR</option>
-                  <option value="ADM">ADMINISTRADOR</option>
+                  <option value="OPERADOR">OPERADOR (Técnico / Pátio)</option>
+                  <option value="GESTOR">GESTOR (Atendimento & Vendas)</option>
+                  <option value="ADM">ADMINISTRADOR (Acesso Total)</option>
                 </select>
               </div>
-              
-              <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 mb-2">
-                <p className="text-[9px] text-amber-700 font-bold uppercase tracking-widest leading-relaxed text-center">
-                  ⚠️ Importante: Se o e-mail não abrir o sistema, peça ao colaborador para confirmar o e-mail na caixa de entrada.
-                </p>
-              </div>
 
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 bg-slate-50 text-slate-500 rounded-xl font-black uppercase text-[10px] hover:bg-slate-100 tracking-widest">Cancelar</button>
+              <div className="flex gap-2.5 pt-3">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddModal(false)} 
+                  className="flex-1 py-2.5 bg-[#0E1116] hover:bg-[#202734] text-[#9AA7B8] rounded-xl font-bold uppercase text-xs tracking-wider transition-colors"
+                >
+                  Cancelar
+                </button>
                 <button 
                   type="submit" 
                   disabled={isCreating}
-                  className="flex-1 py-4 bg-primary text-white rounded-xl font-black uppercase text-[10px] shadow-lg shadow-primary/20 hover:bg-emerald-600 tracking-widest flex items-center justify-center gap-2"
+                  className="flex-1 py-2.5 bg-[#C8F52E] hover:bg-[#b8e520] active:scale-[0.98] text-[#0E1116] font-bold uppercase text-xs tracking-wider rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isCreating ? <Loader2 className="animate-spin" size={14} /> : 'Criar Conta'}
                 </button>

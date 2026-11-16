@@ -9,6 +9,7 @@ import {
   Car, 
   CheckCircle2, 
   Clock, 
+  Calendar,
   AlertCircle,
   TrendingUp,
   ArrowUpRight,
@@ -18,9 +19,8 @@ import {
   Edit2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useQuotes, useCatalog } from '../hooks/useData';
+import { useQuotes, useCatalog, useProfiles } from '../hooks/useData';
 import Pagination from '../components/ui/Pagination';
-import AgendamentoModal from '../components/features/AgendamentoModal';
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import { sendWhatsApp, getBudgetMsg, getAppointmentConfirmationMsg } from '../utils/whatsappUtils';
 import { getStatusStyle, getStatusLabel, formatOsNumber, formatCurrency } from '../utils/statusUtils';
@@ -38,11 +38,38 @@ const Vendas = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showNovoModal, setShowNovoModal] = useState(false);
 
+  const { profiles = [] } = useProfiles();
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('09:00');
+  const [scheduleTechId, setScheduleTechId] = useState('');
+  const [scheduleDeposit, setScheduleDeposit] = useState('');
+  const [scheduleDepositMethod, setScheduleDepositMethod] = useState('pix');
+  const [isApproving, setIsApproving] = useState(false);
+
+  const openQuoteDetails = (quote) => {
+    setSelectedQuote(quote);
+    if (quote) {
+      if (quote.data_agendamento) {
+        try {
+          const d = new Date(quote.data_agendamento);
+          setScheduleDate(d.toISOString().split('T')[0]);
+          setScheduleTime(d.toTimeString().slice(0, 5));
+        } catch {
+          setScheduleDate(new Date().toISOString().split('T')[0]);
+        }
+      } else {
+        setScheduleDate(new Date().toISOString().split('T')[0]);
+      }
+      setScheduleTechId(quote.tecnico_id || '');
+      setScheduleDeposit('');
+      setScheduleDepositMethod('pix');
+    }
+  };
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
-  const [showAgendaModal, setShowAgendaModal] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [activeMenuQuote, setActiveMenuQuote] = useState(null);
   const [showPagamento, setShowPagamento] = useState(false);
@@ -89,18 +116,36 @@ const Vendas = () => {
   const aprovados = (quotes || []).filter(q => q && q.status !== 'ORCAMENTO' && q.status !== 'CANCELADO');
   const ticketMedio = aprovados.length > 0 ? convertidosFaturamento / aprovados.length : 0;
 
-  const handleApprove = async (quote) => {
-    setSelectedQuote(quote);
-    setShowAgendaModal(true);
+  const handleApprove = (quote) => {
+    openQuoteDetails(quote);
   };
 
-  const confirmApproval = async (appointmentData) => {
-    const result = await approveQuote(appointmentData);
-    if (result.success) {
-        setShowAgendaModal(false);
-        toast.success('Agendamento realizado e OS criada!');
+  const handleConfirmApproval = async () => {
+    if (!currentSelectedQuote) return;
+    if (!scheduleDate) {
+      toast.warning('Por favor, informe a data de início para o agendamento.');
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      const scheduledAt = `${scheduleDate}T${scheduleTime || '09:00'}:00.000Z`;
+      const selectedProf = (profiles || []).find((p) => p.id === scheduleTechId);
+
+      const appointmentData = {
+        id: currentSelectedQuote.id,
+        data_agendamento: scheduledAt,
+        tecnico_id: scheduleTechId || null,
+        tecnico: selectedProf?.nome || null,
+        valor_total: currentSelectedQuote.valor_total || currentSelectedQuote.valor,
+        valor_pago_agora: scheduleDeposit ? Number(scheduleDeposit) : 0,
+        metodo_pagamento: scheduleDepositMethod,
+      };
+
+      const result = await approveQuote(appointmentData);
+      if (result.success) {
+        toast.success('Orçamento aprovado e agendado com sucesso!');
         
-        // Dispara aviso opcional de WhatsApp para Agendamento Confirmado com Dialog Customizado
         const confirmZap = await confirmDialog(
           'Agendamento Confirmado',
           'Orçamento aprovado com sucesso! Deseja enviar o comprovante de agendamento por WhatsApp?',
@@ -109,29 +154,35 @@ const Vendas = () => {
         );
 
         if (confirmZap) {
-            const dateObj = new Date(appointmentData.data_agendamento);
-            const dataStr = formatDateBR(dateObj);
-            const horaStr = formatTimeBR(dateObj);
-            const cleanPhone = (selectedQuote.cliente_telefone || '').replace(/\D/g, '');
-            
-            if (cleanPhone) {
-              sendWhatsApp(
-                cleanPhone, 
-                getAppointmentConfirmationMsg(
-                  selectedQuote.cliente_nome, 
-                  selectedQuote.veiculo_desc,
-                  appointmentData.valor_total,
-                  appointmentData.valor_pago_agora,
-                  dataStr, 
-                  horaStr
-                )
-              );
-            } else {
-              toast.warning('Cliente sem telefone cadastrado. Mensagem não enviada.');
-            }
+          const dateObj = new Date(scheduledAt);
+          const dataStr = formatDateBR(dateObj);
+          const horaStr = formatTimeBR(dateObj);
+          const cleanPhone = (currentSelectedQuote.cliente_telefone || '').replace(/\D/g, '');
+          
+          if (cleanPhone) {
+            sendWhatsApp(
+              cleanPhone, 
+              getAppointmentConfirmationMsg(
+                currentSelectedQuote.cliente_nome, 
+                currentSelectedQuote.veiculo_desc,
+                appointmentData.valor_total,
+                appointmentData.valor_pago_agora,
+                dataStr, 
+                horaStr
+              )
+            );
+          }
         }
 
         setSelectedQuote(null);
+      } else {
+        toast.error('Não foi possível aprovar a proposta.');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao aprovar proposta.');
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -313,126 +364,124 @@ const Vendas = () => {
       {/* Tabela de Orçamentos (Design System Rebrand) */}
       <div className="bg-white border border-[#E1E6EC] rounded-3xl overflow-hidden shadow-2xs">
         <div className="overflow-x-auto overflow-y-visible">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-[#F3F5F7] border-b border-[#E1E6EC]">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-[#F3F5F7] text-[#5B6674] uppercase tracking-wider border-b border-[#E1E6EC] font-semibold">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Cód / Data</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Cliente / Veículo</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Serviço Proposto</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider">Valor Total</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-[#5B6674] uppercase tracking-wider text-right">Ações</th>
+                <th className="py-3.5 px-4">Cód / Data</th>
+                <th className="py-3.5 px-4">Cliente / Veículo</th>
+                <th className="py-3.5 px-4">Serviço Proposto</th>
+                <th className="py-3.5 px-4">Valor Total</th>
+                <th className="py-3.5 px-4 text-center">Status</th>
+                <th className="py-3.5 px-4 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Carregando propostas...</p>
+                  <td colSpan="6" className="py-16 text-center text-slate-400">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 border-2 border-volt/20 border-t-volt rounded-full animate-spin mx-auto"></div>
+                      <p className="text-xs font-semibold text-[#5B6674]">Carregando propostas...</p>
                     </div>
                   </td>
                 </tr>
               ) : filteredQuotes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).map((q) => (
-                <tr key={q.id} className="hover:bg-slate-50/30 transition-all group">
-                  <td className="px-6 py-4">
-                    <p className="text-xs font-black text-slate-800 tracking-tighter italic">
-                      {formatOsNumber(q.os_number || q.osNumber || q.id)}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                <tr 
+                  key={q.id} 
+                  onClick={() => openQuoteDetails(q)}
+                  className="hover:bg-[#F3F5F7] cursor-pointer transition-colors group"
+                >
+                  <td className="py-3.5 px-4 font-mono font-bold text-[#0E1116]">
+                    {formatOsNumber(q.os_number || q.osNumber || q.id)}
+                    <span className="block text-[10px] text-[#5B6674] font-normal">
                       {q.data && !isNaN(new Date(q.data).getTime()) 
                         ? formatDateBR(q.data) 
                         : '--'}
-                    </p>
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 border border-slate-100">
-                        <Car size={20} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-700 leading-none">{q.cliente_nome}</p>
-                        <p className="text-[11px] text-slate-400 font-bold mt-1.5 uppercase tracking-tighter">{q.veiculo_desc}</p>
-                      </div>
-                    </div>
+                  <td className="py-3.5 px-4">
+                    <div className="font-bold text-[#0E1116]">{q.cliente_nome}</div>
+                    <span className="text-[11px] text-[#5B6674] font-mono tracking-wider">
+                      {q.veiculo_desc}
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-bold text-slate-500 line-clamp-1">{q.servico || 'Detalhamento Premium'}</span>
+                  <td className="py-3.5 px-4">
+                    <span className="text-xs text-[#0E1116] font-medium line-clamp-1">{q.servico || 'Detalhamento Premium'}</span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-black text-slate-800">
+                  <td className="py-3.5 px-4 font-mono">
+                    <div className="font-bold text-[#0E1116]">
                       {formatCurrency(q.valor)}
-                    </p>
+                    </div>
+                    {q.saldo_devedor > 0 ? (
+                      <span className="text-[10px] text-[#E5484D] block">
+                        Falta {formatCurrency(q.saldo_devedor)}
+                      </span>
+                    ) : (
+                      q.valor_pago > 0 && <span className="text-[10px] text-emerald-600 font-bold block">Quitado</span>
+                    )}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="py-3.5 px-4 text-center">
                     <div className="flex flex-col items-center justify-center gap-1">
-                      <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${getStatusStyle(q.status)}`}>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border transition-all ${getStatusStyle(q.status)}`}>
                         {getStatusLabel(q.status)}
                       </span>
-                      {q.saldo_devedor > 0 ? (
-                        <span className="text-[8px] font-black text-amber-500 uppercase tracking-tighter">
-                          Saldo: {formatCurrency(q.saldo_devedor)}
-                        </span>
-                      ) : (
-                        q.valor_pago > 0 && <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">Quitado</span>
-                      )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1 relative">
                       <button 
-                        onClick={() => setSelectedQuote(q)}
-                        className="p-2.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all" 
+                        onClick={() => openQuoteDetails(q)}
+                        className="p-1.5 text-[#5B6674] hover:text-[#0E1116] hover:bg-slate-200/60 rounded-lg transition-colors" 
                         title="Ver Detalhes"
                       >
-                        <ArrowUpRight size={20} />
+                        <ArrowUpRight size={16} />
                       </button>
                       <button 
                         onClick={() => { setActivePaymentOS(q); setShowPagamento(true); }}
-                        className={`p-2.5 rounded-xl transition-all border ${
+                        className={`p-1.5 rounded-lg transition-colors border ${
                           q.saldo_devedor > 0 
-                            ? 'text-amber-500 hover:bg-amber-50 border-transparent hover:border-amber-200' 
-                            : 'text-emerald-500 hover:bg-emerald-50 border-transparent hover:border-emerald-200'
+                            ? 'text-amber-600 hover:bg-amber-50 border-amber-200' 
+                            : 'text-emerald-600 hover:bg-emerald-50 border-emerald-200'
                         }`} 
-                        title="Pagamentos"
+                        title="Receber Pagamento"
                       >
-                        <DollarSign size={20} />
+                        <DollarSign size={16} />
                       </button>
+                      <button 
+                        onClick={() => {
+                          const cleanPhone = (q.cliente_telefone || '').replace(/\D/g, '');
+                          if (cleanPhone) {
+                            sendWhatsApp(cleanPhone, getBudgetMsg(q.cliente_nome, q.veiculo_desc, q.valor, q.servicos_detalhados, q.servico));
+                          } else {
+                            toast.warning('Cliente sem telefone cadastrado.');
+                          }
+                        }}
+                        className="p-1.5 hover:bg-emerald-50 rounded-lg text-emerald-600 transition-colors"
+                        title="Enviar por WhatsApp"
+                      >
+                        <Zap size={16} fill="currentColor" />
+                      </button>
+                      <div>
                         <button 
-                          onClick={() => {
-                            const cleanPhone = (q.cliente_telefone || '').replace(/\D/g, '');
-                            if (cleanPhone) {
-                              sendWhatsApp(cleanPhone, getBudgetMsg(q.cliente_nome, q.veiculo_desc, q.valor, q.servicos_detalhados, q.servico));
-                            } else {
-                              toast.warning('Cliente sem telefone cadastrado.');
-                            }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuQuote(q);
                           }}
-                          className="p-2.5 hover:bg-emerald-50 rounded-xl text-emerald-400 hover:text-emerald-600 transition-all font-bold"
-                          title="Enviar por WhatsApp"
+                          className="p-1.5 rounded-lg transition-colors text-[#5B6674] hover:text-[#0E1116] hover:bg-slate-200/60"
+                          title="Mais opções"
                         >
-                          <Zap size={20} fill="currentColor" />
+                          <MoreHorizontal size={16} />
                         </button>
-                        <div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuQuote(q);
-                            }}
-                            className="p-2.5 rounded-xl transition-all text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-                          >
-                            <MoreHorizontal size={20} />
-                          </button>
-                        </div>
+                      </div>
                     </div>
                   </td>
                 </tr>
               ))}
               {!loading && filteredQuotes.length === 0 && (
                  <tr>
-                  <td colSpan="6" className="px-6 py-20 text-center opacity-30">
-                    <FilePlus size={48} className="mx-auto mb-3" />
-                    <p className="font-bold uppercase tracking-widest text-xs">Nenhum orçamento encontrado</p>
+                  <td colSpan="6" className="px-6 py-16 text-center text-slate-400">
+                    <FilePlus size={40} className="mx-auto mb-2 opacity-40" />
+                    <p className="font-semibold uppercase tracking-wider text-xs">Nenhum orçamento encontrado</p>
                   </td>
                 </tr>
               )}
@@ -563,18 +612,115 @@ const Vendas = () => {
                   </div>
                 )}
               </div>
+
+              {/* Seção de Agendamento e Despacho Integrada no Próprio Modal (Sem Telas Sobrepostas) */}
+              {['QUOTE', 'ORCAMENTO', 'ORÇAMENTO'].includes(String(currentSelectedQuote.status).toUpperCase()) && (
+                <div className="bg-[#0E1116] p-5 rounded-2xl border border-[#2E3744] space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} className="text-[#C8F52E]" />
+                    <label className="text-xs font-black text-[#F2F5F8] uppercase tracking-wider font-display">
+                      Agendamento & Despacho para Execução
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">Data de Início *</label>
+                      <input
+                        type="date"
+                        value={scheduleDate}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                        className="w-full h-11 px-3 bg-[#171C24] border border-[#2E3744] rounded-xl text-xs text-[#F2F5F8] focus:border-[#C8F52E] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">Horário Previsto *</label>
+                      <input
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                        className="w-full h-11 px-3 bg-[#171C24] border border-[#2E3744] rounded-xl text-xs text-[#F2F5F8] focus:border-[#C8F52E] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">
+                        Técnico Responsável <span className="text-slate-500 font-normal">(Opcional)</span>
+                      </label>
+                      <select
+                        value={scheduleTechId}
+                        onChange={(e) => setScheduleTechId(e.target.value)}
+                        className="w-full h-11 px-3 bg-[#171C24] border border-[#2E3744] rounded-xl text-xs text-[#F2F5F8] focus:border-[#C8F52E] outline-none"
+                      >
+                        <option value="">Fila Geral do Pátio (Sem operador pré-alocado)</option>
+                        {profiles.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nome || p.email} ({p.role || 'Técnico'})
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Se não alocar agora, o serviço fica na fila geral e o operador poderá puxar no box.
+                      </span>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">Sinal / Adiantamento (R$)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="0,00"
+                          value={scheduleDeposit}
+                          onChange={(e) => setScheduleDeposit(e.target.value)}
+                          className="flex-1 h-11 px-3 bg-[#171C24] border border-[#2E3744] rounded-xl text-xs text-[#F2F5F8] focus:border-[#C8F52E] outline-none font-mono"
+                        />
+                        <select
+                          value={scheduleDepositMethod}
+                          onChange={(e) => setScheduleDepositMethod(e.target.value)}
+                          className="h-11 px-2.5 bg-[#171C24] border border-[#2E3744] rounded-xl text-xs text-[#F2F5F8] focus:border-[#C8F52E] outline-none font-bold"
+                        >
+                          <option value="pix">PIX</option>
+                          <option value="credit_card">Crédito</option>
+                          <option value="debit_card">Débito</option>
+                          <option value="cash">Dinheiro</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Rodapé Fixo */}
             <div className="p-6 md:p-8 border-t border-[#2E3744] shrink-0 bg-[#0E1116]">
                <div className="flex gap-4">
-                 {['QUOTE', 'ORCAMENTO', 'ORÇAMENTO', 'CANCELADO', 'CANCELED'].includes(String(currentSelectedQuote.status).toUpperCase()) ? (
+                 {['QUOTE', 'ORCAMENTO', 'ORÇAMENTO'].includes(String(currentSelectedQuote.status).toUpperCase()) ? (
                    <button 
-                     onClick={() => handleApprove(currentSelectedQuote)}
-                     className="flex-1 py-4 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] rounded-xl text-xs font-black uppercase tracking-wider shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all font-bold"
+                     onClick={handleConfirmApproval}
+                     disabled={isApproving}
+                     className="flex-1 py-4 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] rounded-xl text-xs font-display font-black uppercase tracking-wider shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2"
                    >
-                     APROVAR E AGENDAR
+                     <CheckCircle2 size={16} />
+                     {isApproving ? 'Aprovando e Agendando...' : 'Confirmar Aprovação & Agendar'}
                    </button>
+                 ) : ['CANCELADO', 'CANCELED', 'SCHEDULED', 'AGENDADO', 'APPROVED', 'APROVADO'].includes(String(currentSelectedQuote.status).toUpperCase()) ? (
+                   <div className="flex-1 flex gap-2">
+                     <button 
+                       onClick={() => navigate('/ordens')}
+                       className="flex-1 py-4 bg-[#232A35] hover:bg-[#2E3744] text-[#F2F5F8] rounded-xl text-xs font-black uppercase tracking-wider transition-all font-bold"
+                     >
+                       Ver OS
+                     </button>
+                     <button 
+                       onClick={() => handleReopen(currentSelectedQuote)}
+                       className="flex-1 py-4 bg-[#232A35] hover:bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-black uppercase tracking-wider transition-all font-bold"
+                       title="Reabrir agendamento e voltar para status de Orçamento para renegociação"
+                     >
+                       Reabrir Proposta
+                     </button>
+                   </div>
                  ) : (
                    <button 
                      onClick={() => navigate('/ordens')}
@@ -608,34 +754,37 @@ const Vendas = () => {
         </div>
       )}
 
-      {/* Modal Independente de Ações */}
+      {/* Modal Independente de Ações — Padrão Canônico Dark Card Rebrand */}
       {currentActiveQuote && (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => setActiveMenuQuote(null)}>
-          <div className="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl animate-scaleUp border border-white/20" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black text-slate-800 uppercase text-sm tracking-widest">
-                Ações • {formatOsNumber(currentActiveQuote.os_number || currentActiveQuote.id)}
-              </h3>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[200] flex items-center justify-center p-4" onClick={() => setActiveMenuQuote(null)}>
+          <div className="bg-[#171C24] border border-[#2E3744] rounded-[2rem] w-full max-w-sm p-6 shadow-2xl animate-scaleUp text-[#F2F5F8]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#2E3744]">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#C8F52E]" />
+                <h3 className="font-display font-black text-[#F2F5F8] uppercase text-xs tracking-widest">
+                  Ações • {formatOsNumber(currentActiveQuote.os_number || currentActiveQuote.id)}
+                </h3>
+              </div>
               <button 
                 onClick={() => setActiveMenuQuote(null)} 
-                className="p-2 hover:bg-slate-50 rounded-full transition-all text-slate-400 hover:text-slate-800"
+                className="p-2 bg-[#232A35] hover:bg-[#2E3744] text-[#9AA7B8] hover:text-[#F2F5F8] rounded-xl transition-all"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {['QUOTE', 'ORCAMENTO', 'ORÇAMENTO'].includes(String(currentActiveQuote.status).toUpperCase()) ? (
                   <>
                     <button 
                       onClick={() => { handleApprove(currentActiveQuote); setActiveMenuQuote(null); }} 
-                      className="w-full py-4 bg-emerald-50 text-emerald-600 font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-emerald-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      className="w-full py-3.5 bg-[#C8F52E] hover:bg-[#b8e520] text-[#0E1116] font-display font-black uppercase text-xs tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.98]"
                     >
                       <CheckCircle2 size={16} /> Aprovar e Agendar
                     </button>
                     <button 
                       onClick={() => handleCancel(currentActiveQuote)} 
-                      className="w-full py-4 bg-rose-50 text-rose-600 font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                      className="w-full py-3.5 bg-[#232A35] hover:bg-rose-500/10 text-rose-400 border border-rose-500/20 font-bold uppercase text-xs tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all"
                     >
                       <AlertCircle size={16} /> Cancelar Proposta
                     </button>
@@ -643,7 +792,7 @@ const Vendas = () => {
                 ) : ['CANCELADO', 'CANCELED'].includes(String(currentActiveQuote.status).toUpperCase()) ? (
                   <button 
                     onClick={() => handleReopen(currentActiveQuote)} 
-                    className="w-full py-4 bg-amber-50 text-amber-600 font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    className="w-full py-3.5 bg-[#232A35] hover:bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold uppercase text-xs tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all"
                   >
                     <Plus size={16} /> Reabrir Proposta
                   </button>
@@ -651,13 +800,13 @@ const Vendas = () => {
                 <>
                   <button 
                     onClick={() => navigate('/ordens')} 
-                    className="w-full py-4 bg-blue-50 text-blue-600 font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-100 hover:scale-[1.02] active:scale-[0.98] transition-all mb-2"
+                    className="w-full py-3.5 bg-[#232A35] hover:bg-[#5CC8FF]/10 text-[#5CC8FF] border border-[#5CC8FF]/20 font-bold uppercase text-xs tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all mb-1"
                   >
-                    <ArrowUpRight size={16} /> Ir para OS
+                    <ArrowUpRight size={16} /> Ir para Ordem de Serviço
                   </button>
                   <button 
                     onClick={() => { handleReopen(currentActiveQuote); setActiveMenuQuote(null); }} 
-                    className="w-full py-2 text-amber-500 bg-transparent font-bold text-[10px] tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-amber-50 transition-all uppercase"
+                    className="w-full py-2.5 text-amber-400 hover:bg-amber-500/10 rounded-xl font-bold text-[10px] tracking-wider flex items-center justify-center gap-1.5 transition-all uppercase"
                   >
                     <Zap size={12} /> Reabrir e Cancelar OS Atual
                   </button>
@@ -671,16 +820,16 @@ const Vendas = () => {
                     setShowEditServices(true);
                     setActiveMenuQuote(null);
                   }} 
-                  className="w-full py-4 bg-primary/10 text-primary font-black uppercase text-xs tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="w-full py-3.5 bg-[#232A35] hover:border-[#C8F52E]/40 border border-[#2E3744] text-[#F2F5F8] hover:text-[#C8F52E] font-bold uppercase text-xs tracking-wider rounded-xl flex items-center justify-center gap-2 transition-all"
                 >
-                  <Edit2 size={16} /> Editar Serviços e Valores
+                  <Edit2 size={15} /> Editar Serviços e Valores
                 </button>
               )}
               
-              <div className="pt-4 mt-4 border-t border-slate-50">
+              <div className="pt-3 mt-3 border-t border-[#2E3744]">
                 <button 
                   onClick={() => handleDelete(currentActiveQuote)} 
-                  className="w-full py-4 text-rose-500 font-bold uppercase text-[10px] tracking-widest rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-50 transition-all"
+                  className="w-full py-2.5 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 font-bold uppercase text-[10px] tracking-widest rounded-xl flex items-center justify-center gap-1.5 transition-all"
                 >
                   <AlertCircle size={14} /> Excluir Permanentemente
                 </button>
@@ -698,14 +847,6 @@ const Vendas = () => {
              fetchQuotes();
              toast.success('Orçamento registrado com sucesso!');
            }}
-         />
-       )}
-
-       {showAgendaModal && currentSelectedQuote && (
-         <AgendamentoModal 
-            quote={currentSelectedQuote}
-            onClose={() => setShowAgendaModal(false)}
-            onConfirm={confirmApproval}
          />
        )}
         {showPagamento && currentActivePaymentQuote && (

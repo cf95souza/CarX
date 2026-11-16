@@ -149,6 +149,7 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
       search?: string;
       page?: string;
       limit?: string;
+      excludeQuote?: string | boolean;
     };
   }>(
     '/work-orders',
@@ -170,6 +171,8 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
       const page = request.query.page ? parseInt(request.query.page, 10) : 1;
       const limit = request.query.limit ? parseInt(request.query.limit, 10) : 20;
 
+      const excludeQuote = request.query.excludeQuote === 'true' || request.query.excludeQuote === true;
+
       const result = await workOrderService.list(tenantId, {
         status: request.query.status as WorkOrderStatusType,
         customerId: request.query.customerId,
@@ -178,6 +181,7 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
         search: request.query.search,
         page,
         limit,
+        excludeQuote,
       });
 
       return reply.code(200).send(result);
@@ -321,28 +325,39 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
 
       const user = request.user as any;
       const currentUserId = user?.userId || user?.sub;
+      const rawRole = String(user?.role || '').toLowerCase().trim();
+      const isTech = rawRole === 'tecnico' || rawRole === 'operador';
 
       try {
-        // Validação de permissões para técnico
-        if (user?.role === 'tecnico') {
+        // Validação de permissões para técnico/operador
+        if (isTech && !user?.isSuperadmin) {
           const currentOrder = await workOrderService.getById(tenantId, request.params.id);
-          if (currentOrder.technicianId !== currentUserId) {
+          
+          // Se a OS já tem outro técnico atribuído diferente do usuário logado
+          if (currentOrder.technicianId && currentOrder.technicianId !== currentUserId) {
             return reply.code(403).send({
               statusCode: 403,
               message: 'Acesso negado: técnico só pode alterar status de ordens atribuídas a ele.',
             });
           }
 
-          // Técnico só pode avançar status operacionais
+          // Se a OS ainda não tem técnico e o operador está iniciando ou concluindo a execução, autoatribui o técnico
+          if (!currentOrder.technicianId && (status === WorkOrderStatus.IN_PROGRESS || status === WorkOrderStatus.QA || status === WorkOrderStatus.READY)) {
+            await workOrderService.update(tenantId, request.params.id, { technicianId: currentUserId }, currentUserId);
+          }
+
+          // Técnico pode avançar status operacionais da esteira
           const allowedTechnicianTransitions: WorkOrderStatusType[] = [
+            WorkOrderStatus.CHECKED_IN,
             WorkOrderStatus.IN_PROGRESS,
             WorkOrderStatus.PAUSED,
             WorkOrderStatus.QA,
+            WorkOrderStatus.READY,
           ];
           if (!allowedTechnicianTransitions.includes(status)) {
             return reply.code(403).send({
               statusCode: 403,
-              message: `Papel técnico não tem permissão para transicionar para o estado "${status}".`,
+              message: `Papel técnico/operador não tem permissão para transicionar para o estado "${status}".`,
             });
           }
         }

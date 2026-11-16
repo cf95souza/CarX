@@ -11,14 +11,14 @@ const PagamentoModal = ({ os, onClose, onSave, onDelete }) => {
   const saldoReal = Math.max(0, totalReal - pagoReal);
 
   const [valor, setValor] = useState(saldoReal > 0 ? saldoReal : (totalReal > 0 ? totalReal : ''));
-  const [metodo, setMetodo] = useState('PIX');
+  const [metodo, setMetodo] = useState('pix');
   const [isSaving, setIsSaving] = useState(false);
 
   const metodos = [
-    { id: 'PIX', label: 'PIX Instantâneo', icon: '⚡' },
-    { id: 'DINHEIRO', label: 'Dinheiro', icon: '💵' },
-    { id: 'CREDITO', label: 'Cartão de Crédito', icon: '💳' },
-    { id: 'DEBITO', label: 'Cartão de Débito', icon: '🏧' },
+    { id: 'pix', label: 'PIX Instantâneo', icon: '⚡' },
+    { id: 'cash', label: 'Dinheiro', icon: '💵' },
+    { id: 'credit_card', label: 'Cartão de Crédito', icon: '💳' },
+    { id: 'debit_card', label: 'Cartão de Débito', icon: '🏧' },
   ];
 
   const handleSave = async () => {

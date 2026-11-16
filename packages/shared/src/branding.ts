@@ -36,6 +36,7 @@ export const HexColorRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
 export const TenantBrandingSchema = z.object({
   id: z.string().uuid().optional(),
   tenant_id: z.string().uuid(),
+  slug: z.string().optional(),
   trade_name: z.string().min(1).max(255).nullable().optional(),
   tagline: z.string().max(255).nullable().optional(),
   logo_url: z.string().url().nullable().optional(),

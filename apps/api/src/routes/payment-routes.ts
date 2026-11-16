@@ -42,7 +42,19 @@ export async function paymentRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ statusCode: 400, message: 'Contexto de oficina (tenant) não identificado.' });
       }
 
-      const parseRes = CreatePaymentInputSchema.safeParse(request.body || {});
+      // Normalização robusta de método de pagamento (PIX, Dinheiro, Cartão, etc.)
+      const rawBody = { ...((request.body as any) || {}) };
+      if (rawBody.method && typeof rawBody.method === 'string') {
+        const m = rawBody.method.toLowerCase().trim();
+        if (m === 'pix') rawBody.method = 'pix';
+        else if (m === 'dinheiro' || m === 'cash') rawBody.method = 'cash';
+        else if (m.includes('deb') || m === 'cartao_debito') rawBody.method = 'debit_card';
+        else if (m.includes('cred') || m.includes('cartao') || m === 'cartao_credito') rawBody.method = 'credit_card';
+        else if (m.includes('transf') || m === 'bank_transfer') rawBody.method = 'bank_transfer';
+        else if (m === 'link') rawBody.method = 'link';
+      }
+
+      const parseRes = CreatePaymentInputSchema.safeParse(rawBody);
       if (!parseRes.success) {
         return reply.code(400).send({
           statusCode: 400,

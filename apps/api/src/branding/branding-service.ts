@@ -53,6 +53,7 @@ export class BrandingService {
       const row = brandingRes.rows[0];
       return {
         ...row,
+        slug: tenant.slug,
         trade_name: row.trade_name || tenant.trade_name,
         app_title: row.app_title || row.trade_name || tenant.trade_name,
         app_short_name: row.app_short_name || tenant.trade_name.substring(0, 30),
@@ -62,6 +63,7 @@ export class BrandingService {
     // Retorna fallback estruturado
     return {
       tenant_id: tenant.id,
+      slug: tenant.slug,
       trade_name: tenant.trade_name,
       tagline: DEFAULT_CARX_BRANDING.tagline,
       logo_url: DEFAULT_CARX_BRANDING.logo_url,

@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { storageService, StorageForbiddenError, StorageNotFoundError } from '../storage/storage-service.js';
+import { adminPool } from '../database/db.js';
 import { MagicBytesError } from '../storage/magic-bytes.js';
 import { QuotaExceededError } from '../plans/plan-service.js';
 import { authenticateBearer } from './auth-routes.js';
@@ -88,6 +89,30 @@ export async function storageRoutes(fastify: FastifyInstance) {
           error: code === 403 ? 'Forbidden' : 'Internal Server Error',
           message: errObj.message || 'Erro interno ao processar upload.',
         });
+      }
+    }
+  );
+
+  /**
+   * GET /storage/files/:id/view — Redireciona para visualização pública/pré-assinada de foto/arquivo
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/storage/files/:id/view',
+    async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+      const fileId = request.params.id;
+      try {
+        const queryRes = await adminPool.query(
+          `SELECT tenant_id FROM storage_files WHERE id::text = $1 OR file_key = $1 LIMIT 1`,
+          [fileId]
+        );
+        if (queryRes.rows.length === 0) {
+          return reply.code(404).send({ statusCode: 404, message: 'Arquivo não encontrado.' });
+        }
+        const tenantId = queryRes.rows[0].tenant_id;
+        const result = await storageService.getPresignedDownloadUrl(tenantId, fileId, 3600);
+        return reply.redirect(result.downloadUrl);
+      } catch {
+        return reply.code(404).send({ statusCode: 404, message: 'Arquivo não encontrado ou indisponível.' });
       }
     }
   );

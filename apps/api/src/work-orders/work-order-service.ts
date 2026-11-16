@@ -54,6 +54,7 @@ export interface ListWorkOrdersParams {
   search?: string;
   page?: number;
   limit?: number;
+  excludeQuote?: boolean;
 }
 
 export class WorkOrderService {
@@ -347,6 +348,8 @@ export class WorkOrderService {
     if (params.status) {
       queryParams.push(params.status);
       conditions.push(`wo.status = $${queryParams.length}`);
+    } else if (params.excludeQuote) {
+      conditions.push(`wo.status != '${WorkOrderStatus.QUOTE}'`);
     }
 
     if (params.customerId) {
@@ -444,6 +447,28 @@ export class WorkOrderService {
         wo.tracking_token AS "trackingToken",
         wo.created_at AS "createdAt",
         wo.updated_at AS "updatedAt",
+        COALESCE(
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', woi.id,
+                'serviceId', woi.service_id,
+                'name', woi.name,
+                'category', woi.category,
+                'quantity', woi.quantity,
+                'unitPriceCents', woi.unit_price_cents,
+                'discountCents', woi.discount_cents,
+                'totalCents', woi.total_cents,
+                'estimatedMinutes', woi.estimated_minutes,
+                'warrantyMonths', woi.warranty_months,
+                'customOrder', woi.custom_order
+              ) ORDER BY woi.custom_order ASC, woi.created_at ASC
+            )
+            FROM work_order_items woi
+            WHERE woi.work_order_id = wo.id AND woi.tenant_id = wo.tenant_id
+          ),
+          '[]'::json
+        ) AS items,
         json_build_object(
           'id', c.id,
           'name', c.name,
@@ -649,7 +674,14 @@ export class WorkOrderService {
       const timestampUpdates: string[] = [];
       const updateParams: unknown[] = [tenantId, id, targetStatus, currentStatus, newProgress];
 
-      if (targetStatus === WorkOrderStatus.CHECKED_IN) {
+      if (targetStatus === WorkOrderStatus.QUOTE) {
+        timestampUpdates.push('scheduled_at = NULL');
+        // Reabertura para orçamento: cancela agendamento pendente no box (Item 20)
+        await client.query(
+          `UPDATE appointments SET status = 'canceled', updated_at = NOW() WHERE tenant_id = $1 AND work_order_id = $2`,
+          [tenantId, id]
+        );
+      } else if (targetStatus === WorkOrderStatus.CHECKED_IN) {
         timestampUpdates.push('checked_in_at = COALESCE(checked_in_at, NOW())');
       } else if (targetStatus === WorkOrderStatus.IN_PROGRESS) {
         timestampUpdates.push('started_at = COALESCE(started_at, NOW())');
@@ -875,6 +907,91 @@ export class WorkOrderService {
       `,
       [tenantId, id, technicianId, totalCents, discountCents, finalCents, scheduledAt, notes, customerNotes, publicNotes, depositRequiredCents]
     );
+
+    // Sincronização automática com a tabela de Agendamentos (appointments) para a Agenda Inteligente (Item 19)
+    if (scheduledAt) {
+      try {
+        const estMin = existing.estimatedMinutes || 60;
+        const startTime = new Date(scheduledAt);
+        const endTime = new Date(startTime.getTime() + estMin * 60000);
+
+        // Localiza primeiro box físico (bay) ativo caso não tenha nenhum atribuído
+        const bayRes = await tenantQuery<{ id: string }>(
+          tenantId,
+          `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
+          [tenantId]
+        );
+        const bayId = bayRes.rows[0]?.id || null;
+
+        // Verifica se já existe um agendamento vinculado a esta OS
+        const appRes = await tenantQuery<{ id: string }>(
+          tenantId,
+          `SELECT id FROM appointments WHERE tenant_id = $1 AND work_order_id = $2 LIMIT 1`,
+          [tenantId, id]
+        );
+
+        const title = `OS #${existing.osNumber} · ${existing.customer?.name || 'Cliente'}`;
+        const serviceName = existing.items?.map((i) => i.name).join(', ') || 'Serviço Automotivo';
+
+        if (appRes.rows.length > 0) {
+          await tenantQuery(
+            tenantId,
+            `UPDATE appointments
+             SET start_time = $3,
+                 end_time = $4,
+                 technician_id = $5,
+                 bay_id = COALESCE(bay_id, $6),
+                 status = 'scheduled',
+                 updated_at = NOW()
+             WHERE tenant_id = $1 AND id = $2`,
+            [tenantId, appRes.rows[0].id, startTime.toISOString(), endTime.toISOString(), technicianId || null, bayId]
+          );
+        } else {
+          await tenantQuery(
+            tenantId,
+            `INSERT INTO appointments (
+               tenant_id,
+               work_order_id,
+               customer_id,
+               vehicle_id,
+               technician_id,
+               bay_id,
+               title,
+               start_time,
+               end_time,
+               estimated_minutes,
+               status,
+               service_name,
+               customer_name,
+               customer_phone,
+               vehicle_plate,
+               vehicle_model
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+            [
+              tenantId,
+              id,
+              existing.customerId,
+              existing.vehicleId,
+              technicianId || null,
+              bayId,
+              title,
+              startTime.toISOString(),
+              endTime.toISOString(),
+              estMin,
+              'scheduled',
+              serviceName,
+              existing.customer?.name || null,
+              existing.customer?.phone || null,
+              existing.vehicle?.plate || null,
+              `${existing.vehicle?.brand || ''} ${existing.vehicle?.model || ''}`.trim() || null,
+            ]
+          );
+        }
+      } catch (appSyncErr) {
+        // Loga erro sem abortar a atualização da OS
+        console.warn('Falha não-bloqueante na sincronização de agendamento:', appSyncErr);
+      }
+    }
 
     const updated = await this.getById(tenantId, id);
 

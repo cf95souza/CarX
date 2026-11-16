@@ -247,14 +247,28 @@ const OperadorLayoutWrapper = () => {
                 Seus Serviços Concluídos
               </h3>
               {(() => {
-                const history = (orders || []).filter(
-                  (os) =>
-                    os &&
-                    (String(os.status || '').toUpperCase().includes('CONCLU') ||
-                      String(os.status || '').toUpperCase() === 'ENTREGUE' ||
-                      String(os.status || '').toUpperCase() === 'DELIVERED') &&
-                    os.tecnico_id === profile?.id
-                );
+                const history = (orders || []).filter((os) => {
+                  if (!os) return false;
+                  const st = String(os.status || '').toUpperCase();
+                  const isDoneStatus = [
+                    'QA',
+                    'READY',
+                    'DELIVERED',
+                    'ENTREGUE',
+                    'CONCLUIDO',
+                    'CONCLUÍDO',
+                    'PRONTO',
+                  ].includes(st) || st.includes('CONCLU');
+
+                  const isMyTech =
+                    !profile?.id ||
+                    os.technicianId === profile?.id ||
+                    os.technician_id === profile?.id ||
+                    os.tecnico_id === profile?.id ||
+                    !os.technician_id;
+
+                  return isDoneStatus && isMyTech;
+                });
 
                 if (history.length === 0) {
                   return (

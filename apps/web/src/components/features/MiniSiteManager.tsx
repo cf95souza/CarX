@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useBrand } from '../../contexts/BrandContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getStoredTenantSlug } from '../../services/api';
 import type {
   MiniSitePortfolioItemDto,
   MiniSiteLeadDto,
@@ -29,6 +31,7 @@ import { toast } from '../../utils/toast';
 export const MiniSiteManager: React.FC = () => {
   const queryClient = useQueryClient();
   const brand = useBrand();
+  const { profile, memberships } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'config' | 'portfolio' | 'leads'>('portfolio');
   const [leadStatusFilter, setLeadStatusFilter] = useState<string>('');
@@ -129,8 +132,8 @@ export const MiniSiteManager: React.FC = () => {
     updateSettingsMutation.mutate(configForm);
   };
 
-  const currentSlug = brand.slug || 'minha-oficina';
-  const publicMiniSiteUrl = `${window.location.origin}/loja/${currentSlug}`;
+  const currentSlug = brand?.slug || (memberships?.[0] as any)?.tenant_slug || (profile as any)?.tenant_slug || getStoredTenantSlug() || 'minha-oficina';
+  const publicMiniSiteUrl = `${window.location.origin}/${currentSlug}`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
@@ -182,7 +185,7 @@ export const MiniSiteManager: React.FC = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <a
-              href={`/loja/${currentSlug}`}
+              href={`/${currentSlug}`}
               target="_blank"
               rel="noopener noreferrer"
               style={{

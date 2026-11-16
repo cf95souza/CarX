@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Search, Wrench, ShieldCheck, MoreHorizontal, DollarSign, Loader2, Type, Car, Trash2, X, Zap, AlertCircle } from 'lucide-react';
+import { Plus, Search, Wrench, ShieldCheck, MoreHorizontal, DollarSign, Loader2, Type, Car, Trash2, X, Zap, AlertCircle, Clock, Percent, Sparkles, Check } from 'lucide-react';
 import { useCatalog, useInventory } from '../hooks/useData';
 import Pagination from '../components/ui/Pagination';
 import { toast } from '../utils/toast';
@@ -24,6 +24,8 @@ const ServicosView = () => {
     categoria: 'Geral',
     tipo_veiculo: 'AMBOS',
     garantia: '12 meses',
+    tempo_estimado: 60,
+    comissao_percent: 10,
     controle_estoque: false,
     materiais: [],
     precos_por_classe: {},
@@ -38,12 +40,14 @@ const ServicosView = () => {
   const handleOpenEdit = (service) => {
     setEditingService(service);
     setFormService({
-      nome: service.nome || '',
-      descricao: service.descricao || '',
-      preco_base: service.preco_base || '',
-      categoria: service.categoria || 'Geral',
+      nome: service.nome || service.name || '',
+      descricao: service.descricao || service.description || '',
+      preco_base: service.preco_base !== undefined ? service.preco_base : (service.price_cents ? service.price_cents / 100 : ''),
+      categoria: service.categoria || service.category || 'Geral',
       tipo_veiculo: service.tipo_veiculo || 'AMBOS',
-      garantia: service.garantia || '12 meses',
+      garantia: service.garantia || (service.warranty_months ? `${service.warranty_months} meses` : '12 meses'),
+      tempo_estimado: service.tempo_estimado || service.estimated_minutes || 60,
+      comissao_percent: service.material_consumption_estimate?.comissao_percent ?? 10,
       controle_estoque: service.controle_estoque || false,
       materiais: service.materiais || [],
       precos_por_classe: service.precos_por_classe || {},
@@ -69,8 +73,17 @@ const ServicosView = () => {
 
     const serviceData = {
       ...formService,
+      name: formService.nome,
+      description: formService.descricao,
       preco_base: parseFloat(formService.preco_base) || 0,
+      price_cents: Math.round((parseFloat(formService.preco_base) || 0) * 100),
+      estimated_minutes: parseInt(formService.tempo_estimado, 10) || 60,
+      warranty_months: parseInt(String(formService.garantia).replace(/\D/g, ''), 10) || 12,
       precos_por_classe: cleanedPrecos,
+      material_consumption_estimate: {
+        comissao_percent: parseFloat(formService.comissao_percent) || 0,
+        materiais: formService.materiais || []
+      },
       is_combo: formService.is_combo || false,
       itens_combo: formService.is_combo ? (formService.itens_combo || []) : []
     };
@@ -87,13 +100,13 @@ const ServicosView = () => {
       toast.success(editingService ? 'Serviço atualizado com sucesso!' : 'Novo serviço adicionado ao catálogo!');
       setShowAddModal(false);
       setEditingService(null);
-      setFormService({ nome: '', descricao: '', preco_base: '', categoria: 'Geral', tipo_veiculo: 'AMBOS', garantia: '12 meses', controle_estoque: false, materiais: [], precos_por_classe: {}, is_combo: false, itens_combo: [] });
+      setFormService({ nome: '', descricao: '', preco_base: '', categoria: 'Geral', tipo_veiculo: 'AMBOS', garantia: '12 meses', tempo_estimado: 60, comissao_percent: 10, controle_estoque: false, materiais: [], precos_por_classe: {}, is_combo: false, itens_combo: [] });
     }
   };
 
   const handleOpenAdd = () => {
      setEditingService(null);
-     setFormService({ nome: '', descricao: '', preco_base: '', categoria: 'Geral', tipo_veiculo: 'AMBOS', garantia: '12 meses', controle_estoque: false, materiais: [], precos_por_classe: {}, is_combo: false, itens_combo: [] });
+     setFormService({ nome: '', descricao: '', preco_base: '', categoria: 'Geral', tipo_veiculo: 'AMBOS', garantia: '12 meses', tempo_estimado: 60, comissao_percent: 10, controle_estoque: false, materiais: [], precos_por_classe: {}, is_combo: false, itens_combo: [] });
      setShowAddModal(true);
   };
 
@@ -193,29 +206,38 @@ const ServicosView = () => {
             <p className="text-sm text-slate-500 mb-8 line-clamp-3 font-medium leading-relaxed italic">{s.descricao || 'Sem descrição cadastrada.'}</p>
             
             <div className="flex items-center justify-between pt-6 border-t border-slate-50">
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center gap-5 sm:gap-6">
                 <div className="flex flex-col">
-                  <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
-                    <ShieldCheck size={10} className="text-emerald-500" /> Garantia
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
+                    <ShieldCheck size={12} className="text-emerald-500" /> Garantia
                   </span>
-                  <span className="text-xs font-bold text-slate-600">{s.garantia || 'Consultar'}</span>
+                  <span className="text-xs font-bold text-slate-700">{s.garantia ? `${s.garantia}` : 'Consultar'}</span>
+                </div>
+
+                <div className="flex flex-col border-l border-slate-100 pl-5">
+                  <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
+                    <Clock size={12} className="text-amber-500" /> Tempo Estimado
+                  </span>
+                  <span className="text-xs font-bold text-slate-700">
+                    {s.tempo_estimado || s.estimated_minutes ? `${s.tempo_estimado || s.estimated_minutes} min` : '60 min'}
+                  </span>
                 </div>
                 
                 {s.controle_estoque && (
-                  <div className="flex flex-col border-l border-slate-100 pl-6">
-                     <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
-                      <ShieldCheck size={10} className="text-blue-500" /> Estoque
+                  <div className="flex flex-col border-l border-slate-100 pl-5">
+                     <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
+                      <ShieldCheck size={12} className="text-blue-500" /> Estoque
                     </span>
                     <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase tracking-widest mt-0.5">Controlado</span>
                   </div>
                 )}
                 
-                <div className="flex flex-col border-l border-slate-100 pl-6">
-                   <span className="text-[8px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
-                    <DollarSign size={10} className="text-primary" /> Investimento
+                <div className="flex flex-col border-l border-slate-100 pl-5">
+                   <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1 items-center flex gap-1">
+                    <DollarSign size={12} className="text-emerald-600" /> Investimento
                   </span>
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-lg font-black text-slate-800 tracking-tighter">
+                    <span className="text-base font-black text-slate-900 tracking-tight font-mono">
                       {s.preco_base ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.preco_base) : '---'}
                     </span>
                     {s.precos_por_classe && Object.keys(s.precos_por_classe).length > 0 && (
@@ -244,9 +266,9 @@ const ServicosView = () => {
               </div>
               <button 
                 onClick={() => handleOpenEdit(s)}
-                className="text-[10px] font-black text-primary hover:text-emerald-700 uppercase tracking-[0.2em] transition-all bg-primary/5 px-4 py-2 rounded-xl border border-primary/10 hover:border-primary/30"
+                className="text-xs font-bold text-slate-800 hover:text-emerald-600 px-3.5 py-2 rounded-xl border border-slate-200 hover:border-emerald-500/40 transition-colors shrink-0"
               >
-                Detalhes
+                Editar
               </button>
             </div>
           </div>
@@ -267,98 +289,225 @@ const ServicosView = () => {
         className="rounded-[2rem] border border-slate-100 mt-4 shadow-sm"
       />
 
-      {/* Modal - Novo Serviço / Edição */}
+      {/* Modal - Novo Serviço / Edição (CarX Dark Card Design System) */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] w-full max-w-2xl shadow-2xl border border-white/20 flex flex-col overflow-hidden animate-in fade-in zoom-in duration-300 max-h-[90vh]">
+        <div className="fixed inset-0 bg-[#0E1116]/80 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#171C24] border border-[#2E3744] text-[#F2F5F8] rounded-[2rem] w-full max-w-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
             {/* Header Fixo */}
-            <div className="p-6 md:p-10 border-b border-slate-50 flex justify-between items-center bg-white shrink-0">
-              <div>
-                <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight">
-                  {editingService ? 'Editar Serviço' : 'Cadastrar Serviço'}
-                </h3>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-1">Configurações do Catálogo de Estética</p>
+            <div className="p-5 sm:p-6 border-b border-[#2E3744] flex justify-between items-center bg-[#171C24] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#0E1116] border border-[#2E3744] flex items-center justify-center text-[#C8F52E]">
+                  <Wrench size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-display font-bold text-white tracking-tight">
+                    {editingService ? 'Editar Serviço' : 'Cadastrar Serviço'}
+                  </h3>
+                  <p className="text-xs text-[#9AA7B8]">
+                    Catálogo técnico de estética, prazos, comissão e precificação
+                  </p>
+                </div>
               </div>
               <button 
                 onClick={() => setShowAddModal(false)} 
-                className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 hover:text-slate-800 transition-all group"
+                className="w-9 h-9 rounded-xl bg-[#0E1116] border border-[#2E3744] flex items-center justify-center text-[#9AA7B8] hover:text-white hover:border-[#C8F52E] transition-all"
+                title="Fechar"
               >
-                <Plus size={24} className="rotate-45 group-hover:scale-110 transition-transform" />
+                <X size={18} />
               </button>
             </div>
             
             {/* Conteúdo Rolável */}
-            <form onSubmit={handleAddService} className="flex-1 overflow-y-auto p-10 space-y-6 custom-scrollbar">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Serviço</label>
-                  <div className="relative group">
-                    <Wrench className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={18} />
+            <form onSubmit={handleAddService} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Nome do Serviço */}
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8]">
+                    Nome do Serviço <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Wrench className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" size={16} />
                     <input 
                       required 
-                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white font-bold text-sm transition-all shadow-inner" 
-                      placeholder="Ex: PPF Capô Frontal"
+                      className="w-full pl-10 pr-4 py-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-sm font-medium focus:border-[#C8F52E] focus:outline-none transition-colors placeholder:text-[#5B6674]" 
+                      placeholder="Ex: PPF Frontal Completo ou Vitrificação 9H"
                       value={formService.nome}
                       onChange={e => setFormService({...formService, nome: e.target.value})}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
-                  <div className="relative group">
-                    <Type className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={18} />
+                {/* Categoria */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8]">Categoria</label>
+                  <div className="relative">
+                    <Type className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5B6674]" size={16} />
                     <select 
-                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white font-bold text-sm appearance-none transition-all shadow-inner"
+                      className="w-full pl-10 pr-4 py-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-sm font-medium focus:border-[#C8F52E] focus:outline-none transition-colors appearance-none cursor-pointer"
                       value={formService.categoria}
                       onChange={e => setFormService({...formService, categoria: e.target.value})}
                     >
                       <option value="Geral">Geral</option>
-                      <option value="PPF">PPF</option>
-                      <option value="Estética">Estética</option>
-                      <option value="Insulfilm">Insulfilm</option>
-                      <option value="Adesivagem">Adesivagem</option>
+                      <option value="PPF">PPF (Proteção de Pintura)</option>
+                      <option value="Estética">Estética & Polimento</option>
+                      <option value="Insulfilm">Insulfilm & Películas</option>
+                      <option value="Adesivagem">Adesivagem & Envelopamento</option>
+                      <option value="Lavagem Técnica">Lavagem Técnica & Higienização</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Veículos Compatíveis</label>
-                  <div className="relative group">
-                    <Car className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={18} />
-                    <select 
-                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white font-bold text-sm appearance-none transition-all shadow-inner"
-                      value={formService.tipo_veiculo}
-                      onChange={e => setFormService({...formService, tipo_veiculo: e.target.value})}
-                    >
-                      <option value="AMBOS">Todos (Carro & Moto)</option>
-                      <option value="CARRO">Apenas Carros</option>
-                      <option value="MOTO">Apenas Motos</option>
-                    </select>
+                {/* Veículos Compatíveis */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8]">Veículos Compatíveis</label>
+                  <div className="grid grid-cols-3 gap-1.5 bg-[#0E1116] p-1 rounded-xl border border-[#2E3744]">
+                    {[
+                      { val: 'AMBOS', label: 'Ambos' },
+                      { val: 'CARRO', label: 'Carro' },
+                      { val: 'MOTO', label: 'Moto' }
+                    ].map(opt => (
+                      <button
+                        key={opt.val}
+                        type="button"
+                        onClick={() => setFormService({...formService, tipo_veiculo: opt.val})}
+                        className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                          formService.tipo_veiculo === opt.val
+                            ? 'bg-[#C8F52E] text-[#0E1116] shadow-sm'
+                            : 'text-[#9AA7B8] hover:text-white'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tempo de Garantia</label>
-                  <div className="relative group">
-                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={18} />
+                {/* Tempo Estimado de Aplicação (Tátil Moderno) */}
+                <div className="space-y-2 md:col-span-2 bg-[#0E1116] border border-[#2E3744] rounded-2xl p-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                      <Clock size={15} className="text-[#C8F52E]" /> Tempo Estimado de Aplicação
+                    </label>
+                    <span className="text-xs font-mono font-bold text-[#C8F52E]">
+                      {formService.tempo_estimado} minutos ({Math.floor(formService.tempo_estimado / 60)}h {formService.tempo_estimado % 60 > 0 ? `${formService.tempo_estimado % 60}m` : ''})
+                    </span>
+                  </div>
+                  
+                  {/* Atalhos táteis */}
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { min: 30, label: '30 min' },
+                      { min: 60, label: '1 hora' },
+                      { min: 120, label: '2 horas' },
+                      { min: 240, label: '4 horas' },
+                      { min: 480, label: '8 horas (1 dia)' },
+                      { min: 960, label: '16 horas (2 dias)' }
+                    ].map(t => (
+                      <button
+                        key={t.min}
+                        type="button"
+                        onClick={() => setFormService({...formService, tempo_estimado: t.min})}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                          Number(formService.tempo_estimado) === t.min
+                            ? 'bg-[#C8F52E]/10 border-[#C8F52E] text-[#C8F52E]'
+                            : 'bg-[#171C24] border-[#2E3744] text-[#9AA7B8] hover:text-white hover:border-[#5B6674]'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pt-1">
                     <input 
-                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white font-bold text-sm transition-all shadow-inner" 
-                      placeholder="Ex: 12 meses"
-                      value={formService.garantia}
-                      onChange={e => setFormService({...formService, garantia: e.target.value})}
+                      type="number"
+                      min="5"
+                      step="5"
+                      className="w-full px-3.5 py-2 bg-[#171C24] border border-[#2E3744] rounded-xl text-white text-xs font-mono font-bold focus:border-[#C8F52E] focus:outline-none transition-colors"
+                      placeholder="Ou digite o tempo livre em minutos..."
+                      value={formService.tempo_estimado}
+                      onChange={e => setFormService({...formService, tempo_estimado: parseInt(e.target.value, 10) || ''})}
                     />
                   </div>
                 </div>
 
+                {/* Tempo de Garantia Certificada (Tátil Moderno) */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço Base (R$)</label>
-                  <div className="relative group">
-                    <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-primary/40 group-focus-within:text-primary transition-colors">R$</span>
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8] flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-emerald-400" /> Garantia Certificada
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Sem garantia', '3 meses', '6 meses', '12 meses', '2 anos', '5 anos'].map(g => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setFormService({...formService, garantia: g})}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                          formService.garantia === g
+                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                            : 'bg-[#0E1116] border-[#2E3744] text-[#9AA7B8] hover:text-white'
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                  <input 
+                    className="w-full px-3.5 py-2.5 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 
+                    placeholder="Ex: 12 meses"
+                    value={formService.garantia}
+                    onChange={e => setFormService({...formService, garantia: e.target.value})}
+                  />
+                </div>
+
+                {/* Comissão do Operador / Técnico (Tátil Moderno) */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8] flex items-center gap-1.5">
+                    <Percent size={14} className="text-[#C8F52E]" /> Comissão do Colaborador
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[0, 5, 10, 15, 20].map(c => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setFormService({...formService, comissao_percent: c})}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                          Number(formService.comissao_percent) === c
+                            ? 'bg-[#C8F52E]/10 border-[#C8F52E] text-[#C8F52E]'
+                            : 'bg-[#0E1116] border-[#2E3744] text-[#9AA7B8] hover:text-white'
+                        }`}
+                      >
+                        {c}%
+                      </button>
+                    ))}
+                  </div>
+                  <div className="relative">
+                    <input 
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.5"
+                      className="w-full pl-3.5 pr-8 py-2.5 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-mono font-bold focus:border-[#C8F52E] focus:outline-none transition-colors"
+                      placeholder="Percentual de comissão..."
+                      value={formService.comissao_percent}
+                      onChange={e => setFormService({...formService, comissao_percent: e.target.value})}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#5B6674]">%</span>
+                  </div>
+                </div>
+
+                {/* Preço Base (R$) */}
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8]">
+                    Preço Base Padrão (R$) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono font-bold text-[#C8F52E] text-base">R$</span>
                     <input 
                       type="number" 
                       step="0.01" 
-                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white font-black text-sm transition-all shadow-inner" 
+                      required
+                      className="w-full pl-12 pr-4 py-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white font-mono font-bold text-base focus:border-[#C8F52E] focus:outline-none transition-colors placeholder:text-[#5B6674]" 
                       placeholder="0,00"
                       value={formService.preco_base}
                       onChange={e => setFormService({...formService, preco_base: e.target.value})}
@@ -367,37 +516,38 @@ const ServicosView = () => {
                 </div>
               </div>
               
-              <div className="space-y-2 pb-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Detalhamento Técnico / Descrição</label>
+              {/* Descrição Detalhada */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-[#9AA7B8]">Detalhamento Técnico / Escopo</label>
                 <textarea 
-                  className="w-full h-32 px-6 py-5 bg-slate-50 border border-slate-100 rounded-[1.5rem] outline-none focus:ring-4 focus:ring-primary/5 focus:bg-white font-bold text-sm resize-none shadow-inner transition-all" 
-                  placeholder="Descreva os materiais inclusos e o que será feito..."
+                  className="w-full h-24 px-4 py-3 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-sm focus:border-[#C8F52E] focus:outline-none transition-colors resize-none placeholder:text-[#5B6674]" 
+                  placeholder="Descreva as etapas, materiais inclusos e instruções de aplicação..."
                   value={formService.descricao}
                   onChange={e => setFormService({...formService, descricao: e.target.value})}
-                ></textarea>
+                />
               </div>
 
-              {/* Seção de Preço Dinâmico por Porte (Fase 57) */}
-              <div className="flex flex-col gap-4 bg-amber-50/50 p-6 rounded-[2rem] border border-amber-200/80 transition-all shadow-sm">
+              {/* Seção de Preço Dinâmico por Porte (Dark Card) */}
+              <div className="bg-[#0E1116] border border-[#2E3744] rounded-2xl p-5 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black text-amber-800 uppercase tracking-widest flex items-center gap-2">
-                    <Zap size={16} className="text-amber-500 fill-amber-500" /> Preço Dinâmico por Porte do Veículo (Opcional)
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#C8F52E] flex items-center gap-2">
+                    <Zap size={15} /> Preço Diferenciado por Porte do Veículo (Opcional)
                   </label>
                 </div>
-                <p className="text-xs font-medium text-slate-600 leading-relaxed">
-                  Defina valores diferenciados de acordo com o porte do automóvel. Se deixado em branco ou zero, o sistema utilizará o <strong>Preço Base</strong> automaticamente na abertura de orçamento/OS.
+                <p className="text-xs text-[#9AA7B8] leading-relaxed">
+                  Defina valores específicos por categoria. Se deixado em branco, o sistema usará o <strong>Preço Base</strong> automaticamente.
                 </p>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
                   {['Hatch', 'Sedan', 'SUV', 'Pickup', 'Esportivo', 'Moto'].map((porte) => (
-                    <div key={porte} className="space-y-1.5">
-                      <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">{porte}</label>
-                      <div className="relative group">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-slate-400 text-xs group-focus-within:text-amber-600 transition-colors">R$</span>
+                    <div key={porte} className="space-y-1 bg-[#171C24] border border-[#2E3744] rounded-xl p-3">
+                      <label className="text-[10px] font-bold text-[#9AA7B8] uppercase tracking-wider block">{porte}</label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-mono font-bold text-[#5B6674]">R$</span>
                         <input 
                           type="number" 
                           step="0.01"
-                          className="w-full pl-9 pr-3 py-3 bg-white border border-amber-200/80 rounded-xl outline-none focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 font-bold text-xs transition-all shadow-sm"
+                          className="w-full pl-8 pr-2 py-1.5 bg-[#0E1116] border border-[#2E3744] rounded-lg text-white font-mono font-bold text-xs focus:border-[#C8F52E] focus:outline-none transition-colors"
                           placeholder="Base"
                           value={formService.precos_por_classe?.[porte] ?? ''}
                           onChange={(e) => {
@@ -417,36 +567,34 @@ const ServicosView = () => {
                 </div>
               </div>
 
-              {/* Seção de Pacotes e Combos de Serviços (Fase 57.2) */}
-              <div className="flex flex-col gap-4 bg-purple-50/50 p-6 rounded-[2rem] border border-purple-200/80 transition-all shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <input 
-                      type="checkbox" 
-                      id="is_combo" 
-                      className="w-6 h-6 rounded-lg text-purple-600 border-purple-300 focus:ring-purple-500/20 transition-all cursor-pointer"
-                      checked={formService.is_combo || false}
-                      onChange={(e) => setFormService({...formService, is_combo: e.target.checked, itens_combo: e.target.checked ? (formService.itens_combo || []) : []})}
-                    />
-                    <label htmlFor="is_combo" className="cursor-pointer select-none">
-                      <span className="block text-sm font-black text-purple-900 tracking-tight flex items-center gap-1.5">
-                        🎁 Este Serviço é um Pacote / Combo Promocional?
-                      </span>
-                      <span className="block text-[10px] font-bold text-purple-700 mt-0.5 uppercase tracking-widest">
-                        Agrupa múltiplos serviços do catálogo com desconto promocional.
-                      </span>
-                    </label>
-                  </div>
+              {/* Seção de Pacotes e Combos de Serviços */}
+              <div className="bg-[#1a1528] border border-[#3b2b52] rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="checkbox" 
+                    id="is_combo" 
+                    className="w-5 h-5 rounded text-purple-500 bg-[#0E1116] border-[#3b2b52] focus:ring-0 cursor-pointer"
+                    checked={formService.is_combo || false}
+                    onChange={(e) => setFormService({...formService, is_combo: e.target.checked, itens_combo: e.target.checked ? (formService.itens_combo || []) : []})}
+                  />
+                  <label htmlFor="is_combo" className="cursor-pointer select-none">
+                    <span className="block text-sm font-bold text-purple-200">
+                      🎁 Este Serviço é um Pacote / Combo Promocional?
+                    </span>
+                    <span className="block text-xs text-purple-300/70 mt-0.5">
+                      Agrupa múltiplos serviços do catálogo com desconto especial.
+                    </span>
+                  </label>
                 </div>
 
                 {formService.is_combo && (
-                  <div className="pt-4 border-t border-purple-200/60 flex flex-col gap-3 animate-in fade-in slide-in-from-top-3">
-                    <label className="text-[10px] font-black text-purple-800 uppercase tracking-widest">
-                      Selecione os Serviços Inclusos neste Combo:
+                  <div className="pt-3 border-t border-[#3b2b52] space-y-3 animate-in fade-in duration-200">
+                    <label className="text-xs font-bold text-purple-200 uppercase tracking-wider block">
+                      Selecione os Serviços Inclusos no Pacote:
                     </label>
-                    <div className="max-h-48 overflow-y-auto space-y-2 pr-2 border border-purple-100 bg-white/80 p-3 rounded-2xl">
+                    <div className="max-h-44 overflow-y-auto space-y-1.5 pr-1 border border-[#3b2b52] bg-[#0E1116] p-2.5 rounded-xl">
                       {services.filter(s => s.id !== editingService?.id && !s.is_combo).length === 0 ? (
-                        <p className="text-xs text-slate-400 font-medium py-2 text-center">Nenhum serviço avulso cadastrado para agrupar.</p>
+                        <p className="text-xs text-[#9AA7B8] py-2 text-center">Nenhum serviço avulso disponível para agrupar.</p>
                       ) : (
                         services.filter(s => s.id !== editingService?.id && !s.is_combo).map(srv => {
                           const isSelected = (formService.itens_combo || []).includes(srv.id);
@@ -458,23 +606,23 @@ const ServicosView = () => {
                                 const next = isSelected ? current.filter(id => id !== srv.id) : [...current, srv.id];
                                 setFormService({ ...formService, itens_combo: next });
                               }}
-                              className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                                isSelected ? 'bg-purple-100/60 border-purple-300 text-purple-900 font-bold shadow-sm' : 'bg-white border-slate-100 hover:border-slate-200 text-slate-700'
+                              className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                                isSelected ? 'bg-purple-900/40 border-purple-500 text-white font-bold' : 'bg-[#171C24] border-[#2E3744] hover:border-[#3b2b52] text-[#9AA7B8]'
                               }`}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2.5">
                                 <input 
                                   type="checkbox" 
                                   checked={isSelected} 
                                   onChange={() => {}} 
-                                  className="w-4 h-4 rounded text-purple-600 border-slate-300 pointer-events-none" 
+                                  className="w-4 h-4 rounded text-purple-500 border-[#2E3744] pointer-events-none" 
                                 />
                                 <div>
-                                  <p className="text-xs">{srv.nome}</p>
-                                  <p className="text-[9px] text-slate-400 font-black uppercase">{srv.categoria}</p>
+                                  <p className="text-xs text-white">{srv.nome}</p>
+                                  <p className="text-[10px] text-[#9AA7B8] uppercase">{srv.categoria}</p>
                                 </div>
                               </div>
-                              <span className="text-xs font-black text-slate-800">
+                              <span className="text-xs font-mono font-bold text-white">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(srv.preco_base || 0)}
                               </span>
                             </div>
@@ -482,176 +630,109 @@ const ServicosView = () => {
                         })
                       )}
                     </div>
-
-                    {/* Cálculo Automático da Economia / Resumo */}
-                    {(() => {
-                      const somaAvulso = (formService.itens_combo || []).reduce((acc, id) => {
-                        const srv = services.find(x => x.id === id);
-                        return acc + (Number(srv?.preco_base) || 0);
-                      }, 0);
-                      const precoCombo = Number(formService.preco_base) || 0;
-                      const economia = somaAvulso - precoCombo;
-                      const percOff = somaAvulso > 0 ? Math.round((economia / somaAvulso) * 100) : 0;
-
-                      return (
-                        <div className="bg-purple-900 text-white p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-md mt-1">
-                          <div>
-                            <span className="text-[9px] font-black uppercase tracking-widest text-purple-300 block">Valor Avulso (Soma dos Itens)</span>
-                            <span className="text-sm font-bold line-through text-purple-200">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(somaAvulso)}
-                            </span>
-                          </div>
-                          <div className="sm:text-right">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 block">
-                              {economia > 0 ? `🔥 Economia para o Cliente (${percOff}% OFF)` : 'Defina o Preço Base (Promocional)'}
-                            </span>
-                            <span className="text-lg font-black text-emerald-300">
-                              {economia > 0 ? `Economize ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(economia)}` : '---'}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-col gap-4 bg-blue-50/50 p-6 rounded-2xl border border-blue-100 transition-all">
-                <div className="flex items-center gap-4">
+              {/* Seção de Controle de Estoque */}
+              <div className="bg-[#101b2b] border border-[#1e3450] rounded-2xl p-5 space-y-3">
+                <div className="flex items-center gap-3">
                   <input 
                     type="checkbox" 
                     id="controle_estoque" 
-                    className="w-6 h-6 rounded-lg text-primary border-slate-300 focus:ring-primary/20 transition-all cursor-pointer"
+                    className="w-5 h-5 rounded text-blue-500 bg-[#0E1116] border-[#1e3450] focus:ring-0 cursor-pointer"
                     checked={formService.controle_estoque}
                     onChange={(e) => setFormService({...formService, controle_estoque: e.target.checked})}
                   />
                   <label htmlFor="controle_estoque" className="cursor-pointer select-none">
-                    <span className="block text-sm font-black text-slate-800 tracking-tight">Habilitar Controle de Estoque</span>
-                    <span className="block text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">Exige baixa obrigatória de material na OS (ex: Metros de PPF).</span>
+                    <span className="block text-sm font-bold text-blue-200">Habilitar Controle de Estoque de Insumos</span>
+                    <span className="block text-xs text-blue-300/70 mt-0.5">Exige baixa obrigatória de material ou bobina na execução da OS.</span>
                   </label>
                 </div>
 
                 {formService.controle_estoque && (
-                  <div className="pt-4 border-t border-blue-100 flex flex-col mt-2 mb-2 animate-in fade-in slide-in-from-top-4">
-                     <div className="flex items-center justify-between mb-4 px-1 flex-wrap gap-2">
-                         <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1">
-                             <Zap size={12} className="text-blue-500" /> Insumos Padrão do Serviço
-                         </label>
-                         {formService.is_combo && (
-                           <button
-                             type="button"
-                             onClick={() => {
-                               const combosMats = [];
-                               (formService.itens_combo || []).forEach(srvId => {
-                                 const srv = services.find(x => x.id === srvId);
-                                 if (srv?.controle_estoque && srv.materiais?.length) {
-                                   srv.materiais.forEach(m => {
-                                     const existingIdx = combosMats.findIndex(x => x.material_id === m.material_id);
-                                     if (existingIdx >= 0) {
-                                       combosMats[existingIdx].quantidade = (Number(combosMats[existingIdx].quantidade) || 0) + (Number(m.quantidade) || 0);
-                                     } else {
-                                       combosMats.push({ ...m });
-                                     }
-                                   });
-                                 }
-                               });
-                               if (combosMats.length > 0) {
-                                 setFormService({ ...formService, materiais: combosMats });
-                                 toast.success(`${combosMats.length} insumos importados dos serviços do combo!`);
-                               } else {
-                                 toast.info('Os serviços selecionados neste combo não exigem materiais controlados.');
-                               }
-                             }}
-                             className="text-[9px] font-black text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-xl uppercase tracking-wider transition-all shadow-sm flex items-center gap-1"
-                           >
-                             ⚡ Importar Insumos do Combo
-                           </button>
-                         )}
-                     </div>
-
-                     {(formService.materiais || []).map((mat, matIdx) => (
-                       <div key={mat.id || matIdx} className="flex items-end gap-3 mb-3">
-                         <div className="flex-1 space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Material do Almoxarifado</label>
-                            <select 
-                              className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl outline-none focus:ring-4 focus:ring-blue-100 text-sm font-bold shadow-sm"
-                              value={mat.material_id || ''}
-                              onChange={e => {
-                                 const next = [...(formService.materiais || [])];
-                                 next[matIdx].material_id = e.target.value;
-                                 setFormService({ ...formService, materiais: next });
-                              }}
-                            >
-                              <option value="">Selecione o Produto...</option>
-                              {inventory.map(inv => (
-                                <option key={inv.id} value={inv.id}>{inv.nome} ({inv.quantidade} {inv.unidade})</option>
-                              ))}
-                            </select>
-                         </div>
-                         <div className="w-24 space-y-1.5">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Qtd</label>
-                            <input 
-                              type="number" 
-                              min="0.1" 
-                              step="any"
-                              className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl outline-none focus:ring-4 focus:ring-blue-100 text-sm font-bold shadow-sm text-center"
-                              value={mat.quantidade}
-                              onChange={e => {
-                                 const next = [...(formService.materiais || [])];
-                                 next[matIdx].quantidade = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
-                                 setFormService({ ...formService, materiais: next });
-                              }}
-                              placeholder="0"
-                            />
-                         </div>
-                         <button 
-                           type="button"
-                           onClick={() => {
-                              const next = (formService.materiais || []).filter((_, i) => i !== matIdx);
+                  <div className="pt-3 border-t border-[#1e3450] space-y-3 animate-in fade-in duration-200">
+                    {(formService.materiais || []).map((mat, matIdx) => (
+                      <div key={mat.id || matIdx} className="flex items-end gap-2.5">
+                        <div className="flex-1 space-y-1">
+                          <label className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">Insumo do Almoxarifado</label>
+                          <select 
+                            className="w-full px-3 py-2 bg-[#0E1116] border border-[#1e3450] rounded-xl text-white text-xs font-medium focus:outline-none"
+                            value={mat.material_id || ''}
+                            onChange={e => {
+                              const next = [...(formService.materiais || [])];
+                              next[matIdx].material_id = e.target.value;
                               setFormService({ ...formService, materiais: next });
-                           }}
-                           className="w-11 h-11 shrink-0 flex items-center justify-center rounded-xl bg-white border border-rose-100 text-rose-400 hover:bg-rose-50 hover:text-rose-600 transition-all font-black"
-                           title="Remover Insumo"
-                         >
-                           <X size={16} strokeWidth={3} />
-                         </button>
-                       </div>
-                     ))}
+                            }}
+                          >
+                            <option value="">Selecione o Insumo...</option>
+                            {inventory.map(inv => (
+                              <option key={inv.id} value={inv.id}>{inv.nome} ({inv.quantidade} {inv.unidade})</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="w-20 space-y-1">
+                          <label className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">Qtd</label>
+                          <input 
+                            type="number" 
+                            min="0.1" 
+                            step="any"
+                            className="w-full px-2.5 py-2 bg-[#0E1116] border border-[#1e3450] rounded-xl text-white text-xs font-bold text-center focus:outline-none"
+                            value={mat.quantidade}
+                            onChange={e => {
+                              const next = [...(formService.materiais || [])];
+                              next[matIdx].quantidade = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
+                              setFormService({ ...formService, materiais: next });
+                            }}
+                            placeholder="0"
+                          />
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const next = (formService.materiais || []).filter((_, i) => i !== matIdx);
+                            setFormService({ ...formService, materiais: next });
+                          }}
+                          className="w-9 h-9 shrink-0 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors"
+                          title="Remover"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
 
-                     <button 
-                       type="button"
-                       onClick={() => {
-                          const next = [...(formService.materiais || []), { id: Date.now(), material_id: '', quantidade: '' }];
-                          setFormService({ ...formService, materiais: next });
-                       }}
-                       className="mt-2 text-[10px] font-black uppercase text-blue-500 hover:text-blue-700 bg-white/50 hover:bg-white px-4 py-2.5 rounded-xl self-start flex items-center gap-2 transition-all border border-blue-200/50 shadow-sm"
-                     >
-                       <Plus size={14} /> Adicionar Item
-                     </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const next = [...(formService.materiais || []), { id: Date.now(), material_id: '', quantidade: '' }];
+                        setFormService({ ...formService, materiais: next });
+                      }}
+                      className="text-xs font-bold text-blue-400 hover:text-blue-300 bg-blue-500/10 px-3 py-1.5 rounded-xl border border-blue-500/20 flex items-center gap-1.5 transition-colors"
+                    >
+                      <Plus size={14} /> Adicionar Insumo Vinculado
+                    </button>
                   </div>
                 )}
               </div>
             </form>
 
             {/* Rodapé Fixo */}
-            <div className="p-6 md:p-8 border-t border-slate-50 shrink-0 bg-white">
-              <div className="flex flex-col-reverse md:flex-row gap-4">
-                <button 
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleAddService}
-                  disabled={isSaving}
-                  className="flex-1 bg-[#C8F52E] hover:bg-[#d6fb4f] text-[#0E1116] py-4 rounded-2xl shadow-xs font-extrabold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                >
-                  {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
-                  {editingService ? 'Atualizar Serviço' : 'Salvar no Catálogo'}
-                </button>
-              </div>
+            <div className="p-4 sm:p-5 border-t border-[#2E3744] bg-[#171C24] shrink-0 flex items-center justify-end gap-3">
+              <button 
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-[#9AA7B8] hover:text-white hover:bg-[#202734] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleAddService}
+                disabled={isSaving}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#C8F52E] hover:bg-[#b8e520] active:scale-[0.98] text-[#0E1116] font-bold text-xs uppercase tracking-wider rounded-xl shadow-sm transition-all disabled:opacity-50"
+              >
+                {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
+                <span>{editingService ? 'Atualizar Serviço' : 'Salvar no Catálogo'}</span>
+              </button>
             </div>
           </div>
         </div>

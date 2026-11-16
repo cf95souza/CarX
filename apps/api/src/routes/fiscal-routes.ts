@@ -89,14 +89,8 @@ export const fiscalRoutes: FastifyPluginAsync = async (app) => {
       async (request, reply) => {
         const tenantId = (request as any).tenantId;
         const invoice = await fiscalService.getInvoiceByWorkOrder(tenantId, request.params.id);
-        if (!invoice) {
-          return reply.status(404).send({
-            statusCode: 404,
-            error: 'Not Found',
-            message: 'Nenhuma nota fiscal emitida para esta Ordem de Serviço.',
-          });
-        }
-        return reply.status(200).send(invoice);
+        // Retorna 200 de forma transparente com null se não houver nota emitida, evitando erro 404 no console
+        return reply.status(200).send(invoice || null);
       }
     );
 

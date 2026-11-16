@@ -27,6 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { offlineStorage } from '../services/offlineStorage';
 import { toast } from '../utils/toast';
+import { compressImageClientSide } from '../utils/imageCompressor';
 import PhotoGuideGallery from '../components/features/PhotoGuideGallery';
 import OperadorLaudoInspecao from '../components/features/OperadorLaudoInspecao';
 import { Button } from '@carx/ui';
@@ -120,23 +121,25 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
     accumulatedSeconds?: number;
   } | null>(null);
 
-  // Lê o estado local do IndexedDB na montagem (caso a OS estivesse rodando offline)
+  // Lê o estado local do IndexedDB apenas se estiver offline (quando online, o servidor é a autoridade absoluta)
   useEffect(() => {
-    offlineStorage.getLocalTimer(workOrderId).then((stored) => {
-      if (stored) {
-        if (stored.status === 'running') {
-          const now = Date.now();
-          const diffSeconds = Math.max(0, Math.floor((now - stored.lastTickTimestamp) / 1000));
-          const total = (stored.accumulatedSeconds || 0) + diffSeconds;
-          setDisplaySeconds(total);
-          setLocalTimerOverride({ isRunning: true, accumulatedSeconds: total });
-        } else if (stored.status === 'paused') {
-          setDisplaySeconds(stored.accumulatedSeconds || 0);
-          setLocalTimerOverride({ isRunning: false, accumulatedSeconds: stored.accumulatedSeconds });
+    if (!isOnline) {
+      offlineStorage.getLocalTimer(workOrderId).then((stored) => {
+        if (stored) {
+          if (stored.status === 'running') {
+            const now = Date.now();
+            const diffSeconds = Math.max(0, Math.floor((now - stored.lastTickTimestamp) / 1000));
+            const total = (stored.accumulatedSeconds || 0) + diffSeconds;
+            setDisplaySeconds(total);
+            setLocalTimerOverride({ isRunning: true, accumulatedSeconds: total });
+          } else if (stored.status === 'paused') {
+            setDisplaySeconds(stored.accumulatedSeconds || 0);
+            setLocalTimerOverride({ isRunning: false, accumulatedSeconds: stored.accumulatedSeconds });
+          }
         }
-      }
-    }).catch(() => {});
-  }, [workOrderId]);
+      }).catch(() => {});
+    }
+  }, [workOrderId, isOnline]);
 
   const isTimerRunning = localTimerOverride !== null
     ? localTimerOverride.isRunning
@@ -147,8 +150,19 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
   // Efeito local para incremento suave do cronômetro enquanto estiver ativo
   const [displaySeconds, setDisplaySeconds] = useState(totalElapsedSeconds);
 
+  // Sincronização em tempo real com o servidor Fastify (quando online)
   useEffect(() => {
-    if (localTimerOverride === null) {
+    if (timerData && isOnline) {
+      const serverSeconds = Number(timerData.totalElapsedSeconds || 0);
+      if (Math.abs(displaySeconds - serverSeconds) > 2 || displaySeconds === 0) {
+        setDisplaySeconds(serverSeconds);
+      }
+      setLocalTimerOverride(null);
+    }
+  }, [timerData, isOnline]);
+
+  useEffect(() => {
+    if (localTimerOverride === null && totalElapsedSeconds > 0 && displaySeconds === 0) {
       setDisplaySeconds(totalElapsedSeconds);
     }
   }, [totalElapsedSeconds, localTimerOverride]);
@@ -328,6 +342,8 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
       toast.success('Serviço concluído com sucesso! Encaminhado para Inspeção QA.');
       setShowConfirmFinish(false);
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       onComplete();
     },
     onError: async (err: any) => {
@@ -360,13 +376,14 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
     }
   };
 
-  // Upload de Fotos integrado com MinIO
+  // Upload de Fotos integrado com MinIO e Compactação Client-Side
   const handlePhotoUpload = async (file: File, fase = 'durante', angulo = 'livre') => {
     if (!file) return;
 
     setIsUploading(true);
     try {
-      const uploaded = await api.storage.upload(file, {
+      const compressed = await compressImageClientSide(file, 1280, 1280, 0.8);
+      const uploaded = await api.storage.upload(compressed, {
         category: 'inspection',
         entityId: workOrderId,
       });

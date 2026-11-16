@@ -3,6 +3,16 @@ import { api } from '../services/api';
 import { createNotification } from './useNotifications';
 import { formatOsNumber } from '../utils/statusUtils';
 
+function normalizePaymentMethod(method) {
+  const m = String(method || '').toLowerCase().trim();
+  if (m === 'pix') return 'pix';
+  if (m === 'dinheiro' || m === 'cash') return 'cash';
+  if (m.includes('deb') || m === 'cartao_debito') return 'debit_card';
+  if (m.includes('cred') || m.includes('cartao') || m === 'cartao_credito') return 'credit_card';
+  if (m.includes('transf') || m === 'bank_transfer') return 'bank_transfer';
+  return 'pix';
+}
+
 function normalizeQuote(q) {
   if (!q) return null;
 
@@ -13,9 +23,15 @@ function normalizeQuote(q) {
 
   const customerName = q.customer?.name || q.cliente_nome || 'Cliente';
   const customerPhone = q.customer?.phone || q.cliente_telefone || '';
+
+  const rawBrand = q.vehicle?.brand && q.vehicle.brand.toLowerCase() !== 'geral' ? q.vehicle.brand.trim() : '';
+  const rawModel = (q.vehicle?.model || '').trim();
+  const cleanModel = rawBrand && rawModel.toLowerCase().startsWith(rawBrand.toLowerCase())
+    ? rawModel
+    : `${rawBrand ? rawBrand + ' ' : ''}${rawModel}`.trim();
   const vehicleDesc = q.vehicle
-    ? `${q.vehicle.brand || ''} ${q.vehicle.model || ''} ${q.vehicle.year ? '(' + q.vehicle.year + ')' : ''}`.trim()
-    : q.veiculo_desc || 'Veículo';
+    ? `${cleanModel} ${q.vehicle.year ? '(' + q.vehicle.year + ')' : ''}`.trim()
+    : (q.veiculo_desc ? q.veiculo_desc.replace(/^Geral\s+/i, '') : 'Veículo');
   const plate = q.vehicle?.plate || q.placa || '';
 
   const rawItems = q.items || q.services || q.servicos_detalhados || [];
@@ -58,6 +74,9 @@ function normalizeQuote(q) {
     tecnico_id: q.technician?.id || q.technicianId || q.tecnico_id,
     observacoes: q.notes || q.observacoes || '',
     data_agendamento: q.scheduledAt || q.data_agendamento || null,
+    created_at: q.createdAt || q.created_at || q.data || null,
+    createdAt: q.createdAt || q.created_at || q.data || null,
+    data: q.scheduledAt || q.data_agendamento || q.createdAt || q.created_at || null,
     historico_pagamentos: q.historico_pagamentos || [],
   };
 }
@@ -135,7 +154,7 @@ export const useQuotes = () => {
       if (valorPago > 0) {
         await api.payments.create(osId, {
           amountCents: Math.round(valorPago * 100),
-          method: appointmentData.metodo_pagamento || 'PIX',
+          method: normalizePaymentMethod(appointmentData.metodo_pagamento),
           notes: 'Adiantamento na aprovação',
         });
       }
@@ -161,7 +180,7 @@ export const useQuotes = () => {
 
       await api.payments.create(osId, {
         amountCents: Math.round(valor * 100),
-        method: metodo,
+        method: normalizePaymentMethod(metodo),
         notes: typeof valorOrObj === 'object' && valorOrObj.tipo ? `Pagamento: ${valorOrObj.tipo}` : 'Pagamento recebido',
       });
       await fetchQuotes();

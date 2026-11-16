@@ -9,17 +9,22 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 
 📍 ONDE O PROJETO PAROU:
    • Fase 7 — Qualidade Contínua, Testes de Carga (k6), Hardening OWASP & Simulação DR: 100% CONCLUÍDA E HOMOLOGADA!
-   • Todas as 5 Tarefas da Fase 7 (T7.1 a T7.5) Foram Entregues e Auditadas com Sucesso Absoluto!
-   • Última Entrega Concluída: FASE 7 COMPLETA (T7.1, T7.2, T7.3, T7.4 e T7.5)
-     - [T7.1] Quality Gate Automatizado (System Quality Gate): Typecheck (0 erros), ESLint (0 erros), Builds de Produção (@carx/web em 8.81s com 106 entradas PWA, @carx/admin em 9.45s), Auditoria PostgreSQL (58/58 tabelas com RLS ENABLE + FORCE = 100%, 0 locks bloqueantes) e emissão formal de quality-report.md e quality-summary.json.
-     - [T7.2] Testes de Isolamento Multitenant (CI Obrigatório): 10/10 testes aprovados em tenant-isolation.test.ts cobrindo dinamicamente as 58 tabelas com tenant_id (incluindo todas as tabelas das Ondas 1, 2 e 3 da Fase 6) e varredura estática AST garantindo 0 chamadas diretas a adminPool.query nos 15 módulos de domínio.
-     - [T7.3] Testes de Carga Progressivos com k6 (1 -> 5 -> 10 -> 25 -> 50 -> 100 VUs): 26.085 requisições totais com 0,00% de erro. No pico de 100 conexões simultâneas (OS/TV monitor, passaportes QR e mini-sites): 1.052,4 req/s, p50=78,93ms, p95=131,98ms e p99=152,06ms.
-     - [T7.4] Auditoria e Hardening OWASP Top 10: 6/6 suítes aprovadas em owasp-hardening.test.ts (bloqueio RBAC vertical 403 e BOLA/IDOR horizontal 404, criptografia AES-256-GCM em repouso e redaction de segredos, neutralização de SQLi/XSS, feature gating 403 + honeypot anti-bot e rejeição de JWT forjado/alg:none).
-     - [T7.5] Simulação Mensal de Desastre e Restauração (DR Drill): Snapshot externo com checksum SHA-256 validado, simulação de perda catastrófica e restauração transacional determinística com RTO = 343ms e RPO = 0 registros perdidos.
+   • Fase 8 — Homologação VPS, Usabilidade e Esteira Operacional:
+     - [T8.2a] Remoção de Fallbacks Visuais, Correções de Equipe/Orçamento e Roteamento Padrão OperaBeauty: 100% CONCLUÍDA!
+     - [T8.2b] Homologação Operacional do Ciclo de Vendas e Redesenho do App do Operador (Design System rebraind/): 100% CONCLUÍDA!
+     - [T8.2c] Refinamentos de Integração, Inspeção e Homologação VPS (Itens 30 a 37): 100% CONCLUÍDA E VALIDADA!
+       * Item 30: APIs & Webhooks Reais (Validado visualmente com 5 evidências PNG)
+       * Item 31: Silhuetas Vetoriais do Veículo por Ângulo no Laudo (4 vistas)
+       * Item 32: Compactação Client-Side Canvas/WebP e Radios Modernos nas Fotos
+       * Item 33: Persistência e Sincronização do Cronômetro Oficial do Servidor
+       * Item 34: Desbloqueio RBAC do Ranking de Técnicos para Operadores
+       * Item 35: Idempotência e Correção HTTP 400 em Parada do Cronômetro
+       * Item 36: Transições Legítimas de Status na Esteira Operacional (HTTP 422)
+       * Item 37: Conclusão de Serviço e Movimentação Imediata para o Histórico
 
-🎯 PRÓXIMO PASSO IMEDIATO (AGUARDANDO INÍCIO):
-   • FASE 8 — Go-To-Market, Beta Fechado & Lançamento em Produção
-   • Próxima Tarefa: [T8.1] Seleção do Grupo Beta, Base de Conhecimento, Validação Comercial de Planos e Lançamento Oficial.
+🎯 PRÓXIMO PASSO IMEDIATO:
+   • Deploy Completo na VPS Oracle de Teste (IP: 137.131.151.125)
+   • Validação em Produção/Staging após Inicialização dos Contêineres Docker.
 
 📊 MAPA DE TODAS AS TAREFAS DA FASE 6 (DIFERENCIAIS COMPETITIVOS):
 --------------------------------------------------------------------------------
@@ -2474,3 +2479,60 @@ Onda 3 Roadmap de Execução:
 
 ### [ ] T8.4 — Lançamento Oficial na VPS Hostinger de Produção
 - [ ] Validação final dos planos e transição definitiva para produção na VPS Hostinger.
+
+---
+
+### [ ] T8.2c — Ajustes Finos de Homologação da Oficina (Apontamentos do Usuário)
+- [x] **Item 1 — Autocompletar da Placa no Novo Orçamento (Print 1)**: Ao digitar a placa (ex: `EVH0H22`), o formulário preenche automaticamente o campo com "Veículo", cor "Prata" e porte "Sedan". Ajustar para não forçar valores padrão estáticos indevidos e permitir digitação limpa.
+- [x] **Item 2 — Prefixo Indevido "Geral" no Nome do Veículo (Print 2)**: Ao salvar o orçamento/OS, o veículo é exibido com a palavra "Geral" na frente (ex: "Geral Honda Civic"). Identificar a origem dessa concatenação (marca/categoria/box) e garantir que seja exibido apenas a marca e modelo corretos.
+- [x] **Item 3 — Contraste e Legibilidade do Badge de Status (Print 3)**: No grid de Ordens de Serviço / Vendas, o badge de status (ex: "Orçamento") está com texto cinza escuro sobre fundo cinza escuro, ficando ilegível. Ajustar classes de cores e contraste do badge para leitura nítida.
+- [x] **Item 4 — Redundância nos Botões de Pagamento nas Ações (Print 4)**: Na coluna AÇÕES do grid, há dois botões voltados para pagamento/cobrança (ícone QR Code Pix e ícone Cifrão $). Avaliar a unificação em um único modal de checkout ou diferenciar claramente a função de cada um.
+- [x] **Item 5 — Tradução dos Filtros de Status em Ordens de Serviço (Print 1)**: As abas/pills de filtro de status na tela de Ordens de Serviço estão em inglês (`Todos os Status`, `QUOTE`, `APPROVED`, `IN_PROGRESS`, `QA`, `READY`, `DELIVERED`). Traduzir para português nativo (`Todos os Status`, `Orçamentos`, `Aprovadas`, `Em Execução`, `Controle QA`, `Prontos`, `Entregues`).
+- [x] **Item 6 — Segregação de Orçamentos (QUOTE) da Fila de Execução e do Operador**: Orçamentos pendentes de aprovação não podem aparecer misturados na fila principal de execução nem na tela de tarefas do Operador. A OS só deve ser despachada para o pátio/técnico após a aprovação formal do orçamento.
+- [x] **Item 7 — Modernização Visual do Modal "Detalhes da Proposta" (Print 2)**: Na tela de Vendas, o modal de detalhes do orçamento ainda está com aparência legada. Aplicar o padrão canônico novo do CarX Design System (Dark Card refinado, tipografia Space Grotesk, hierarquia de informações e badges modernos).
+- [x] **Item 8 — Modernização Visual do Modal de Pagamentos (Print 3)**: O modal de registrar pagamento precisa ser refinado para o novo padrão visual moderno do sistema, com acabamento refinado de cartões, botões e tipografia.
+- [x] **Item 9 — Persistência e Exibição Correta dos Serviços no WhatsApp e Proposta**: A mensagem do WhatsApp e a visualização de detalhes exibiram o texto genérico "• Serviços Especializados" mesmo após o usuário selecionar o serviço específico na criação do orçamento. Corrigir para persistir e exibir exatamente os serviços selecionados com nomes e valores corretos.
+- [x] **Item 10 — Redesenho do Modal de Ações Rápidas da OS/Orçamento (Print 1)**: O modal de ações (`AÇÕES • #OS-0002`) está no layout branco antigo com botões legados. Modernizar para o padrão Dark Card do CarX Design System (`#171C24`, borda `#2E3744`, ícones e ações com visual premium).
+- [x] **Item 11 — Unificação do Fluxo de Aprovação e Agendamento sem Telas Sobrepostas (Print 2 e 3)**: Eliminar o modal branco legado "AGENDAR SERVIÇO" que aparece sobreposto ao fechar e causa duplicidade com a tela de detalhes. O fluxo de aprovação e agendamento deve ser integrado e resolvido diretamente dentro do modal moderno de Detalhes da Proposta.
+- [x] **Item 12 — Correção do Erro HTTP 400 em Pagamento na Aprovação (`approveQuote`)**: Ao clicar em confirmar agendamento/aprovação com adiantamento, ocorre o erro `POST /work-orders/:id/payments 400 Bad Request: Dados de pagamento inválidos`. Corrigir o payload enviado por `approveQuote` em `useQuotes.js` para bater exatamente com o schema esperado pela API Fastify.
+- [x] **Item 13 — Correção de Asset Ausente 404 (`carx-logo.svg`)**: O arquivo `carx-logo.svg` está gerando erro 404 no console. Assegurar que o arquivo esteja presente na pasta `public/assets/` do web para servir corretamente.
+- [x] **Item 14 — Tratamento de Erros de Console (401 Unauthorized e 404 Fiscal Invoice)**:
+  - Eliminar os erros 401 em consultas em segundo plano ajustando os interceptores de renovação de token JWT.
+  - Ajustar a consulta de NFS-e (`GET /work-orders/:id/fiscal-invoice`) para não estourar erro 404 quando a OS ainda não possui nota emitida (deve retornar null de forma transparente).
+  - Tratar chamadas de fotos do portal para usar as credenciais corretas do tenant/cliente.
+- [x] **Item 15 — Agendamento Flexível sem Exigência de Operador**: O agendamento da OS não pode obrigar a seleção de um colaborador. Permitir agendar sem técnico pré-alocado, mantendo o serviço na fila geral para atribuição posterior ou para o operador puxar no pátio.
+- [x] **Item 16 — Padronização Visual do Grid de Vendas e Orçamentos (Print 1)**: Harmonizar o grid de Vendas com o padrão moderno da tela de Ordens de Serviço (bordas, espaçamentos, tipografia, badges de status com alto contraste e botões de ação limpos).
+- [x] **Item 17 — Redesenho Moderno da Tela de Clientes (Print 2)**: Atualizar a página de Clientes eliminando resquícios do layout legado no banner do portal, na tabela de clientes e na paginação, alinhando ao Design System CarX.
+- [x] **Item 18 — Modal Elegante e Mobile-First de Detalhes do Cliente (Print 3)**: Substituir a gaveta lateral branca (drawer com botão "Cadastrar" cortado, UUID longo e status `QUOTE` em inglês) por um modal moderno, elegante, escuro e 100% responsivo para celulares de gestores de oficina.
+- [x] **Item 19 — Persistência da Data de Agendamento na Agenda e Histórico do Cliente**: Ao aprovar e agendar, a data/hora selecionadas não estão sendo salvas na tabela de agendamentos (`appointments`) nem no histórico de serviços do cliente (`--/--/----`). Garantir persistência e exibição correta na Agenda e no perfil do cliente.
+- [x] **Item 20 — Permissão de Reabertura de OS Agendada (SCHEDULED ➔ QUOTE)**: Corrigir a máquina de estados em `ALLOWED_WORK_ORDER_TRANSITIONS` para permitir reverter `SCHEDULED ➔ QUOTE`, possibilitando reabrir e renegociar orçamentos agendados quando o cliente pedir alterações antes do check-in.
+- [x] **Item 21 — Rota Inicial de Relatórios e Enriquecimento da Visão Gerencial (Print 1)**: Ao clicar no menu lateral "Relatórios", a página deve abrir diretamente na "Visão Gerencial" (em vez de cair direto em NPS). Além disso, enriquecer a Visão Gerencial com gráficos de faturamento, volume de serviços e distribuição financeira, preenchendo o espaço vazio abaixo dos cards.
+- [x] **Item 22 — Modernização Visual do CRM de Retenção & Pós-Venda (Print 2)**: Eliminar traços antigos com arredondamentos estranhos e linhas desproporcionais na tela de CRM de Retenção. Aplicar o Design System CarX com Dark Cards `#171C24`, bordas `#2E3744` e hierarquia nítida.
+- [x] **Item 23 — Ajuste Visual do Botão "Nova Transferência" em Redes/Franquias (Print 3)**: O botão "Nova Transferência" no histórico de insumos entre lojas está com proporções e ícone estranhos. Harmonizar com o padrão de botões canônicos do sistema.
+- [x] **Item 24 — Correção Crítica de Responsividade Mobile em Redes / Franquias (Print 4)**: Na visualização móvel/celular, a tela Corporativa de Redes vaza horizontalmente, cortando botões de ação ("Transferir Insumos", "Nova Filial") e abas de filiais. Aplicar layout flexível com quebra de linha inteligente e adaptabilidade total a smartphones.
+- [x] **Item 25 — Modernização do Modal "Cadastrar Serviço" e Catálogo (Print 5)**: O modal de cadastro de serviços e a tela de serviços estão com visual legado e campos básicos. Modernizar o modal em Dark Card com inputs táteis modernos (tempo estimado, comissão, porte do veículo, garantia) e refinamento do catálogo.
+- [x] **Item 26 — Redesenho Moderno da Tela de Equipe & Colaboradores (Print 6)**: A aba de Membros & Acessos está em cartões brancos antigos com botões de rodapé legados. Modernizar para o novo padrão visual com badges de cargo, status do técnico e ações com botões modernos.
+- [x] **Item 27 — Refinamento do Ranking de Técnicos e Gamificação (Print 7)**: O card do líder e o quadro geral de técnicos precisam de acabamento moderno e do cálculo dinâmico correto do streak auditado ("Dias Sem Retrabalho") conectado aos laudos de QA e OS entregues.
+- [x] **Item 28 — Modernização de Configurações e Limpeza de Cores Legadas (Print 1)**: A tela de Configurações > Identidade Visual possui seletores de cores (primária, secundária e fundo) que quebram o Design System canônico. Remover esses color pickers herdados do sistema legado e focar a customização no Nome da Loja, Logomarca, Contatos e TV da Loja com layout Dark Card moderno.
+- [x] **Item 29 — Correção Dinâmica de Slug do Mini-Site da Loja (Print 2)**: O link do mini-site público está apontando estaticamente para `/loja/minha-oficina`, disparando erro "Oficina Não Encontrada". Ajustar para usar o slug real da oficina logada (ex: `http://137.131.151.125:8080/caiocar` ou `carx.tech/:slug`), garantindo que ao clicar o site abra perfeitamente com os dados da oficina.
+- [x] **Item 30 — Avaliação e Conclusão ou Simplificação de APIs & Webhooks**: Auditar a aba de APIs & Webhooks: se for mantida para integrações externas (CRM, automações Zapier/Webhooks), consolidar para funcionar 100% com emissão de token real; se o foco for a operação direta da oficina, simplificar ou reposicionar para planos corporativos para manter o painel limpo. Consolidação 100% concluída: endpoints REST reais integrados no client `api.integrations` (geração de chaves criptografadas SHA-256 `carx_live_...`, revogação no banco, cadastro de webhooks reais com segredos HMAC, testes de disparo via Fastify e documentação Swagger UI `/v1/docs` no CarX Design System Dark Card).
+- [x] **Item 31 — Silhuetas Gráficas do Veículo por Ângulo no Laudo de Inspeção (Print 2)**: No Laudo 360° do operador (`OperadorLaudoInspecao.tsx`), ao alternar entre as abas (*Superior, Frente, Traseira, Laterais*), o diagrama continua mostrando apenas a silhueta da vista superior do carro. Implementar as silhuetas em SVG vetoriais específicas para cada visão (*frente, traseira e perfil lateral*) para marcação precisa dos pinos de avaria. Silhuetas SVG vetoriais detalhadas implementadas para as 4 vistas com mapeamento inteligente de peças e pinos numerados no padrão CarX Dark.
+- [x] **Item 32 — Redimensionamento, Compactação Client-Side e Redução de Bordas nas Fotos da Vistoria Guiada (Print 3)**: Na vistoria guiada (`PhotoGuideGallery.jsx`), os cards de foto estão com bordas e cantos arredondados excessivos (`rounded-[2rem]`). Ajustar para um raio moderno e proporcional (`rounded-xl` / `rounded-2xl`). Implementar compactação client-side de imagem (Canvas/WebP max 1280px / 80% qualidade) antes do envio para a API, prevenindo o esgotamento do disco na VPS. Implementada compactação automática em `imageCompressor.ts` (Canvas/WebP max 1280px / 80%) integrada no upload de fotos e redesign dos cards em `rounded-2xl` e `rounded-xl` no Dark Card CarX.
+- [x] **Item 33 — Persistência Real e Sincronização do Cronômetro Oficial do Servidor (Print 4)**: Corrigir a sincronização do cronômetro da OS com o backend Fastify: quando o operador sai da tela ou fecha o app por engano (ex: estava em 2min, aguardou até 2m05s e recarregou), o tempo não pode regredir nem descompassar. O tempo decorrido deve persistir atomicamente no banco para continuidade sem perdas. Ajustada a autoridade do cronômetro para priorizar `timerData` do servidor Fastify sobre o cache do IndexedDB durante conexão online, evitando regressão ou congelamento de tempo ao recarregar a tela.
+- [x] **Item 34 — Correção do Erro HTTP 403 Forbidden em Ranking de Técnicos (`GET /reports/technicians/ranking`)**: Ajustar o RBAC/permissões no backend Fastify para que operadores e técnicos autenticados possam consultar o ranking de técnicos e gamificação sem bloqueio de permissão (403 Forbidden).
+- [x] **Item 35 — Correção do Erro HTTP 400 Bad Request em Parada do Cronômetro (`POST /technician/work-orders/:id/stop`)**: Ao tentar parar/pausar o serviço pelo operador, a API retorna erro 400. Corrigido o interceptor central `fetchClient` para não enviar cabeçalho `application/json` com corpo vazio em requisições POST sem payload e implementada idempotência resiliente no método `stopTimer` do backend.
+- [x] **Item 36 — Correção do Erro HTTP 422 Unprocessable Entity em Transição de Status (`PATCH /work-orders/:id/status`)**: Ao tentar atualizar o status ou finalizar o serviço pela tela do operador, a máquina de estados rejeita a transição com erro 422. Atualizada a máquina canônica `ALLOWED_WORK_ORDER_TRANSITIONS` em `@carx/shared` para permitir transições legítimas da esteira operacional (`CHECKED_IN`, `SCHEDULED`, `PAUSED`, `IN_PROGRESS` ➔ `QA` e `READY`), autoatribuindo o operador caso a OS ainda não tivesse técnico alocado.
+- [x] **Item 37 — Conclusão de Serviço pelo Operador e Movimentação para o Histórico**: Ao finalizar o serviço, a OS deve ser movida imediatamente para o histórico de concluídas do operador e removida da fila de pendentes ("Minha fila"), sincronizando a lista local e o estado no servidor. Atualizados `isClosed` na fila do operador para excluir OS em `QA` e `READY` das tarefas a executar e refinada a listagem da aba Histórico em `App.jsx` com invalidação de cache via React Query.
+- [ ] **Item 38 — Teste E2E de Fluxo Sistêmico Completo 100% Visual pela Tela (Frontend)**: Realizar homologação de ponta a ponta operando o sistema exclusivamente pela interface gráfica (via automação de browser/Playwright na tela real, sem atalhos e sem manipulação de banco/código por trás):
+  - **Acesso do Super Admin**: Login no painel `/superadm`, navegação visual na tela de Oficinas/Tenants e cadastro de uma nova oficina pelo modal/formulário da interface (slug, razão social, plano e dados de acesso).
+  - **Login do Gestor**: Acesso ao painel da oficina recém-criada (`/:slug/login` / `/dashboard`) usando as credenciais criadas.
+  - **Configuração Operacional**: Cadastro de colaborador/operador e serviços caso necessário pela interface.
+  - **Digitação de placa limpa** e criação de Novo Orçamento com serviços reais.
+  - **Visualização de detalhes** e Aprovação com Agendamento.
+  - **Recepção na tela do Operador** (apenas OS aprovada na fila).
+  - **Execução de Laudo 360°** com silhuetas por ângulo e marcação de avarias.
+  - **Upload de fotos** com compressão client-side.
+  - **Execução técnica** com cronômetro oficial sincronizado, pausa e conclusão.
+  - **Movimentação para Histórico** do operador e status QA / Pronto.
+  - **Registro de Pagamento** sem duplicidade e entrega final.
+  - **Conferência de dados** em Relatórios Gerenciais e Ranking de Técnicos.

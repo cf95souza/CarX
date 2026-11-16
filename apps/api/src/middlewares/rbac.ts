@@ -29,13 +29,33 @@ export function requireRole(
       return;
     }
 
-    const currentRole = (user.role as UserRoleType) || UserRole.ATENDENTE;
+    const rawRole = String(user.role || '').toLowerCase().trim();
+    let currentRole: string = rawRole || UserRole.ATENDENTE;
+    if (rawRole === 'adm' || rawRole === 'admin' || rawRole === 'administrador') {
+      currentRole = UserRole.OWNER;
+    } else if (rawRole === 'operador') {
+      currentRole = UserRole.TECNICO;
+    } else if (rawRole === 'gestor') {
+      currentRole = UserRole.GESTOR;
+    }
 
-    if (!rolesArray.includes(currentRole)) {
+    const normalizedAllowed = rolesArray.map((r) => {
+      const lr = String(r).toLowerCase().trim();
+      if (lr === 'adm' || lr === 'admin') return UserRole.OWNER;
+      if (lr === 'operador') return UserRole.TECNICO;
+      return lr;
+    });
+
+    // Se o usuário for owner ou superadmin, tem acesso total aos endpoints de gestor e atendente
+    if (currentRole === UserRole.OWNER && (normalizedAllowed.includes(UserRole.GESTOR) || normalizedAllowed.includes(UserRole.ATENDENTE))) {
+      return;
+    }
+
+    if (!normalizedAllowed.includes(currentRole)) {
       return reply.code(403).send({
         statusCode: 403,
         error: 'Forbidden',
-        message: `Acesso negado: seu papel ("${currentRole}") não possui permissão para acessar esta rota.`,
+        message: `Acesso negado: seu papel ("${user.role}") não possui permissão para acessar esta rota.`,
       });
     }
   };

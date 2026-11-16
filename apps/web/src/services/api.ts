@@ -3,7 +3,11 @@ import type {
   WorkOrderStatusType,
   NpsMetricsDto,
   ApiKeyDto,
+  CreateApiKeyInputDto,
+  CreateApiKeyResponseDto,
   WebhookEndpointDto,
+  CreateWebhookEndpointInputDto,
+  WebhookDeliveryDto,
   TechnicianQueueItemDto,
   TechnicianRankingItemDto,
   DreReportDto,
@@ -236,8 +240,15 @@ export async function fetchClient<T>(endpoint: string, options: RequestInit = {}
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
 
+  const method = (options.method || 'GET').toUpperCase();
+  let body = options.body;
+  if (['POST', 'PUT', 'PATCH'].includes(method) && (body === undefined || body === null)) {
+    body = JSON.stringify({});
+  }
+
   const response = await fetch(url, {
     ...options,
+    body,
     headers,
   });
 
@@ -338,8 +349,15 @@ export async function portalFetchClient<T>(endpoint: string, options: RequestIni
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
 
+  const method = (options.method || 'GET').toUpperCase();
+  let body = options.body;
+  if (['POST', 'PUT', 'PATCH'].includes(method) && (body === undefined || body === null)) {
+    body = JSON.stringify({});
+  }
+
   const response = await fetch(url, {
     ...options,
+    body,
     headers,
   });
 
@@ -440,9 +458,10 @@ export const api = {
 
   // --- ORDENS DE SERVIÇO ---
   workOrders: {
-    list: async (params?: { status?: string; limit?: number; offset?: number; search?: string }) => {
+    list: async (params?: { status?: string; limit?: number; offset?: number; search?: string; excludeQuote?: boolean }) => {
       const q = new URLSearchParams();
       if (params?.status) q.append('status', params.status);
+      if (params?.excludeQuote) q.append('excludeQuote', 'true');
       if (params?.limit) q.append('limit', String(params.limit));
       if (params?.offset) q.append('offset', String(params.offset));
       if (params?.search) q.append('search', params.search);
@@ -1328,6 +1347,38 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+  },
+
+  // --- INTEGRAÇÕES, CHAVES DE API & WEBHOOKS (T3.14) ---
+  integrations: {
+    listApiKeys: async (): Promise<{ apiKeys: ApiKeyDto[] }> =>
+      fetchClient<{ apiKeys: ApiKeyDto[] }>('/integrations/api-keys'),
+    createApiKey: async (data: CreateApiKeyInputDto): Promise<CreateApiKeyResponseDto> =>
+      fetchClient<CreateApiKeyResponseDto>('/integrations/api-keys', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    revokeApiKey: async (id: string): Promise<{ message: string }> =>
+      fetchClient<{ message: string }>(`/integrations/api-keys/${id}`, {
+        method: 'DELETE',
+      }),
+    listWebhooks: async (): Promise<{ webhooks: WebhookEndpointDto[] }> =>
+      fetchClient<{ webhooks: WebhookEndpointDto[] }>('/integrations/webhooks'),
+    createWebhook: async (data: CreateWebhookEndpointInputDto): Promise<{ webhook: WebhookEndpointDto }> =>
+      fetchClient<{ webhook: WebhookEndpointDto }>('/integrations/webhooks', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    deleteWebhook: async (id: string): Promise<{ message: string }> =>
+      fetchClient<{ message: string }>(`/integrations/webhooks/${id}`, {
+        method: 'DELETE',
+      }),
+    testWebhook: async (id: string): Promise<{ message: string; delivery?: WebhookDeliveryDto | null }> =>
+      fetchClient<{ message: string; delivery?: WebhookDeliveryDto | null }>(`/integrations/webhooks/${id}/test`, {
+        method: 'POST',
+      }),
+    listDeliveries: async (id: string): Promise<{ deliveries: WebhookDeliveryDto[] }> =>
+      fetchClient<{ deliveries: WebhookDeliveryDto[] }>(`/integrations/webhooks/${id}/deliveries`),
   },
 };
 

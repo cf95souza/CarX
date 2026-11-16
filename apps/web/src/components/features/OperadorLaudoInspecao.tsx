@@ -80,15 +80,22 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
     const nextNumber = damagePoints.length + 1;
     let autoPart = 'lataria';
     if (activeView === 'superior') {
-      if (y < 25) autoPart = 'capô dianteiro';
-      else if (y > 75) autoPart = 'porta-malas / traseira';
-      else autoPart = 'teto';
+      if (y < 28) autoPart = 'capô dianteiro';
+      else if (y > 72) autoPart = 'porta-malas / traseira';
+      else autoPart = 'teto / teto solar';
     } else if (activeView === 'frente') {
-      autoPart = y > 60 ? 'para-choque dianteiro' : 'grade / faróis';
+      if (y < 45) autoPart = 'capô / para-brisa';
+      else if (y <= 68) autoPart = 'grade / faróis dianteiros';
+      else autoPart = 'para-choque dianteiro';
     } else if (activeView === 'traseira') {
-      autoPart = y > 60 ? 'para-choque traseiro' : 'tampa do porta-malas';
+      if (y < 45) autoPart = 'vidro traseiro';
+      else if (y <= 68) autoPart = 'tampa do porta-malas / lanternas';
+      else autoPart = 'para-choque traseiro';
     } else {
-      autoPart = x < 50 ? 'porta dianteira' : 'porta traseira';
+      if (x < 28) autoPart = 'para-lama / roda dianteira';
+      else if (x < 52) autoPart = 'porta dianteira / retrovisor';
+      else if (x < 76) autoPart = 'porta traseira';
+      else autoPart = 'para-lama / roda traseira';
     }
 
     const newPoint: DamagePoint = {
@@ -369,25 +376,138 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
               onClick={handleCarClick}
               className="relative w-full h-56 flex items-center justify-center cursor-crosshair touch-manipulation"
             >
-              {/* Silhueta Vetorial Dinâmica do Veículo */}
-              <svg
-                viewBox="0 0 200 320"
-                className="w-44 h-56 stroke-[#2E3744] fill-none stroke-[2] pointer-events-none"
-              >
-                {/* Contorno do carro superior */}
-                <path d="M50 30 Q100 20 150 30 Q170 45 170 90 L170 230 Q170 280 150 295 Q100 305 50 295 Q30 280 30 230 L30 90 Q30 45 50 30 Z" />
-                {/* Para-brisa dianteiro */}
-                <path d="M55 70 Q100 65 145 70 L140 100 Q100 95 60 100 Z" stroke="#3A4657" />
-                {/* Teto */}
-                <rect x="58" y="105" width="84" height="80" rx="8" stroke="#3A4657" />
-                {/* Para-brisa traseiro */}
-                <path d="M60 190 Q100 185 140 190 L145 220 Q100 225 55 220 Z" stroke="#3A4657" />
-                {/* Rodas */}
-                <rect x="22" y="55" width="10" height="35" rx="3" fill="#2E3744" />
-                <rect x="168" y="55" width="10" height="35" rx="3" fill="#2E3744" />
-                <rect x="22" y="215" width="10" height="35" rx="3" fill="#2E3744" />
-                <rect x="168" y="215" width="10" height="35" rx="3" fill="#2E3744" />
-              </svg>
+              {/* Silhueta Vetorial Específica por Ângulo */}
+              {activeView === 'superior' && (
+                <svg
+                  viewBox="0 0 200 320"
+                  className="w-44 h-56 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
+                >
+                  {/* Retrovisores */}
+                  <path d="M22 100 Q15 95 18 85 Q25 80 32 90 Z" fill="#2E3744" stroke="#4B586E" />
+                  <path d="M178 100 Q185 95 182 85 Q175 80 168 90 Z" fill="#2E3744" stroke="#4B586E" />
+                  {/* Rodas laterais */}
+                  <rect x="20" y="55" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
+                  <rect x="168" y="55" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
+                  <rect x="20" y="215" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
+                  <rect x="168" y="215" width="12" height="36" rx="4" fill="#232A36" stroke="#4B586E" />
+                  {/* Carroceria principal */}
+                  <path d="M50 25 Q100 15 150 25 Q172 45 170 95 L170 225 Q172 275 150 295 Q100 305 50 295 Q28 275 30 225 L30 95 Q28 45 50 25 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
+                  {/* Capô - vincos */}
+                  <path d="M60 40 L68 85 M140 40 L132 85" stroke="#2E3744" strokeWidth="1.5" />
+                  {/* Para-brisa dianteiro */}
+                  <path d="M52 88 Q100 80 148 88 L142 120 Q100 115 58 120 Z" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
+                  {/* Teto */}
+                  <rect x="56" y="125" width="88" height="65" rx="6" fill="#1C232E" stroke="#3A4657" strokeWidth="1.5" />
+                  {/* Vidros laterais */}
+                  <path d="M42 125 L52 125 L52 190 L42 190 Z M158 125 L148 125 L148 190 L158 190 Z" fill="#0E1116" stroke="#3A4657" />
+                  {/* Para-brisa traseiro */}
+                  <path d="M58 195 Q100 190 142 195 L148 228 Q100 234 52 228 Z" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
+                  {/* Tampa do porta-malas */}
+                  <path d="M62 245 Q100 250 138 245" stroke="#3A4657" strokeWidth="1.5" />
+                </svg>
+              )}
+
+              {activeView === 'frente' && (
+                <svg
+                  viewBox="0 0 280 200"
+                  className="w-56 h-48 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
+                >
+                  {/* Pneus no chão */}
+                  <rect x="36" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
+                  <rect x="214" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
+                  {/* Retrovisores externos */}
+                  <path d="M38 90 Q22 88 20 80 Q22 72 38 75 Z" fill="#1C232E" stroke="#4B586E" />
+                  <path d="M242 90 Q258 88 260 80 Q258 72 242 75 Z" fill="#1C232E" stroke="#4B586E" />
+                  {/* Cabine / Teto e colunas A */}
+                  <path d="M80 35 Q140 30 200 35 L225 90 L55 90 Z" fill="#1C232E" stroke="#4B586E" strokeWidth="2.5" />
+                  {/* Para-brisa com retrovisor interno */}
+                  <path d="M85 42 Q140 38 195 42 L215 85 L65 85 Z" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
+                  <rect x="135" y="44" width="10" height="6" rx="2" fill="#4B586E" />
+                  {/* Carroceria dianteira */}
+                  <path d="M40 90 Q140 85 240 90 L248 140 Q248 165 235 170 Q140 175 45 170 Q32 165 32 140 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
+                  {/* Faróis Dianteiros LED */}
+                  <path d="M45 102 L95 106 L90 120 L42 114 Z" fill="#232A36" stroke="#C8F52E" strokeWidth="2" />
+                  <path d="M235 102 L185 106 L190 120 L238 114 Z" fill="#232A36" stroke="#C8F52E" strokeWidth="2" />
+                  {/* Grade Central do Radiador */}
+                  <rect x="105" y="112" width="70" height="30" rx="6" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
+                  <line x1="105" y1="122" x2="175" y2="122" stroke="#2E3744" strokeWidth="1.5" />
+                  <line x1="105" y1="132" x2="175" y2="132" stroke="#2E3744" strokeWidth="1.5" />
+                  {/* Suporte de Placa */}
+                  <rect x="115" y="148" width="50" height="15" rx="3" fill="#0E1116" stroke="#C8F52E" strokeWidth="1" />
+                  <text x="140" y="159" fill="#C8F52E" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">CARX</text>
+                  {/* Para-choque / Spoilers inferiores */}
+                  <path d="M45 160 L65 172 M235 160 L215 172" stroke="#3A4657" strokeWidth="2" />
+                </svg>
+              )}
+
+              {activeView === 'traseira' && (
+                <svg
+                  viewBox="0 0 280 200"
+                  className="w-56 h-48 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
+                >
+                  {/* Pneus traseiros */}
+                  <rect x="36" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
+                  <rect x="214" y="145" width="30" height="45" rx="5" fill="#232A36" stroke="#4B586E" />
+                  {/* Retrovisores traseiros (verso) */}
+                  <path d="M38 88 Q22 86 20 80 Q22 74 38 76 Z" fill="#1C232E" stroke="#3A4657" />
+                  <path d="M242 88 Q258 86 260 80 Q258 74 242 76 Z" fill="#1C232E" stroke="#3A4657" />
+                  {/* Teto e colunas traseiras */}
+                  <path d="M80 35 Q140 30 200 35 L225 85 L55 85 Z" fill="#1C232E" stroke="#4B586E" strokeWidth="2.5" />
+                  {/* Vigia / Vidro traseiro com linhas de desembaçador */}
+                  <path d="M85 42 Q140 38 195 42 L215 80 L65 80 Z" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
+                  <line x1="88" y1="55" x2="192" y2="55" stroke="#2E3744" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="82" y1="65" x2="198" y2="65" stroke="#2E3744" strokeWidth="1" strokeDasharray="3 3" />
+                  {/* Tampa do porta-malas / Traseira */}
+                  <path d="M42 85 Q140 82 238 85 L248 140 Q248 165 235 170 Q140 175 45 170 Q32 165 32 140 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
+                  {/* Lanternas Traseiras Vermelhas */}
+                  <path d="M42 100 L95 104 L90 120 L40 115 Z" fill="#3D181A" stroke="#EF4444" strokeWidth="2" />
+                  <path d="M238 100 L185 104 L190 120 L240 115 Z" fill="#3D181A" stroke="#EF4444" strokeWidth="2" />
+                  {/* Barra de conexão das lanternas */}
+                  <line x1="95" y1="108" x2="185" y2="108" stroke="#EF4444" strokeWidth="1.5" strokeOpacity="0.7" />
+                  {/* Vinco da placa */}
+                  <rect x="110" y="125" width="60" height="22" rx="4" fill="#0E1116" stroke="#3A4657" strokeWidth="1.5" />
+                  <text x="140" y="139" fill="#F2F5F8" fontSize="8" fontFamily="monospace" fontWeight="bold" textAnchor="middle">{vehiclePlate}</text>
+                  {/* Difusor e Escapamentos */}
+                  <rect x="52" y="162" width="22" height="8" rx="3" fill="#0E1116" stroke="#4B586E" strokeWidth="1.5" />
+                  <rect x="206" y="162" width="22" height="8" rx="3" fill="#0E1116" stroke="#4B586E" strokeWidth="1.5" />
+                </svg>
+              )}
+
+              {activeView === 'laterais' && (
+                <svg
+                  viewBox="0 0 340 160"
+                  className="w-64 h-44 stroke-[#3A4657] fill-[#131820] stroke-[2] pointer-events-none transition-all"
+                >
+                  {/* Linha de solo */}
+                  <line x1="10" y1="135" x2="330" y2="135" stroke="#232A36" strokeWidth="2" strokeDasharray="6 4" />
+                  {/* Carroceria lateral */}
+                  <path d="M20 105 Q35 70 85 68 L130 35 Q210 32 235 50 L275 75 Q315 78 322 105 Q325 125 305 125 L275 125 Q270 100 240 100 Q210 100 205 125 L135 125 Q130 100 100 100 Q70 100 65 125 L35 125 Q20 125 20 105 Z" fill="#171C24" stroke="#4B586E" strokeWidth="2.5" />
+                  {/* Vidros laterais (Cabine) */}
+                  <path d="M135 42 L225 42 Q235 55 255 70 L135 70 Z" fill="#0E1116" stroke="#3A4657" strokeWidth="2" />
+                  {/* Coluna B */}
+                  <line x1="190" y1="42" x2="190" y2="70" stroke="#2E3744" strokeWidth="3" />
+                  {/* Retrovisor lateral */}
+                  <path d="M130 65 Q120 60 120 54 Q125 50 135 54 Z" fill="#2E3744" stroke="#4B586E" />
+                  {/* Linhas das Portas */}
+                  <path d="M135 70 L130 115" stroke="#2E3744" strokeWidth="1.5" />
+                  <path d="M190 70 L190 115" stroke="#2E3744" strokeWidth="1.5" />
+                  <path d="M255 70 L248 105" stroke="#2E3744" strokeWidth="1.5" />
+                  {/* Maçanetas táteis */}
+                  <rect x="145" y="76" width="16" height="4" rx="2" fill="#4B586E" />
+                  <rect x="200" y="76" width="16" height="4" rx="2" fill="#4B586E" />
+                  {/* Roda Dianteira */}
+                  <circle cx="100" cy="115" r="22" fill="#171C24" stroke="#232A36" strokeWidth="4" />
+                  <circle cx="100" cy="115" r="14" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
+                  <circle cx="100" cy="115" r="4" fill="#C8F52E" />
+                  {/* Roda Traseira */}
+                  <circle cx="240" cy="115" r="22" fill="#171C24" stroke="#232A36" strokeWidth="4" />
+                  <circle cx="240" cy="115" r="14" fill="#0E1116" stroke="#4B586E" strokeWidth="2" />
+                  <circle cx="240" cy="115" r="4" fill="#C8F52E" />
+                  {/* Farol dianteiro & Lanterna traseira */}
+                  <path d="M20 95 L32 90 L32 100 Z" fill="#C8F52E" opacity="0.8" />
+                  <path d="M320 92 L310 88 L312 98 Z" fill="#EF4444" opacity="0.8" />
+                </svg>
+              )}
 
               {/* Pinos Numerados Interativos */}
               {currentViewPoints.map((p) => (
@@ -402,7 +522,10 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
             </div>
 
             <div className="text-[12px] text-[#9AA7B8] text-center font-medium mt-1">
-              Toque na imagem para marcar uma avaria
+              {activeView === 'superior' && 'Toque no capô, teto ou porta-malas para marcar a avaria'}
+              {activeView === 'frente' && 'Toque no para-choque, grade, capô ou faróis'}
+              {activeView === 'traseira' && 'Toque na tampa, lanternas ou para-choque traseiro'}
+              {activeView === 'laterais' && 'Toque nas portas, para-lamas ou caixas de roda'}
             </div>
           </div>
 
