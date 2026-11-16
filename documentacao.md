@@ -4521,3 +4521,19 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - **Data de Cadastro na Tela de Clientes**:
     - Resolvida discrepância de nomenclatura entre camelCase (`createdAt`) retornado pelo Fastify e snake_case (`created_at`) consultado em `apps/web/src/pages/Clientes.jsx`.
     - Normalizador de dados `normalizeClient` em `apps/web/src/hooks/useClients.js` atualizado para unificar `created_at` e `createdAt`. Adicionada badge explicativa "Cliente desde DD/MM/AAAA" no perfil do cliente.
+
+- **Item 45 — Resolução de Agenda Real, Auto-Sync Retroativo, Laudo Técnico & PDF por dentro da OS e Roteamento Correto em Nova OS (Orçamento ➔ Vendas)**:
+  - **Agenda Real e Eliminação de Mock**:
+    - Identificada causa raiz em `apps/api/src/work-orders/work-order-service.ts`: ao inserir agendamentos na tabela `appointments`, o SQL usava `service_name` em vez de `service_summary`, causando erro silencioso no Postgres e deixando a tabela vazia.
+    - Criado método centralizado `syncAppointmentForWorkOrder` e corrigido o SQL com colunas reais (`service_summary`, `origin: 'INTERNAL'`).
+    - Adicionada rotina de auto-sync retroativo em `getSmartScheduleOverview` (`appointment-service.ts`), que identifica OSs agendadas sem entrada em `appointments` e insere retroativamente.
+    - Eliminado o array estático do Rebrand em `Agenda.tsx` (`Chevrolet Montana`, `Fiat Fiorino`, etc.), garantindo que a tela nunca mais pisque dados fictícios e exiba apenas agendamentos reais da oficina ou grade limpa. Corrigido cálculo de `dateString` para horário local.
+  - **Laudo Técnico e Geração de PDF por dentro da OS (`OrdensServico.tsx`)**:
+    - No modal de Detalhes da OS (onde o usuário apontou no print), adicionado o card **"Laudo Técnico & Checklist de Entrada"**.
+    - Exibe status da vistoria (Vistoriado, Concluído, Assinado), Km registrado, nível de combustível, contagem de avarias identificadas e assinatura do cliente.
+    - Integrados botões de ação: **"Visualizar Laudo"** (abre o modal `VcrReportModal` formatado com impressão A4), **"Baixar Laudo em PDF"** (chama o endpoint oficial de PDF e inicia download seguro de arquivo `.pdf`) e **"Realizar Checklist"** (abre o assistente interativo `CarVisualChecklist`).
+    - Adicionado botão de atalho rápido com ícone `ClipboardCheck` na tabela geral de Ordens de Serviço.
+  - **Roteamento de "Salvar Orçamento" em Nova OS (`NovaOrdemServico.tsx`)**:
+    - Ajustada a função `handleSave`: quando salva como orçamento (`isQuote = true`), envia explicitamente `status: 'QUOTE'`, omite `scheduledAt`, invalida queries de orçamentos e redireciona para `/vendas`.
+    - Quando salva como OS (`isQuote = false`), envia `status: 'SCHEDULED'` com agendamento ativo e redireciona para `/ordens`.
+

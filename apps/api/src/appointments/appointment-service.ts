@@ -1063,6 +1063,92 @@ export class AppointmentService {
     const dayStart = `${dateStr}T00:00:00.000Z`;
     const dayEnd = `${dateStr}T23:59:59.999Z`;
 
+    // Auto-sync retroativo de ordens de serviço agendadas que ainda não tenham registro na tabela appointments
+    try {
+      const unsyncedWos = await tenantQuery<{
+        id: string;
+        os_number: number;
+        customer_id: string;
+        vehicle_id: string;
+        technician_id: string | null;
+        scheduled_at: string;
+        estimated_minutes: number;
+        cust_name: string | null;
+        cust_phone: string | null;
+        veh_plate: string | null;
+        veh_brand: string | null;
+        veh_model: string | null;
+        items_summary: string | null;
+      }>(
+        tenantId,
+        `SELECT 
+           wo.id,
+           wo.os_number,
+           wo.customer_id,
+           wo.vehicle_id,
+           wo.technician_id,
+           wo.scheduled_at,
+           wo.estimated_minutes,
+           c.name AS cust_name,
+           c.phone AS cust_phone,
+           v.plate AS veh_plate,
+           v.brand AS veh_brand,
+           v.model AS veh_model,
+           (SELECT STRING_AGG(name, ', ') FROM work_order_items WHERE work_order_id = wo.id) AS items_summary
+         FROM work_orders wo
+         LEFT JOIN customers c ON c.id = wo.customer_id
+         LEFT JOIN vehicles v ON v.id = wo.vehicle_id
+         WHERE wo.tenant_id = $1 
+           AND wo.scheduled_at IS NOT NULL
+           AND wo.status NOT IN ('QUOTE', 'CANCELED', 'CANCELADO')
+           AND NOT EXISTS (
+             SELECT 1 FROM appointments a 
+             WHERE a.tenant_id = $1 AND a.work_order_id = wo.id
+           )`,
+        [tenantId]
+      );
+
+      if (unsyncedWos.rows.length > 0 && finalBays.length > 0) {
+        const primaryBayId = finalBays[0].id;
+        for (const row of unsyncedWos.rows) {
+          const sAt = new Date(row.scheduled_at);
+          const estM = row.estimated_minutes || 60;
+          const eAt = new Date(sAt.getTime() + estM * 60000);
+          const title = `OS #${row.os_number} · ${row.cust_name || 'Cliente'}`;
+          const summary = row.items_summary || 'Serviço Automotivo';
+          const vehModel = `${row.veh_brand || ''} ${row.veh_model || ''}`.trim() || null;
+
+          await tenantQuery(
+            tenantId,
+            `INSERT INTO appointments (
+               tenant_id, work_order_id, customer_id, vehicle_id, technician_id,
+               bay_id, title, start_time, end_time, estimated_minutes,
+               status, origin, service_summary, customer_name, customer_phone, vehicle_plate, vehicle_model
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled', 'INTERNAL', $11, $12, $13, $14, $15)`,
+            [
+              tenantId,
+              row.id,
+              row.customer_id,
+              row.vehicle_id,
+              row.technician_id || null,
+              primaryBayId,
+              title,
+              sAt.toISOString(),
+              eAt.toISOString(),
+              estM,
+              summary,
+              row.cust_name || null,
+              row.cust_phone || null,
+              row.veh_plate || null,
+              vehModel,
+            ]
+          );
+        }
+      }
+    } catch (autoSyncErr) {
+      console.warn('[SmartSchedule] Falha não-bloqueante no auto-sync de agendamentos:', autoSyncErr);
+    }
+
     const appointments = await this.listAppointments(tenantId, {
       startDate: dayStart,
       endDate: dayEnd,

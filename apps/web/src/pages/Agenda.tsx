@@ -77,7 +77,10 @@ export const Agenda: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
 
   const dateString = useMemo(() => {
-    return selectedDate.toISOString().split('T')[0];
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(selectedDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }, [selectedDate]);
 
   // Consulta da Visão Inteligente por Box & Atrasos
@@ -99,7 +102,7 @@ export const Agenda: React.FC = () => {
     return membersList.filter((m: any) => m.role === 'tecnico' || m.role === 'gestor' || m.role === 'owner');
   }, [membersList]);
 
-  // Lista consolidada de boxes (da API ou fallback oficial Rebrand)
+  // Lista consolidada de boxes (da API ou estrutura canônica limpa)
   const boxes = useMemo(() => {
     if (smartOverview?.bays && smartOverview.bays.length > 0) {
       return smartOverview.bays.map((b: SmartBayOverviewDto) => ({
@@ -112,9 +115,9 @@ export const Agenda: React.FC = () => {
       }));
     }
     return [
-      { id: 'bay-1', name: 'Box 1 · Lucas', color: '#C8F52E', technicianName: 'Lucas', occupancyStatus: 'occupied' as const },
-      { id: 'bay-2', name: 'Box 2 · Rafa', color: '#CDEBFB', technicianName: 'Rafa', occupancyStatus: 'occupied' as const },
-      { id: 'bay-3', name: 'Box 3 · livre', color: '#E8EEF4', technicianName: null, occupancyStatus: 'free' as const },
+      { id: 'bay-1', name: 'Box 1 · Principal', color: '#C8F52E', technicianName: null, occupancyStatus: 'free' as const },
+      { id: 'bay-2', name: 'Box 2 · Secundário', color: '#CDEBFB', technicianName: null, occupancyStatus: 'free' as const },
+      { id: 'bay-3', name: 'Box 3 · Rápido', color: '#E8EEF4', technicianName: null, occupancyStatus: 'free' as const },
     ];
   }, [smartOverview]);
 
@@ -215,69 +218,10 @@ export const Agenda: React.FC = () => {
         }
       });
 
-      if (items.length > 0) {
-        return items;
-      }
+      return items;
     }
 
-    // Grid oficial do Rebrand (rebraind/HTML/Gestor · Agenda-html/Agenda.dc.html) com dados canônicos
-    return [
-      {
-        id: '1',
-        bayIndex: 0,
-        title: 'Chevrolet Montana',
-        subtitle: 'Insulfilme completo · em execução',
-        top: 0,
-        height: 164,
-        bg: '#C8F52E',
-      },
-      {
-        id: '2',
-        bayIndex: 0,
-        title: 'Fiat Fiorino',
-        subtitle: 'Lalamove 3AD · 12:00',
-        top: 228,
-        height: 108,
-        bg: '#E8EEF4',
-      },
-      {
-        id: '3',
-        bayIndex: 1,
-        title: 'BYD Seal',
-        subtitle: 'PPF frontal · em execução',
-        top: 56,
-        height: 220,
-        bg: '#CDEBFB',
-      },
-      {
-        id: '4',
-        bayIndex: 1,
-        title: 'VW Tera',
-        subtitle: 'Aguardando aprovação do cliente',
-        top: 340,
-        height: 108,
-        bg: '#FFE2A8',
-      },
-      {
-        id: '5',
-        bayIndex: 2,
-        title: 'Hyundai HR',
-        subtitle: 'Película · 11:00',
-        top: 168,
-        height: 108,
-        bg: '#E8EEF4',
-      },
-      {
-        id: 'free',
-        bayIndex: 2,
-        title: 'Horário livre · 15h',
-        subtitle: '',
-        top: 392,
-        height: 56,
-        bg: 'transparent',
-        isFreeSlot: true,
-      },
-    ];
+    return [];
   }, [smartOverview]);
 
   const handlePrevDay = () => {

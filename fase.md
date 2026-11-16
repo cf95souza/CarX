@@ -1,4 +1,4 @@
-# CarX — Guia Mestre de Fases e Execução (fase.md)
+﻿# CarX — Guia Mestre de Fases e Execução (fase.md)
 
 Este documento é a **bússola oficial de execução** do **CarX** (transformação do legado *OsSystem* em SaaS multitenant automotivo de alta performance).
 
@@ -26,6 +26,8 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
        * Item 41: Isolamento Multitenant da URL do Monitor TV (/:slug/tv) (Print 3)
        * Item 42: Eliminação de Emojis e Modernização dos Botões de Fases de Fotos (Print 3)
        * Item 43: Redesenho de Alta Fidelidade do Checklist / Laudo e Silhuetas por Categoria (5x5 Clay Renders)
+        * Item 44: Resiliência de Storage Local (Fix Erro 500 MinIO), Agendamento com Seleção de Box em Orçamentos e Data de Cadastro em Clientes
+        * Item 45: Resolução de Agenda Real, Auto-Sync Retroativo, Laudo Técnico & PDF na OS e Redirecionamento de Orçamento para Vendas
 
 🎯 PRÓXIMO PASSO IMEDIATO:
    • Item 38: Teste E2E de Fluxo Sistêmico Completo 100% Visual pela Tela (Frontend)
@@ -2537,3 +2539,5 @@ Onda 3 Roadmap de Execução:
   - **Fix Erro 500 no Salvamento do Checklist/Assinatura**: Ao salvar a assinatura da inspeção (`POST /inspections/:id/sign`), a API gerava `ECONNREFUSED 127.0.0.1:9000` por ausência do container MinIO na topologia de teste da VPS. Implementado fallback de armazenamento local resiliente em `apps/api/src/storage/storage-service.ts` (`uploadFile`, `getFileBuffer` e `getPresignedDownloadUrl`), garantindo que assinaturas e fotos sejam salvas sem interrupção do fluxo técnico mesmo se o S3 estiver offline; adicionado o serviço `carx-minio` persistido em `infra/compose.oracle-test.yml`.
   - **Seleção de Box de Atendimento e Sincronização na Agenda**: Adicionado seletor de Box no modal de aprovação/agendamento de orçamento em `apps/web/src/pages/Vendas.jsx`; atualizado payload em `apps/web/src/hooks/useQuotes.js` e DTO `UpdateWorkOrderDto` com `bayId`; sincronizada a criação/atualização de `appointments` com provisionamento automático dos 3 boxes canônicos (`Box 1 · Principal`, `Box 2 · Secundário`, `Box 3 · Rápido`) no banco do tenant e exibição garantida na timeline da Agenda.
   - **Data de Cadastro na Tela de Clientes**: Corrigida a discrepância entre `createdAt` (retornado pelo Fastify) e `created_at` (esperado pelo frontend) em `apps/web/src/hooks/useClients.js` e `apps/web/src/pages/Clientes.jsx`, exibindo a data de cadastro correta tanto na listagem quanto no perfil de clientes cadastrados automaticamente pela Nova OS.
+
+

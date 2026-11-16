@@ -947,6 +947,23 @@ export const api = {
       const token = getStoredToken();
       return `${API_BASE_URL}/inspections/${id}/pdf${token ? `?token=${encodeURIComponent(token)}` : ''}`;
     },
+    downloadPdfBlob: async (id: string): Promise<Blob> => {
+      const token = getStoredToken();
+      const tenantId = getStoredTenantId();
+      const tenantSlug = getStoredTenantSlug();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (tenantId) headers['x-tenant-id'] = tenantId;
+      if (tenantSlug) headers['x-tenant-slug'] = tenantSlug;
+
+      const res = await fetch(`${API_BASE_URL}/inspections/${id}/pdf`, {
+        headers,
+      });
+      if (!res.ok) {
+        throw new Error(`Falha ao baixar Laudo Técnico (Status ${res.status})`);
+      }
+      return res.blob();
+    },
   },
 
   // --- ARMAZENAMENTO DE ARQUIVOS (MinIO / S3) ---

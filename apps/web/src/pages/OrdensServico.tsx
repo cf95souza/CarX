@@ -6,6 +6,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { toast } from '../utils/toast';
 import { Button, Badge, Card, CardHeader, CardTitle, CardContent, EmptyState, Input } from '@carx/ui';
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
+import CarVisualChecklist from '../components/features/CarVisualChecklist';
+import { VcrReportModal } from '../components/features/VcrReportModal';
 import {
   Wrench,
   Search,
@@ -40,6 +42,7 @@ import {
   Download,
   Ban,
   Receipt,
+  ClipboardCheck,
 } from 'lucide-react';
 import type {
   WorkOrderStatusType,
@@ -194,6 +197,45 @@ export const OrdensServico: React.FC = () => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState<boolean>(false);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [fiscalFeedback, setFiscalFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Estados para Laudo Técnico & Checklist de Entrada (VCR)
+  const [inspectionsList, setInspectionsList] = useState<any[]>([]);
+  const [loadingInspections, setLoadingInspections] = useState<boolean>(false);
+  const [isVcrModalOpen, setIsVcrModalOpen] = useState<boolean>(false);
+  const [activeInspectionForReport, setActiveInspectionForReport] = useState<any | null>(null);
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState<boolean>(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+
+  // Carregar laudos de inspeção quando uma OS é selecionada
+  React.useEffect(() => {
+    if (!selectedOrder?.id) {
+      setInspectionsList([]);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingInspections(true);
+
+    api.inspections
+      .getByWorkOrder(selectedOrder.id)
+      .then((res: any) => {
+        if (isMounted) {
+          const list = Array.isArray(res) ? res : res?.inspections || [];
+          setInspectionsList(list);
+        }
+      })
+      .catch((err) => {
+        console.warn('Inspeções não encontradas ou erro ao carregar:', err);
+        if (isMounted) setInspectionsList([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingInspections(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedOrder?.id]);
 
   // Carregar dados de NFS-e quando uma OS é selecionada
   React.useEffect(() => {
@@ -434,6 +476,33 @@ export const OrdensServico: React.FC = () => {
       entregues: list.filter((o) => o.status === 'DELIVERED').length,
     };
   }, [orders]);
+
+  // Download Seguro do PDF do Laudo Técnico
+  const handleDownloadInspectionPdf = async (inspectionId: string, vehiclePlate?: string) => {
+    setIsDownloadingPdf(true);
+    try {
+      toast.info('Baixando PDF oficial do Laudo Técnico...');
+      const blob = await api.inspections.downloadPdfBlob(inspectionId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Laudo_Vistoria_${vehiclePlate || 'Veiculo'}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Laudo Técnico em PDF baixado com sucesso!');
+    } catch (err: any) {
+      toast.error('Erro ao baixar PDF do laudo: ' + (err.message || ''));
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  const handleOpenVcrReport = (inspection: any) => {
+    setActiveInspectionForReport(inspection);
+    setIsVcrModalOpen(true);
+  };
 
   // Transição de Status
   const handleTransition = async (orderId: string, nextStatus: WorkOrderStatusType) => {
@@ -714,9 +783,17 @@ export const OrdensServico: React.FC = () => {
                           <button
                             onClick={() => setSelectedOrder(os)}
                             className="p-1.5 text-[#5B6674] hover:text-[#0E1116] hover:bg-[#F3F5F7] rounded-lg transition-colors"
-                            title="Ver Detalhes"
+                            title="Ver Detalhes e Laudo"
                           >
                             <Eye size={16} />
+                          </button>
+
+                          <button
+                            onClick={() => setSelectedOrder(os)}
+                            className="p-1.5 text-[#5B6674] hover:text-[#0E1116] hover:bg-[#F3F5F7] rounded-lg transition-colors"
+                            title="Laudo Técnico & Checklist (VCR)"
+                          >
+                            <ClipboardCheck size={16} />
                           </button>
 
                           <button
@@ -1116,6 +1193,119 @@ export const OrdensServico: React.FC = () => {
                 </div>
               </div>
 
+              {/* Módulo de Laudo Técnico & Checklist de Entrada (VCR) */}
+              <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ClipboardCheck size={16} className="text-[#0E1116]" />
+                    <span className="font-bold text-[#0E1116] text-xs">
+                      Laudo Técnico & Checklist de Entrada
+                    </span>
+                  </div>
+                  {inspectionsList.length > 0 && (
+                    <Badge variant="volt">
+                      {inspectionsList[0].status === 'signed'
+                        ? 'Laudo Assinado'
+                        : inspectionsList[0].status === 'completed'
+                        ? 'Concluído'
+                        : 'Vistoriado'}
+                    </Badge>
+                  )}
+                </div>
+
+                {loadingInspections ? (
+                  <div className="py-2 text-center text-xs text-[#5B6674]">
+                    <Clock size={14} className="inline mr-1.5 animate-spin" />
+                    Carregando laudo técnico...
+                  </div>
+                ) : inspectionsList.length > 0 ? (
+                  (() => {
+                    const currentInsp = inspectionsList[0];
+                    const totalDamage = currentInsp.damagePoints?.length || 0;
+                    return (
+                      <div className="space-y-2 text-xs">
+                        <div className="grid grid-cols-3 gap-2 bg-white p-3 rounded-lg border border-[#E1E6EC]">
+                          <div>
+                            <span className="text-[#5B6674] block text-[11px]">Km Registrado</span>
+                            <span className="font-mono font-bold text-[#0E1116]">
+                              {currentInsp.currentKm ? `${Number(currentInsp.currentKm).toLocaleString('pt-BR')} km` : '--'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#5B6674] block text-[11px]">Combustível</span>
+                            <span className="font-mono font-bold text-[#0E1116]">
+                              {currentInsp.fuelLevel || '--'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[#5B6674] block text-[11px]">Avarias Apontadas</span>
+                            <span className="font-mono font-bold text-[#0E1116]">
+                              {totalDamage > 0 ? (
+                                <span className="text-amber-600 font-bold">{totalDamage} avaria(s)</span>
+                              ) : (
+                                <span className="text-emerald-600 font-bold">Sem avarias</span>
+                              )}
+                            </span>
+                          </div>
+                          {currentInsp.customerSignatureName && (
+                            <div className="col-span-3 pt-1 border-t border-[#E1E6EC] flex items-center justify-between">
+                              <span className="text-[#5B6674] text-[11px]">
+                                Assinado digitalmente pelo cliente:
+                              </span>
+                              <span className="font-bold text-[#0E1116]">
+                                {currentInsp.customerSignatureName}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Ações do Laudo */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenVcrReport(currentInsp)}
+                            className="px-3 py-1.5 rounded-lg bg-white border border-[#E1E6EC] hover:bg-[#F8FAFC] text-[#0E1116] font-medium inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                          >
+                            <Eye size={13} />
+                            Visualizar Laudo
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isDownloadingPdf}
+                            onClick={() => handleDownloadInspectionPdf(currentInsp.id, selectedOrder.vehicle?.plate)}
+                            className="carx-btn-volt !h-8 !px-3 !text-xs inline-flex items-center gap-1.5"
+                          >
+                            <Download size={13} className={isDownloadingPdf ? 'animate-spin' : ''} />
+                            {isDownloadingPdf ? 'Gerando PDF...' : 'Baixar Laudo em PDF'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsChecklistModalOpen(true)}
+                            className="px-2.5 py-1.5 rounded-lg text-[#5B6674] hover:text-[#0E1116] hover:bg-[#E1E6EC] font-medium inline-flex items-center gap-1 text-[11px] transition-colors"
+                            title="Editar ou refazer o checklist"
+                          >
+                            <RefreshCw size={12} />
+                            Atualizar
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="p-3 bg-white rounded-lg border border-[#E1E6EC] flex items-center justify-between gap-3">
+                    <span className="text-xs text-[#5B6674]">Nenhum checklist de vistoria realizado para esta OS.</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsChecklistModalOpen(true)}
+                      className="carx-btn-volt !h-8 !px-3 !text-xs inline-flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                      <Plus size={13} />
+                      Realizar Checklist
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Módulo Fiscal (NFS-e) - T6.10 */}
               <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-3">
                 <div className="flex items-center justify-between">
@@ -1486,6 +1676,43 @@ export const OrdensServico: React.FC = () => {
                 {cancellingFiscal ? 'Cancelando...' : 'Confirmar Cancelamento'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Laudo Técnico Completo (VCR) */}
+      {isVcrModalOpen && activeInspectionForReport && selectedOrder && (
+        <VcrReportModal
+          isOpen={isVcrModalOpen}
+          onClose={() => {
+            setIsVcrModalOpen(false);
+            setActiveInspectionForReport(null);
+          }}
+          osData={selectedOrder}
+          points={activeInspectionForReport.damagePoints || []}
+          generalNotes={activeInspectionForReport.notes || ''}
+          km={activeInspectionForReport.currentKm}
+          signature={activeInspectionForReport.customerSignatureUrl}
+        />
+      )}
+
+      {/* Modal Interativo de Checklist e Desenho Visual */}
+      {isChecklistModalOpen && selectedOrder && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl max-h-[95vh] flex flex-col">
+            <CarVisualChecklist
+              osData={selectedOrder}
+              onClose={() => {
+                setIsChecklistModalOpen(false);
+                api.inspections
+                  .getByWorkOrder(selectedOrder.id)
+                  .then((res: any) => {
+                    const list = Array.isArray(res) ? res : res?.inspections || [];
+                    setInspectionsList(list);
+                  })
+                  .catch(() => {});
+              }}
+            />
           </div>
         </div>
       )}

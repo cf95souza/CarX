@@ -232,6 +232,8 @@ export const NovaOrdemServico: React.FC = () => {
       await api.workOrders.create({
         customerId: resolvedCustId,
         vehicleId: resolvedVehId,
+        status: isQuote ? 'QUOTE' : 'SCHEDULED',
+        depositRequiredCents: Math.round(depositPix * 100),
         services: selectedServices.map((s) => ({
           serviceId: s.id,
           name: s.name,
@@ -239,12 +241,18 @@ export const NovaOrdemServico: React.FC = () => {
           quantity: 1,
         })),
         notes: `Cliente: ${customer.name} (${customer.phone || 'Sem fone'}). Veículo: ${vehicle.model || 'Veículo'} - ${vehicle.plate}. Porte: ${vehicle.sizeClass}. Sinal Pix: R$ ${depositPix.toFixed(2)}`,
-        scheduledAt: new Date().toISOString(),
+        scheduledAt: isQuote ? undefined : new Date().toISOString(),
       } as any);
 
       queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+      queryClient.invalidateQueries({ queryKey: ['quotes-list'] });
+      queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
       toast.success(isQuote ? 'Orçamento salvo com sucesso!' : 'Ordem de Serviço gerada e agendada com sucesso!');
-      navigate('/ordens');
+      if (isQuote) {
+        navigate('/vendas');
+      } else {
+        navigate('/ordens');
+      }
     } catch (err: any) {
       toast.error(err.message || (isQuote ? 'Erro ao salvar orçamento.' : 'Erro ao gerar ordem de serviço.'));
     } finally {

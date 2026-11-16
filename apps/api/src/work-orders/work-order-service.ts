@@ -325,7 +325,20 @@ export class WorkOrderService {
       });
     }
 
-    return this.getById(tenantId, createdOrder!.id!);
+    const fullOrder = await this.getById(tenantId, createdOrder!.id!);
+
+    // Sincronização automática com a tabela de Agendamentos (appointments) na criação
+    if (data.scheduledAt && initialStatus !== WorkOrderStatus.QUOTE && initialStatus !== WorkOrderStatus.CANCELED) {
+      await this.syncAppointmentForWorkOrder(
+        tenantId,
+        fullOrder,
+        data.scheduledAt,
+        data.technicianId,
+        (data as any).bayId
+      );
+    }
+
+    return fullOrder;
   }
 
   /**
@@ -907,116 +920,13 @@ export class WorkOrderService {
 
     // Sincronização automática com a tabela de Agendamentos (appointments) para a Agenda Inteligente (Item 19)
     if (scheduledAt) {
-      try {
-        const estMin = existing.estimatedMinutes || 60;
-        const startTime = new Date(scheduledAt);
-        const endTime = new Date(startTime.getTime() + estMin * 60000);
-
-        // Identifica ou seleciona o box físico (bay)
-        let targetBayId = data.bayId || null;
-        if (!targetBayId) {
-          const bayRes = await tenantQuery<{ id: string }>(
-            tenantId,
-            `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
-            [tenantId]
-          );
-          targetBayId = bayRes.rows[0]?.id || null;
-        }
-
-        // Se ainda não tiver box cadastrado na oficina, provisiona os 3 canônicos
-        if (!targetBayId) {
-          const defaultBays = [
-            { name: 'Box 1 · Principal', color: '#C8F52E', orderIndex: 0 },
-            { name: 'Box 2 · Secundário', color: '#CDEBFB', orderIndex: 1 },
-            { name: 'Box 3 · Rápido', color: '#E8EEF4', orderIndex: 2 },
-          ];
-          for (const b of defaultBays) {
-            try {
-              await tenantQuery(
-                tenantId,
-                `INSERT INTO bays (tenant_id, name, color, order_index, is_active)
-                 VALUES ($1, $2, $3, $4, true)
-                 ON CONFLICT (tenant_id, name) DO NOTHING`,
-                [tenantId, b.name, b.color, b.orderIndex]
-              );
-            } catch {}
-          }
-          const bayRes = await tenantQuery<{ id: string }>(
-            tenantId,
-            `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
-            [tenantId]
-          );
-          targetBayId = bayRes.rows[0]?.id || null;
-        }
-
-        // Verifica se já existe um agendamento vinculado a esta OS
-        const appRes = await tenantQuery<{ id: string }>(
-          tenantId,
-          `SELECT id FROM appointments WHERE tenant_id = $1 AND work_order_id = $2 LIMIT 1`,
-          [tenantId, id]
-        );
-
-        const title = `OS #${existing.osNumber} · ${existing.customer?.name || 'Cliente'}`;
-        const serviceName = existing.items?.map((i) => i.name).join(', ') || 'Serviço Automotivo';
-
-        if (appRes.rows.length > 0) {
-          await tenantQuery(
-            tenantId,
-            `UPDATE appointments
-             SET start_time = $3,
-                 end_time = $4,
-                 technician_id = $5,
-                 bay_id = COALESCE($6, bay_id),
-                 status = 'scheduled',
-                 updated_at = NOW()
-             WHERE tenant_id = $1 AND id = $2`,
-            [tenantId, appRes.rows[0].id, startTime.toISOString(), endTime.toISOString(), technicianId || null, targetBayId]
-          );
-        } else {
-          await tenantQuery(
-            tenantId,
-            `INSERT INTO appointments (
-               tenant_id,
-               work_order_id,
-               customer_id,
-               vehicle_id,
-               technician_id,
-               bay_id,
-               title,
-               start_time,
-               end_time,
-               estimated_minutes,
-               status,
-               service_name,
-               customer_name,
-               customer_phone,
-               vehicle_plate,
-               vehicle_model
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-            [
-              tenantId,
-              id,
-              existing.customerId,
-              existing.vehicleId,
-              technicianId || null,
-              targetBayId,
-              title,
-              startTime.toISOString(),
-              endTime.toISOString(),
-              estMin,
-              'scheduled',
-              serviceName,
-              existing.customer?.name || null,
-              existing.customer?.phone || null,
-              existing.vehicle?.plate || null,
-              `${existing.vehicle?.brand || ''} ${existing.vehicle?.model || ''}`.trim() || null,
-            ]
-          );
-        }
-      } catch (appSyncErr) {
-        // Loga erro sem abortar a atualização da OS
-        console.warn('Falha não-bloqueante na sincronização de agendamento:', appSyncErr);
-      }
+      await this.syncAppointmentForWorkOrder(
+        tenantId,
+        existing,
+        scheduledAt,
+        technicianId,
+        data.bayId
+      );
     }
 
     const updated = await this.getById(tenantId, id);
@@ -2191,6 +2101,138 @@ export class WorkOrderService {
       isFullyPaid: paidCents >= finalCents,
       paidAt: row.paymentStatus === 'approved' ? row.updatedAt : null,
     };
+  }
+
+  /**
+   * Sincronização atômica e resiliente da Ordem de Serviço com a tabela de Agendamentos (appointments)
+   */
+  async syncAppointmentForWorkOrder(
+    tenantId: string,
+    workOrder: WorkOrderDto,
+    scheduledAt: string | Date,
+    technicianId?: string | null,
+    bayId?: string | null
+  ): Promise<void> {
+    try {
+      const estMin = workOrder.estimatedMinutes || 60;
+      const startTime = new Date(scheduledAt);
+      const endTime = new Date(startTime.getTime() + estMin * 60000);
+
+      // Identifica ou seleciona o box físico (bay)
+      let targetBayId = bayId || null;
+      if (!targetBayId) {
+        const bayRes = await tenantQuery<{ id: string }>(
+          tenantId,
+          `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
+          [tenantId]
+        );
+        targetBayId = bayRes.rows[0]?.id || null;
+      }
+
+      // Se ainda não tiver box cadastrado na oficina, provisiona os 3 canônicos
+      if (!targetBayId) {
+        const defaultBays = [
+          { name: 'Box 1 · Principal', color: '#C8F52E', orderIndex: 0 },
+          { name: 'Box 2 · Secundário', color: '#CDEBFB', orderIndex: 1 },
+          { name: 'Box 3 · Rápido', color: '#E8EEF4', orderIndex: 2 },
+        ];
+        for (const b of defaultBays) {
+          try {
+            await tenantQuery(
+              tenantId,
+              `INSERT INTO bays (tenant_id, name, color, order_index, is_active)
+               VALUES ($1, $2, $3, $4, true)
+               ON CONFLICT (tenant_id, name) DO NOTHING`,
+              [tenantId, b.name, b.color, b.orderIndex]
+            );
+          } catch {}
+        }
+        const bayRes = await tenantQuery<{ id: string }>(
+          tenantId,
+          `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
+          [tenantId]
+        );
+        targetBayId = bayRes.rows[0]?.id || null;
+      }
+
+      // Verifica se já existe um agendamento vinculado a esta OS
+      const appRes = await tenantQuery<{ id: string }>(
+        tenantId,
+        `SELECT id FROM appointments WHERE tenant_id = $1 AND work_order_id = $2 LIMIT 1`,
+        [tenantId, workOrder.id]
+      );
+
+      const title = `OS #${workOrder.osNumber} · ${workOrder.customer?.name || 'Cliente'}`;
+      const serviceSummary = workOrder.items?.map((i) => i.name).join(', ') || 'Serviço Automotivo';
+
+      if (appRes.rows.length > 0) {
+        await tenantQuery(
+          tenantId,
+          `UPDATE appointments
+           SET start_time = $3,
+               end_time = $4,
+               technician_id = $5,
+               bay_id = COALESCE($6, bay_id),
+               title = $7,
+               service_summary = $8,
+               status = 'scheduled',
+               updated_at = NOW()
+           WHERE tenant_id = $1 AND id = $2`,
+          [
+            tenantId,
+            appRes.rows[0].id,
+            startTime.toISOString(),
+            endTime.toISOString(),
+            technicianId || null,
+            targetBayId,
+            title,
+            serviceSummary,
+          ]
+        );
+      } else {
+        await tenantQuery(
+          tenantId,
+          `INSERT INTO appointments (
+             tenant_id,
+             work_order_id,
+             customer_id,
+             vehicle_id,
+             technician_id,
+             bay_id,
+             title,
+             start_time,
+             end_time,
+             estimated_minutes,
+             status,
+             origin,
+             service_summary,
+             customer_name,
+             customer_phone,
+             vehicle_plate,
+             vehicle_model
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled', 'INTERNAL', $11, $12, $13, $14, $15)`,
+          [
+            tenantId,
+            workOrder.id,
+            workOrder.customerId,
+            workOrder.vehicleId,
+            technicianId || null,
+            targetBayId,
+            title,
+            startTime.toISOString(),
+            endTime.toISOString(),
+            estMin,
+            serviceSummary,
+            workOrder.customer?.name || null,
+            workOrder.customer?.phone || null,
+            workOrder.vehicle?.plate || null,
+            `${workOrder.vehicle?.brand || ''} ${workOrder.vehicle?.model || ''}`.trim() || null,
+          ]
+        );
+      }
+    } catch (appSyncErr) {
+      console.warn('Falha não-bloqueante na sincronização de agendamento:', appSyncErr);
+    }
   }
 }
 
