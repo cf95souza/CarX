@@ -28,6 +28,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
        * Item 43: Redesenho de Alta Fidelidade do Checklist / Laudo e Silhuetas por Categoria (5x5 Clay Renders)
         * Item 44: Resiliência de Storage Local (Fix Erro 500 MinIO), Agendamento com Seleção de Box em Orçamentos e Data de Cadastro em Clientes
         * Item 45: Resolução de Agenda Real, Auto-Sync Retroativo, Laudo Técnico & PDF na OS e Redirecionamento de Orçamento para Vendas
+         * Item 46: Novo Layout da Vistoria Digital (Design System Rebrand), Resolução de Cliente e Veículo, Silhuetas Hatch 3D e Botões de Alto Contraste (100% sem perda de dados)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
    • Item 38: Teste E2E de Fluxo Sistêmico Completo 100% Visual pela Tela (Frontend)

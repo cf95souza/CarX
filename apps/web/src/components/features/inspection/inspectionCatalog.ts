@@ -113,21 +113,147 @@ export const getAngleImage = (category: VehicleCategory, angle: InspectionAngle)
   `/assets/inspection/${category}/${angle}.png`;
 
 /**
- * Converte o `size_class` do veículo (enum `VehicleSizeClassEnum` ou legados como "CARRO")
- * na categoria visual da vistoria. Fallback seguro: sedan.
+ * Converte o `size_class` do veículo ou infere pelo nome do modelo/descrição
+ * na categoria visual da vistoria (hatch, sedan, suv, picape, moto). Fallback seguro: sedan.
  */
-export function resolveVehicleCategory(sizeClass?: string | null): VehicleCategory {
-  const normalized = String(sizeClass ?? '')
+export function resolveVehicleCategory(
+  sizeClass?: string | null,
+  modelText?: string | null
+): VehicleCategory {
+  const normSize = String(sizeClass ?? '')
     .trim()
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-  if (!normalized) return 'sedan';
-  if (normalized.includes('moto')) return 'moto';
-  if (normalized.includes('hatch')) return 'hatch';
-  if (normalized.includes('pick') || normalized.includes('picape')) return 'picape';
-  if (normalized.includes('suv') || normalized.includes('van') || normalized.includes('utilit')) return 'suv';
+  if (normSize.includes('moto')) return 'moto';
+  if (normSize.includes('hatch')) return 'hatch';
+  if (normSize.includes('pick') || normSize.includes('picape')) return 'picape';
+  if (normSize.includes('suv') || normSize.includes('van') || normSize.includes('utilit')) return 'suv';
+  if (normSize.includes('sedan')) return 'sedan';
+
+  // Se não foi identificado pelo porte, infere pelo nome do modelo
+  const normModel = String(modelText ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (normModel) {
+    if (
+      normModel.includes('fiesta') ||
+      normModel.includes('onix') ||
+      normModel.includes('hb20') ||
+      normModel.includes('gol') ||
+      normModel.includes('polo') ||
+      normModel.includes('mobi') ||
+      normModel.includes('kwid') ||
+      normModel.includes('argo') ||
+      normModel.includes('sandero') ||
+      normModel.includes('ka') ||
+      normModel.includes('c3') ||
+      normModel.includes('208') ||
+      normModel.includes('fit') ||
+      normModel.includes('clio') ||
+      normModel.includes('fox') ||
+      normModel.includes('up') ||
+      normModel.includes('corsa') ||
+      normModel.includes('etios hatch') ||
+      normModel.includes('yaris hatch') ||
+      normModel.includes('hatch')
+    ) {
+      return 'hatch';
+    }
+
+    if (
+      normModel.includes('compass') ||
+      normModel.includes('t-cross') ||
+      normModel.includes('tcross') ||
+      normModel.includes('renegade') ||
+      normModel.includes('tracker') ||
+      normModel.includes('kicks') ||
+      normModel.includes('creta') ||
+      normModel.includes('sw4') ||
+      normModel.includes('duster') ||
+      normModel.includes('ecosport') ||
+      normModel.includes('hr-v') ||
+      normModel.includes('hrv') ||
+      normModel.includes('wr-v') ||
+      normModel.includes('wrv') ||
+      normModel.includes('corolla cross') ||
+      normModel.includes('taos') ||
+      normModel.includes('tiguan') ||
+      normModel.includes('pulse') ||
+      normModel.includes('fastback') ||
+      normModel.includes('nivus') ||
+      normModel.includes('suv')
+    ) {
+      return 'suv';
+    }
+
+    if (
+      normModel.includes('hilux') ||
+      normModel.includes('ranger') ||
+      normModel.includes('s10') ||
+      normModel.includes('toro') ||
+      normModel.includes('strada') ||
+      normModel.includes('saveiro') ||
+      normModel.includes('montana') ||
+      normModel.includes('amarok') ||
+      normModel.includes('rampage') ||
+      normModel.includes('l200') ||
+      normModel.includes('oroch') ||
+      normModel.includes('frontier') ||
+      normModel.includes('maverick') ||
+      normModel.includes('picape') ||
+      normModel.includes('pickup')
+    ) {
+      return 'picape';
+    }
+
+    if (
+      normModel.includes('cg') ||
+      normModel.includes('titan') ||
+      normModel.includes('fan') ||
+      normModel.includes('biz') ||
+      normModel.includes('fazer') ||
+      normModel.includes('xre') ||
+      normModel.includes('bros') ||
+      normModel.includes('pcx') ||
+      normModel.includes('nmax') ||
+      normModel.includes('hornet') ||
+      normModel.includes('mt-03') ||
+      normModel.includes('mt03') ||
+      normModel.includes('mt-07') ||
+      normModel.includes('bmw gs') ||
+      normModel.includes('moto')
+    ) {
+      return 'moto';
+    }
+
+    if (
+      normModel.includes('civic') ||
+      normModel.includes('corolla') ||
+      normModel.includes('cruze') ||
+      normModel.includes('virtus') ||
+      normModel.includes('cronos') ||
+      normModel.includes('onix plus') ||
+      normModel.includes('hb20s') ||
+      normModel.includes('versa') ||
+      normModel.includes('city') ||
+      normModel.includes('sentra') ||
+      normModel.includes('jetta') ||
+      normModel.includes('voyage') ||
+      normModel.includes('siena') ||
+      normModel.includes('prisma') ||
+      normModel.includes('cerato') ||
+      normModel.includes('fusion') ||
+      normModel.includes('sedan')
+    ) {
+      return 'sedan';
+    }
+  }
+
   return 'sedan';
 }
 

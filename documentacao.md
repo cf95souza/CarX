@@ -4537,3 +4537,11 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
     - Ajustada a função `handleSave`: quando salva como orçamento (`isQuote = true`), envia explicitamente `status: 'QUOTE'`, omite `scheduledAt`, invalida queries de orçamentos e redireciona para `/vendas`.
     - Quando salva como OS (`isQuote = false`), envia `status: 'SCHEDULED'` com agendamento ativo e redireciona para `/ordens`.
 
+- **Item 46 — Novo Layout da Vistoria Digital (Design System Rebrand), Resolução de Cliente/Veículo e Silhuetas Hatch 3D**:
+  - **Resolução de Cliente e Veículo**: Normalização completa em `CarVisualChecklist.jsx` para extrair dinamicamente `customer.name` e `vehicle.model/brand/plate` da Ordem de Serviço, eliminando o fallback em branco 'CLIENTE | VEÍCULO'.
+  - **Silhueta Hatch 3D Oficial**: Integrado o catálogo com `resolveVehicleCategory` para mapear modelos como Ford Fiesta para a categoria canônica 'hatch', carregando os clay renders 3D dos 5 ângulos oficiais (/assets/inspection/hatch/).
+  - **Seletor de Categoria Interativo**: Adicionada barra de seleção de porte (Hatch, Sedan, SUV, Picape, Moto) no cabeçalho do laudo para ajuste instantâneo pelo operador.
+  - **Design System CarX Rebrand & Alto Contraste**: Redesenhado todo o modal com tema dark profundo (#0E1116 / #171C24 / #262D35), botão 'Vistoria com IA' com destaque nítido em Verde Volt (#C8F52E), abas de navegação de ângulos com badges de avarias e botões inferiores ('Ver Laudo Digital VCR PDF', 'Finalizar e Assinar' e 'Cancelar') 100% visíveis e estilizados.
+  - **Integridade do Banco de Dados**: Preservação total de 100% dos dados relacionais existentes (clientes, veículos, OSs e pagamentos mantidos intactos).
+
+

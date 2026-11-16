@@ -1698,23 +1698,19 @@ export const OrdensServico: React.FC = () => {
 
       {/* Modal Interativo de Checklist e Desenho Visual */}
       {isChecklistModalOpen && selectedOrder && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-white rounded-2xl w-full max-w-5xl overflow-hidden shadow-2xl max-h-[95vh] flex flex-col">
-            <CarVisualChecklist
-              osData={selectedOrder}
-              onClose={() => {
-                setIsChecklistModalOpen(false);
-                api.inspections
-                  .getByWorkOrder(selectedOrder.id)
-                  .then((res: any) => {
-                    const list = Array.isArray(res) ? res : res?.inspections || [];
-                    setInspectionsList(list);
-                  })
-                  .catch(() => {});
-              }}
-            />
-          </div>
-        </div>
+        <CarVisualChecklist
+          osData={selectedOrder}
+          onClose={() => {
+            setIsChecklistModalOpen(false);
+            api.inspections
+              .getByWorkOrder(selectedOrder.id)
+              .then((res: any) => {
+                const list = Array.isArray(res) ? res : res?.inspections || [];
+                setInspectionsList(list);
+              })
+              .catch(() => {});
+          }}
+        />
       )}
     </div>
   );
