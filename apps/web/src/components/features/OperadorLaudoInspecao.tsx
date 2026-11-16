@@ -404,7 +404,8 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
       const signatureBase64 = canvasRef.current?.toDataURL('image/png') ?? '';
       const categoryLabel = VEHICLE_CATEGORIES.find((c) => c.id === category)?.label ?? category;
 
-      await api.technician.startWithChecklist(workOrderId, {
+      // 1. Inicia checklist e obtém o retorno da inspeção
+      const startRes = await api.technician.startWithChecklist(workOrderId, {
         currentKm: parseKm(currentKm),
         fuelLevel,
         notes: notes.trim() || 'Laudo de inspeção 360° realizado pelo operador.',
@@ -415,10 +416,47 @@ export const OperadorLaudoInspecao: React.FC<OperadorLaudoInspecaoProps> = ({
         ],
       });
 
-      const inspRes = await api.inspections.getByWorkOrder(workOrderId);
-      const inspectionId: string | undefined = inspRes?.inspections?.[0]?.id;
+      // 2. Extrai o ID da inspeção do retorno direto do endpoint
+      let inspectionId: string | undefined = startRes?.inspection?.id;
+
+      // 3. Fallback resiliente: busca por workOrderId aceitando tanto Array quanto Objeto
       if (!inspectionId) {
-        throw new Error('Inspeção não localizada após iniciar o checklist.');
+        try {
+          const inspRes: any = await api.inspections.getByWorkOrder(workOrderId);
+          if (Array.isArray(inspRes) && inspRes.length > 0) {
+            inspectionId = inspRes[0]?.id;
+          } else if (inspRes?.inspections && Array.isArray(inspRes.inspections) && inspRes.inspections.length > 0) {
+            inspectionId = inspRes.inspections[0]?.id;
+          } else if (inspRes?.id) {
+            inspectionId = inspRes.id;
+          }
+        } catch {
+          // segue para próximo fallback
+        }
+      }
+
+      // 4. Fallback de criação caso a inspeção ainda não exista no banco
+      if (!inspectionId) {
+        const vehicleId = os?.vehicle?.id || os?.vehicle_id;
+        if (vehicleId) {
+          try {
+            const created = await api.inspections.create({
+              workOrderId,
+              vehicleId,
+              inspectionType: 'check_in',
+              currentKm: parseKm(currentKm),
+              fuelLevel,
+              notes: notes.trim() || 'Laudo de inspeção 360° realizado pelo operador.',
+            });
+            inspectionId = created?.id;
+          } catch {
+            // falhou ao criar
+          }
+        }
+      }
+
+      if (!inspectionId) {
+        throw new Error('Não foi possível inicializar ou localizar a inspeção da Ordem de Serviço.');
       }
 
       let failed = 0;
