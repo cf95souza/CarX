@@ -4506,3 +4506,18 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - **Catálogo Canônico (`inspectionCatalog.ts`)**: Mapeamento 1:1 para o enum `DamageViewEnum` da API Fastify (`isometric`, `front`, `rear`, `right`, `left`), tipos de danos (`scratch`, `dent`, `paint_chip`, `stain`, `crack`, `repainted`) e heurística inteligente de detecção da peça atingida (`detectPart`).
   - **Fluxo do Operador (`OperadorLaudoInspecao.tsx`)**: Vistoria guiada 360°, registro de quilometragem e combustível em botões táteis, relato técnico por voz (Web Speech API), fotos de evidência por dano com compressão client-side (max 1280px / 80% qualidade) e Etapa 2 com termo de responsabilidade e canvas digital para assinatura tátil do cliente com salvamento atômico no backend.
   - **Evidência Visual**: Matriz comparativa 5x5 consolidada em `clay_renders_showcase.png`.
+
+- **Item 44 — Resiliência de Storage Local (Fix Erro 500 MinIO), Agendamento com Seleção de Box em Orçamentos e Persistência de Data de Cadastro em Clientes**:
+  - **Resiliência do Serviço de Armazenamento e Fix Erro 500 no Laudo**:
+    - Investigado o log de erro `POST /inspections/:id/sign` na VPS Oracle: `connect ECONNREFUSED 127.0.0.1:9000`.
+    - Implementada camada de fallback transparente em `StorageService` (`apps/api/src/storage/storage-service.ts`): quando a conexão com o S3/MinIO falha, o arquivo (assinatura ou fotos) é gravado no disco persistente local com hash isolado por tenant e registrado em `storage_files` com `bucket_name = 'local'`.
+    - Métodos `getFileBuffer` e `getPresignedDownloadUrl` atualizados para servir buffers e data URLs diretamente do storage local em caso de fallback, prevenindo 100% de erros 500 durante a vistoria e assinatura do laudo.
+    - Topologia Docker de teste na VPS (`infra/compose.oracle-test.yml`) enriquecida com o container oficial `carx-test-minio` persistido no volume `carx_test_miniodata`.
+  - **Agendamento de Orçamentos com Seleção de Box e Timeline**:
+    - Modal de aprovação e agendamento de orçamento em `apps/web/src/pages/Vendas.jsx` atualizado para carregar dinamicamente os boxes da oficina via `api.appointments.getBays()`, permitindo ao gestor escolher o box de atendimento no despacho.
+    - Hook `useQuotes.js` e interface `UpdateWorkOrderDto` atualizados para propagar `bayId` para o backend.
+    - Sincronização automática em `work-order-service.ts`: se a oficina não possuir boxes cadastrados, são auto-provisionados os 3 boxes canônicos (`Box 1 · Principal`, `Box 2 · Secundário`, `Box 3 · Rápido`) no banco do tenant e vinculado o agendamento na tabela `appointments`, garantindo que apareça no grid da Agenda.
+    - `appointment-service.ts` atualizado para realocar agendamentos sem box para o primeiro box ativo no `getSmartScheduleOverview`.
+  - **Data de Cadastro na Tela de Clientes**:
+    - Resolvida discrepância de nomenclatura entre camelCase (`createdAt`) retornado pelo Fastify e snake_case (`created_at`) consultado em `apps/web/src/pages/Clientes.jsx`.
+    - Normalizador de dados `normalizeClient` em `apps/web/src/hooks/useClients.js` atualizado para unificar `created_at` e `createdAt`. Adicionada badge explicativa "Cliente desde DD/MM/AAAA" no perfil do cliente.

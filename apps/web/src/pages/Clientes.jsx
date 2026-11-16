@@ -178,7 +178,7 @@ const ClientesView = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-xs text-[#5B6674]">
-                      {formatDateBR(c.created_at)}
+                      {formatDateBR(c.created_at || c.createdAt)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -336,6 +336,11 @@ const ClientesView = () => {
                     <span className="text-xs text-[#9AA7B8] font-mono">{selectedClientProfile.telefone || 'Sem telefone'}</span>
                     {selectedClientProfile.email && (
                       <span className="text-[11px] text-slate-500 hidden sm:inline">• {selectedClientProfile.email}</span>
+                    )}
+                    {(selectedClientProfile.created_at || selectedClientProfile.createdAt) && (
+                      <span className="text-[11px] text-[#C8F52E]/90 hidden sm:inline font-mono">
+                        • Cliente desde {formatDateBR(selectedClientProfile.created_at || selectedClientProfile.createdAt)}
+                      </span>
                     )}
                   </div>
                 </div>

@@ -19,6 +19,8 @@ export const useClients = () => {
     address_street: c.address_street || '',
     address_city: c.address_city || '',
     address_state: c.address_state || '',
+    created_at: c.createdAt || c.created_at || (c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()),
+    createdAt: c.createdAt || c.created_at || (c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString()),
   });
 
   const fetchClients = useCallback(async () => {

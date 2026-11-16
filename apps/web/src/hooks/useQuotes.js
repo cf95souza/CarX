@@ -145,6 +145,9 @@ export const useQuotes = () => {
       if (appointmentData.tecnico_id) {
         updatePayload.technicianId = appointmentData.tecnico_id;
       }
+      if (appointmentData.box_id || appointmentData.bayId) {
+        updatePayload.bayId = appointmentData.box_id || appointmentData.bayId;
+      }
       if (Object.keys(updatePayload).length > 0) {
         await api.workOrders.update(osId, updatePayload);
       }

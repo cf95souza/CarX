@@ -1,5 +1,6 @@
 import { formatDateBR, formatTimeBR } from '../utils/dateUtils';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from '../services/api';
 import { 
   Plus, 
   Search, 
@@ -39,12 +40,28 @@ const Vendas = () => {
   const [showNovoModal, setShowNovoModal] = useState(false);
 
   const { profiles = [] } = useProfiles();
+  const [bays, setBays] = useState([]);
+  const [scheduleBayId, setScheduleBayId] = useState('');
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('09:00');
   const [scheduleTechId, setScheduleTechId] = useState('');
   const [scheduleDeposit, setScheduleDeposit] = useState('');
   const [scheduleDepositMethod, setScheduleDepositMethod] = useState('pix');
   const [isApproving, setIsApproving] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.appointments.getBays()
+      .then((res) => {
+        if (isMounted && Array.isArray(res)) {
+          setBays(res);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Vendas] Erro ao listar boxes da oficina:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   const openQuoteDetails = (quote) => {
     setSelectedQuote(quote);
@@ -61,6 +78,7 @@ const Vendas = () => {
         setScheduleDate(new Date().toISOString().split('T')[0]);
       }
       setScheduleTechId(quote.tecnico_id || '');
+      setScheduleBayId(quote.bay_id || quote.box_id || (bays[0]?.id || ''));
       setScheduleDeposit('');
       setScheduleDepositMethod('pix');
     }
@@ -135,6 +153,8 @@ const Vendas = () => {
       const appointmentData = {
         id: currentSelectedQuote.id,
         data_agendamento: scheduledAt,
+        box_id: scheduleBayId || null,
+        bayId: scheduleBayId || null,
         tecnico_id: scheduleTechId || null,
         tecnico: selectedProf?.nome || null,
         valor_total: currentSelectedQuote.valor_total || currentSelectedQuote.valor,
@@ -647,6 +667,26 @@ const Vendas = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">
+                        Box de Atendimento *
+                      </label>
+                      <select
+                        value={scheduleBayId}
+                        onChange={(e) => setScheduleBayId(e.target.value)}
+                        className="w-full h-11 px-3 bg-[#171C24] border border-[#2E3744] rounded-xl text-xs text-[#F2F5F8] focus:border-[#C8F52E] outline-none"
+                      >
+                        {bays.length === 0 && <option value="">Box 1 · Principal (Padrão)</option>}
+                        {bays.map((bay) => (
+                          <option key={bay.id} value={bay.id}>
+                            {bay.name} {bay.description ? `· ${bay.description}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-slate-500 mt-1 block">
+                        Aloca o veículo diretamente no box de trabalho da oficina.
+                      </span>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">
                         Técnico Responsável <span className="text-slate-500 font-normal">(Opcional)</span>
                       </label>
                       <select
@@ -665,6 +705,9 @@ const Vendas = () => {
                         Se não alocar agora, o serviço fica na fila geral e o operador poderá puxar no box.
                       </span>
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-[10px] font-bold text-[#9AA7B8] uppercase block mb-1">Sinal / Adiantamento (R$)</label>
                       <div className="flex gap-2">

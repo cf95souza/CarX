@@ -20,6 +20,8 @@ volumes:
     name: carx_test_pgdata
   carx_test_redisdata:
     name: carx_test_redisdata
+  carx_test_miniodata:
+    name: carx_test_miniodata
 
 services:
   # ----------------------------------------------------------------------------
@@ -65,6 +67,22 @@ services:
       retries: 5
 
   # ----------------------------------------------------------------------------
+  # 2.1 MinIO S3 Object Storage
+  # ----------------------------------------------------------------------------
+  carx-minio:
+    image: minio/minio:latest
+    container_name: carx-test-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-carx_minio_admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-CarX@SecureMinio2026!}
+    volumes:
+      - carx_test_miniodata:/data
+    networks:
+      - carx_test_net
+
+  # ----------------------------------------------------------------------------
   # 3. API Backend Fastify
   # ----------------------------------------------------------------------------
   carx-api:
@@ -82,6 +100,11 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-carx_admin}:${POSTGRES_PASSWORD:-CarX@SecureOracle2026!}@carx-db:5432/${POSTGRES_DB:-carx_db}
       DATABASE_ADMIN_URL: postgresql://${POSTGRES_USER:-carx_admin}:${POSTGRES_PASSWORD:-CarX@SecureOracle2026!}@carx-db:5432/${POSTGRES_DB:-carx_db}
       REDIS_URL: redis://:${REDIS_PASSWORD:-carx_redis_oracle_2026}@carx-redis:6379/0
+      MINIO_ENDPOINT: carx-minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-carx_minio_admin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-CarX@SecureMinio2026!}
+      MINIO_BUCKET_MEDIA: carx-media
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-carx_super_secret_jwt_access_token_oracle_2026}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-carx_super_secret_jwt_refresh_token_oracle_2026}
       JWT_ACCESS_EXPIRATION: 15m

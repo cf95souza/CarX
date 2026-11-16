@@ -595,6 +595,7 @@ export interface UpdateWorkOrderDto {
   notes?: string | null;
   customerNotes?: string | null;
   publicNotes?: string | null;
+  bayId?: string | null;
 }
 
 export interface ChangeWorkOrderStatusDto {

@@ -912,13 +912,42 @@ export class WorkOrderService {
         const startTime = new Date(scheduledAt);
         const endTime = new Date(startTime.getTime() + estMin * 60000);
 
-        // Localiza primeiro box físico (bay) ativo caso não tenha nenhum atribuído
-        const bayRes = await tenantQuery<{ id: string }>(
-          tenantId,
-          `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
-          [tenantId]
-        );
-        const bayId = bayRes.rows[0]?.id || null;
+        // Identifica ou seleciona o box físico (bay)
+        let targetBayId = data.bayId || null;
+        if (!targetBayId) {
+          const bayRes = await tenantQuery<{ id: string }>(
+            tenantId,
+            `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
+            [tenantId]
+          );
+          targetBayId = bayRes.rows[0]?.id || null;
+        }
+
+        // Se ainda não tiver box cadastrado na oficina, provisiona os 3 canônicos
+        if (!targetBayId) {
+          const defaultBays = [
+            { name: 'Box 1 · Principal', color: '#C8F52E', orderIndex: 0 },
+            { name: 'Box 2 · Secundário', color: '#CDEBFB', orderIndex: 1 },
+            { name: 'Box 3 · Rápido', color: '#E8EEF4', orderIndex: 2 },
+          ];
+          for (const b of defaultBays) {
+            try {
+              await tenantQuery(
+                tenantId,
+                `INSERT INTO bays (tenant_id, name, color, order_index, is_active)
+                 VALUES ($1, $2, $3, $4, true)
+                 ON CONFLICT (tenant_id, name) DO NOTHING`,
+                [tenantId, b.name, b.color, b.orderIndex]
+              );
+            } catch {}
+          }
+          const bayRes = await tenantQuery<{ id: string }>(
+            tenantId,
+            `SELECT id FROM bays WHERE tenant_id = $1 AND is_active = true ORDER BY order_index ASC LIMIT 1`,
+            [tenantId]
+          );
+          targetBayId = bayRes.rows[0]?.id || null;
+        }
 
         // Verifica se já existe um agendamento vinculado a esta OS
         const appRes = await tenantQuery<{ id: string }>(
@@ -937,11 +966,11 @@ export class WorkOrderService {
              SET start_time = $3,
                  end_time = $4,
                  technician_id = $5,
-                 bay_id = COALESCE(bay_id, $6),
+                 bay_id = COALESCE($6, bay_id),
                  status = 'scheduled',
                  updated_at = NOW()
              WHERE tenant_id = $1 AND id = $2`,
-            [tenantId, appRes.rows[0].id, startTime.toISOString(), endTime.toISOString(), technicianId || null, bayId]
+            [tenantId, appRes.rows[0].id, startTime.toISOString(), endTime.toISOString(), technicianId || null, targetBayId]
           );
         } else {
           await tenantQuery(
@@ -970,7 +999,7 @@ export class WorkOrderService {
               existing.customerId,
               existing.vehicleId,
               technicianId || null,
-              bayId,
+              targetBayId,
               title,
               startTime.toISOString(),
               endTime.toISOString(),

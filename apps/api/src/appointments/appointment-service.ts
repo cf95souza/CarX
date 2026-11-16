@@ -151,6 +151,31 @@ export class AppointmentService {
     `;
 
     const res = await tenantQuery<BayDto>(tenantId, sql, params);
+
+    // Auto-provisiona os 3 boxes canônicos se a oficina não possuir boxes cadastrados
+    if (res.rows.length === 0) {
+      const defaultBays = [
+        { name: 'Box 1 · Principal', color: '#C8F52E', orderIndex: 0 },
+        { name: 'Box 2 · Secundário', color: '#CDEBFB', orderIndex: 1 },
+        { name: 'Box 3 · Rápido', color: '#E8EEF4', orderIndex: 2 },
+      ];
+      for (const b of defaultBays) {
+        try {
+          await tenantQuery(
+            tenantId,
+            `INSERT INTO bays (tenant_id, name, color, order_index, is_active)
+             VALUES ($1, $2, $3, $4, true)
+             ON CONFLICT (tenant_id, name) DO NOTHING;`,
+            [tenantId, b.name, b.color, b.orderIndex]
+          );
+        } catch {
+          // ignora conflitos em concorrência
+        }
+      }
+      const reQuery = await tenantQuery<BayDto>(tenantId, sql, params);
+      return reQuery.rows;
+    }
+
     return res.rows;
   }
 
@@ -1042,6 +1067,16 @@ export class AppointmentService {
       startDate: dayStart,
       endDate: dayEnd,
     });
+
+    // Se houver agendamentos sem box atribuído ou órfãos, aloca visualmente no primeiro box ativo
+    if (finalBays.length > 0) {
+      const primaryBayId = finalBays[0].id;
+      for (const a of appointments) {
+        if (!a.bayId || !finalBays.some((b) => b.id === a.bayId)) {
+          a.bayId = primaryBayId;
+        }
+      }
+    }
 
     const now = new Date();
     let totalAppointments = appointments.length;

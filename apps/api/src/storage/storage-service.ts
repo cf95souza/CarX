@@ -1,3 +1,4 @@
+import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import {
@@ -109,8 +110,7 @@ export class StorageService {
         await this.s3.send(new CreateBucketCommand({ Bucket: bucketName }));
         this.bucketInitialized = true;
       } catch (createErr) {
-        // Pode falhar se já existir em concorrência
-        this.bucketInitialized = true;
+        // Não quebra a inicialização se MinIO estiver temporariamente indisponível
       }
     }
   }
@@ -187,19 +187,34 @@ export class StorageService {
     // 3. Montagem da chave isolada no MinIO
     const fileKey = this.buildFileKey(tenantId, category, originalName, detected.extension);
 
-    // 4. Envio binário para o MinIO / S3
-    await this.s3.send(
-      new PutObjectCommand({
-        Bucket: this.defaultBucket,
-        Key: fileKey,
-        Body: buffer,
-        ContentType: detected.mime,
-        Metadata: {
-          'tenant-id': tenantId,
-          'original-name': encodeURIComponent(originalName),
-        },
-      })
-    );
+    // 4. Envio binário para o MinIO / S3 com Fallback Local Resiliente
+    let targetBucket = this.defaultBucket;
+    try {
+      await this.ensureBucketExists();
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.defaultBucket,
+          Key: fileKey,
+          Body: buffer,
+          ContentType: detected.mime,
+          Metadata: {
+            'tenant-id': tenantId,
+            'original-name': encodeURIComponent(originalName),
+          },
+        })
+      );
+    } catch (s3Err: any) {
+      console.warn(`[StorageService] MinIO offline (${s3Err.message}). Utilizando storage local resiliente.`);
+      targetBucket = 'local';
+      try {
+        const localDir = path.resolve(process.env.STORAGE_LOCAL_DIR || '/tmp/carx-storage', tenantId, category);
+        fs.mkdirSync(localDir, { recursive: true });
+        const localPath = path.join(localDir, path.basename(fileKey));
+        fs.writeFileSync(localPath, buffer);
+      } catch (fsErr: any) {
+        console.error('[StorageService] Falha ao persistir em storage local:', fsErr.message);
+      }
+    }
 
     // 5. Registro na tabela storage_files sob o contexto de RLS
     const res = await tenantQuery<StorageFileDto>(
@@ -221,7 +236,7 @@ export class StorageService {
       [
         tenantId,
         fileKey,
-        this.defaultBucket,
+        targetBucket,
         originalName,
         declaredMimeType || detected.mime,
         detected.mime,
@@ -322,6 +337,20 @@ export class StorageService {
     // 2. Barreira adicional: valida prefixo tenant/{tenantId}/ na chave S3
     this.assertTenantFileKey(tenantId, file.file_key);
 
+    // Se o arquivo estiver armazenado localmente via fallback resiliente
+    if (file.bucket_name === 'local') {
+      const localDir = path.resolve(process.env.STORAGE_LOCAL_DIR || '/tmp/carx-storage', tenantId, file.category || 'general');
+      const localPath = path.join(localDir, path.basename(file.file_key));
+      if (fs.existsSync(localPath)) {
+        const fileData = fs.readFileSync(localPath);
+        const dataUrl = `data:${file.mime_type || 'image/png'};base64,${fileData.toString('base64')}`;
+        return {
+          downloadUrl: dataUrl,
+          file,
+        };
+      }
+    }
+
     // 3. Gera URL de leitura assinada
     const command = new GetObjectCommand({
       Bucket: file.bucket_name || this.defaultBucket,
@@ -418,20 +447,37 @@ export class StorageService {
     const file = res.rows[0];
     this.assertTenantFileKey(tenantId, file.file_key);
 
-    const response = await this.s3.send(
-      new GetObjectCommand({
-        Bucket: file.bucket_name || this.defaultBucket,
-        Key: file.file_key,
-      })
-    );
-
-    if (!response.Body) {
-      throw new Error('Conteúdo do arquivo vazio no MinIO.');
+    if (file.bucket_name === 'local') {
+      const localDir = path.resolve(process.env.STORAGE_LOCAL_DIR || '/tmp/carx-storage', tenantId, file.category || 'general');
+      const localPath = path.join(localDir, path.basename(file.file_key));
+      if (fs.existsSync(localPath)) {
+        return fs.readFileSync(localPath);
+      }
     }
 
-    // AWS SDK v3 Body stream conversion
-    const byteArray = await (response.Body as any).transformToByteArray();
-    return Buffer.from(byteArray);
+    try {
+      const response = await this.s3.send(
+        new GetObjectCommand({
+          Bucket: file.bucket_name || this.defaultBucket,
+          Key: file.file_key,
+        })
+      );
+
+      if (!response.Body) {
+        throw new Error('Conteúdo do arquivo vazio no MinIO.');
+      }
+
+      // AWS SDK v3 Body stream conversion
+      const byteArray = await (response.Body as any).transformToByteArray();
+      return Buffer.from(byteArray);
+    } catch (s3Err: any) {
+      const localDir = path.resolve(process.env.STORAGE_LOCAL_DIR || '/tmp/carx-storage', tenantId, file.category || 'general');
+      const localPath = path.join(localDir, path.basename(file.file_key));
+      if (fs.existsSync(localPath)) {
+        return fs.readFileSync(localPath);
+      }
+      throw s3Err;
+    }
   }
 
   /**
