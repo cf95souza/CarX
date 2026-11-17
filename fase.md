@@ -44,9 +44,13 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 57: Correção Global de Clipboard em Ambientes HTTP e Agendamento Online (100% Concluído e Validado)
         * [x] Item 58: Aplicação do Design System Rebrand CarX em 100% da Agenda e Sub-telas (100% Concluído e Validado)
         * [x] Item 59: Portal do Cliente: Correção de getStoredTenantSlug is not defined, URL por Slug e Enriquecimento Visual (100% Concluído e Validado)
-        * [ ] Item 60: CRM de Retenção: Correção de Contraste Tipográfico de Textos Claros/Apagados (Print 3)
-        * [ ] Item 61: Configurações & Integrações (Settings): Ajuste de Layout e Espaçamento Responsivo (Print 4)
-        * [ ] Item 62: Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty)
+        * [x] Item 60: CRM de Retenção: Correção de Contraste Tipográfico de Textos Claros/Apagados (Print 3) (100% Concluído e Validado)
+        * [x] Item 61: Configurações & Integrações (Settings): Ajuste de Layout e Espaçamento Responsivo (Print 4) (100% Concluído e Validado)
+        * [x] Item 62: Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty) (100% Concluído e Validado)
+      - [T8.2f] Esteira Operacional: QA, Entrega com Garantia e Histórico do Operador (Itens 63 a 65 — EXECUÇÃO SEQUENCIAL 1 A 1):
+        * [x] Item 63: Vistoria de QA Guiada (Controle de Qualidade) em Ordens de Serviço (Botão Roxo em Destaque + Checklist Técnico + Aprovação para Pronto) (100% Concluído e Validado)
+        * [ ] Item 64: Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Botão "Entregar Veículo" + Conferência Financeira + Assinatura + Transição DELIVERED)
+        * [ ] Item 65: Histórico Reativo de Serviços Concluídos do Operador (/operador -> Histórico com dados completos, sincronização pós-finalização e suporte offline)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
    • Item 38: Teste E2E de Fluxo Sistêmico Completo 100% Visual pela Tela (Frontend)
@@ -2862,3 +2866,55 @@ Onda 3 Roadmap de Execução:
       - Rotas `/assinatura`, `/licenca` e `/billing` registradas em `App.jsx` para papéis `ADM`, `GESTOR` e `OWNER`;
       - Atalho rápido "Assinatura & Licença ↗" adicionado no topo da barra de abas de Configurações (`Settings.jsx`).
 - **Critério de Aceite**: A oficina acessa `/assinatura` ou clica em "Assinatura & Licença" no menu/configurações, visualiza seu plano e quotas, abre o modal de quitação PIX, copia o código ou escaneia o QR Code, e obtém baixa imediata e reativação da loja. Builds de `@carx/shared`, `@carx/api` e `@carx/web` (8.56s) validados com 100% de sucesso.
+
+---
+
+### [x] Item 63 — Vistoria de QA Guiada (Controle de Qualidade) em Ordens de Serviço `(Concluído e Validado)`
+- **Problema Reportado**: Conforme o print da tela de Ordens de Serviço (`OrdensServico.tsx`), quando o operador finaliza a execução técnica no box e a OS transita para o status `Vistoria QA` (85%), não existia nenhum botão textual destacado nem fluxo guiado e intuitivo na coluna "AÇÕES" para o gestor/auditor realizar a inspeção técnica de liberação do veículo.
+- **Escopo Executado**:
+  - Na coluna "AÇÕES" da tabela de Ordens de Serviço (`OrdensServico.tsx`):
+    - Quando `os.status === 'QA'`, renderizado botão de ação primária destacado: **"Vistoria QA"** (em tom roxo/ametista `#8B5CF6` com ícone `ClipboardCheck`, texto explícito e efeito hover responsivo ao lado do botão de Receber).
+  - No Drawer / Modal de Detalhes da Ordem de Serviço (`selectedOrder`):
+    - Banner de destaque roxo contextualizado: *"Aguardando Vistoria de Qualidade (QA) - Serviço finalizado pelo técnico. Realize a auditoria para liberar o carro."* com botão direto **"Iniciar QA"**;
+    - Botão de atalho "Vistoria QA" integrado no rodapé do modal de detalhes.
+  - Modal Guiado de **Vistoria e Controle de Qualidade (QA)** (`QaChecklistModal.tsx`):
+    - Identificação completa: Número da OS, Veículo, Placa, Cliente e Técnico encarregado;
+    - 5 Critérios Oficiais de Conformidade Técnica:
+      1. *Acabamento Superficial & Padrão Estético* (ausência de bolhas, marcas de estiramento ou poeira);
+      2. *Refile & Adesão Perfeita das Bordas* (recortes precisos e selamento térmico concluído);
+      3. *Alinhamento & Remontagem de Componentes* (lanternas, maçanetas, frisos no alinhamento de fábrica);
+      4. *Limpeza, Desengraxe & Remoção de Resíduos* (vidros e lataria impecáveis sem resíduos de aplicação);
+      5. *Vistoria Final de Saída & Fotos Registradas* (fotos da entrega arquivadas e sem avarias pós-serviço);
+    - Atalho de agilidade operacional: Botão **"Marcar Todos Conformes"** para preenchimento em 1 clique;
+    - Avaliação por estrelas do Score de Qualidade (1 a 5 estrelas);
+    - Parecer do auditor e campo de recomendações para o cliente / cuidados nas primeiras 48h;
+    - Fluxo de Retrabalho Técnico: Botão "Reprovar / Retrabalho" que abre justificativa obrigatória e devolve a OS para `IN_PROGRESS` com prioridade máxima na fila do operador;
+    - Fluxo de Aprovação: Botão primário Volt **"Aprovar Vistoria & Liberar Veículo"**, acionando `api.qa.createAudit`, transicionando a OS para `READY` (Pronto), elevando o progresso para 100% e invalidando em tempo real as queries de OS e painéis.
+- **Critério de Aceite**: Na tela de OSs, a ordem em `Vistoria QA` exibe o botão roxo "Vistoria QA" na coluna de Ações e dentro dos detalhes da OS. O gestor abre o modal, audita os critérios e aprova a qualidade com 1 clique, transicionando a OS para `READY` e atualizando a interface instantaneamente. Compilação do `@carx/web` validada com 100% de sucesso em 8.24s.
+
+---
+
+### [ ] Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia `(Backlog Sequencial)`
+- **Problema Reportado**: Quando o veículo está no status `READY` (`Pronto / Aguardando Retirada`), não há botão claro de entrega ao cliente na coluna AÇÕES nem modal formal de encerramento com conferência financeira, assinatura do termo de entrega e emissão do Certificado de Garantia Digital.
+- **Escopo a Executar**:
+  - Na tabela de `OrdensServico.tsx`:
+    - Quando `os.status === 'READY'`, exibir botão de ação primária destacado: **"Entregar Carro"** (estilo CarX Volt `#C8F52E` com ícone `CheckCircle2` ou `KeyRound`).
+  - Modal Guiado de **Entrega de Veículo ao Cliente** (`ModalEntregaVeiculo.tsx`):
+    - Conferência Financeira: Se houver saldo devedor pendente (`balanceCents > 0`), alerta amarelo/vermelho com botão direto "Receber Saldo no Caixa (Pix/Cartão/Dinheiro)" antes de liberar;
+    - Marcador de Entrega: Conferência de quilometragem de saída (`km_saida`) e nível de combustível de entrega;
+    - Assinatura do Cliente: Assinatura digital do termo de retirada;
+    - Certificado de Garantia Digital: Ativação formal da garantia dos serviços (PPF, Vitrificação, Película) com token público `/v/:token`;
+    - Confirmação de Entrega: Atualização de status da OS para `DELIVERED` e arquivamento formal no Pátio.
+- **Critério de Aceite**: O gestor clica em "Entregar Carro", confere pendências financeiras, assina o termo e conclui a entrega com emissão de garantia digital e movimentação da OS para `DELIVERED`.
+
+---
+
+### [ ] Item 65 — Histórico Reativo de Serviços Concluídos do Operador (/operador -> Histórico) `(Backlog Sequencial)`
+- **Problema Reportado**: Quando o técnico finaliza um serviço no box pelo app móvel do operador (`/operador`), o serviço não fica visível nem registrado na aba "Histórico" ("Seus Serviços Concluídos").
+- **Causa Raiz & Escopo a Executar**:
+  - `App.jsx` lê `orders` do hook `useOrders()`, que não é sincronizado automaticamente pós-conclusão da OS e filtra estaticamente por `isMyTech`;
+  - Substituir a leitura estática na aba Histórico por um hook reativo `useQuery` com `['technician-history', user?.id]`, trazendo ordens onde o usuário logado é o técnico responsável (`technicianId === user.id` ou `tecnico_id === user.id`);
+  - Suporte a status `QA`, `READY` e `DELIVERED` na visualização histórica do operador;
+  - Cards visuais completos com placa em destaque, nome do cliente, serviço executado, tempo de execução e badge do status atual;
+  - Invalidação automática da query de histórico quando `ExecutorView.onComplete` for acionado.
+- **Critério de Aceite**: O operador finaliza qualquer OS no box e, ao acessar a aba Histórico, o serviço aparece imediatamente listado com seus dados e status em tempo real.

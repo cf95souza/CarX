@@ -4724,6 +4724,44 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - **Compilação e Validação**:
     - Monorepo completo (`@carx/shared`, `@carx/api`, `@carx/web`) compilado com 100% de sucesso e 0 erros.
 
+---
+
+## ⚡ Fase em Andamento: T8.2f — Esteira Operacional: QA, Entrega com Garantia e Histórico do Operador (Itens 63 a 65)
+
+### Item 63 — Vistoria de QA Guiada (Controle de Qualidade) em Ordens de Serviço (Em Andamento)
+- **Problema Reportado pelo Usuário**:
+  - Na tela de Ordens de Serviço (`OrdensServico.tsx`), após o operador técnico finalizar a ordem de serviço no box pelo app móvel, a OS entra no status `Vistoria QA` (85%). Porém, na tabela do gestor, a coluna "AÇÕES" só exibe ícones genéricos (olhar, prancheta, bandeira e receber saldo), deixando o gestor sem saber como e onde efetuar a vistoria de qualidade para liberar o carro.
+- **Arquitetura da Solução**:
+  - **Ação Contextual em Destaque**:
+    - Na tabela de `OrdensServico.tsx`, quando a OS estiver no status `QA`, é renderizado um botão primário com texto claro e alto contraste: **"Vistoria QA"** (estilo Dark Volt com fundo roxo/ametista `#8B5CF6`, texto branco, ícone `ClipboardCheck`).
+  - **Modal Guiado de Controle de Qualidade (`ModalVistoriaQA.tsx`)**:
+    - Cabeçalho com identificação do veículo (Marca, Modelo, Ano), Placa, Cliente, Número da OS e Técnico executor responsável;
+    - Checklist técnico auditável com 5 pontos de controle essenciais:
+      1. *Acabamento e Brilho*: Superfície sem marcas de boina, hologramas ou resíduos de polidor;
+      2. *Aplicação Técnica*: PPF, Películas ou Vitrificação sem bolhas, cantos soltos ou descolamentos;
+      3. *Limpeza e Entrega*: Interior e exterior limpos, sem poeira de lixamento ou marcas de dedos;
+      4. *Itens do Orçamento*: Todos os serviços e peças contratados foram integralmente entregues;
+      5. *Fotos do Depois*: Registro fotográfico de conclusão anexado para o laudo e portal;
+    - Score de Qualidade (Nota 0 a 10) para alimentar as métricas do técnico;
+    - Campo de parecer técnico / observações de auditoria;
+    - Fluxo de Retrabalho: Botão "Apontar Retrabalho", retornando o status para `IN_PROGRESS` com justificativa técnica;
+    - Fluxo de Liberação: Botão "Aprovar Qualidade & Liberar Veículo", transicionando o status para `READY` (Pronto), atualizando o progresso para 95%-100% e notificando o sistema.
+
+### Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Planejado)
+- **Problema Reportado pelo Usuário**:
+  - O gestor não possui botão e fluxo intuitivo para entregar formalmente o veículo quando ele fica pronto, verificar débitos financeiros, registrar a saída do veículo e emitir a garantia digital.
+- **Arquitetura da Solução**:
+  - Botão destacado **"Entregar Carro"** na coluna de ações quando a OS estiver no status `READY`;
+  - Modal com conferência de saldo financeiro, quilometragem de saída, assinatura digital do termo de entrega e emissão automática do Certificado de Garantia;
+  - Transição de status para `DELIVERED`.
+
+### Item 65 — Histórico Reativo de Serviços Concluídos do Operador (Planejado)
+- **Problema Reportado pelo Usuário**:
+  - Ao finalizar um serviço no box pelo app móvel do operador (`/operador`), o serviço não fica gravado na aba "Histórico" ("Seus Serviços Concluídos").
+- **Arquitetura da Solução**:
+  - Substituir o hook estático `useOrders` na aba Histórico do operador por uma consulta reativa com `useQuery` (`['technician-history', user?.id]`), compatibilizando os status `QA`, `READY` e `DELIVERED` e atualizando a visualização no momento em que `onComplete` for executado.
+
+
 
 
 

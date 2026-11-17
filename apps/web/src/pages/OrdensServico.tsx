@@ -9,6 +9,7 @@ import { Button, Badge, Card, CardHeader, CardTitle, CardContent, EmptyState, In
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import CarVisualChecklist from '../components/features/CarVisualChecklist';
 import { VcrReportModal } from '../components/features/VcrReportModal';
+import QaChecklistModal from '../components/features/QaChecklistModal';
 import {
   Wrench,
   Search,
@@ -206,6 +207,15 @@ export const OrdensServico: React.FC = () => {
   const [activeInspectionForReport, setActiveInspectionForReport] = useState<any | null>(null);
   const [isChecklistModalOpen, setIsChecklistModalOpen] = useState<boolean>(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
+
+  // Estados para Auditoria de Qualidade (QA)
+  const [isQaModalOpen, setIsQaModalOpen] = useState<boolean>(false);
+  const [qaTargetOrder, setQaTargetOrder] = useState<any | null>(null);
+
+  const handleOpenQaModal = (order: any) => {
+    setQaTargetOrder(order);
+    setIsQaModalOpen(true);
+  };
 
   // Carregar laudos de inspeção quando uma OS é selecionada
   React.useEffect(() => {
@@ -816,6 +826,17 @@ export const OrdensServico: React.FC = () => {
                             </button>
                           )}
 
+                          {os.status === 'QA' && (
+                            <button
+                              onClick={() => handleOpenQaModal(os)}
+                              className="px-2.5 py-1.5 text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-all font-bold flex items-center gap-1.5 shadow-sm text-xs cursor-pointer"
+                              title="Realizar Inspeção de Qualidade (QA) para Liberação do Veículo"
+                            >
+                              <ClipboardCheck size={14} />
+                              <span>Vistoria QA</span>
+                            </button>
+                          )}
+
                           {os.status === 'APPROVED' && (
                             <button
                               onClick={() => handleTransition(os.id, 'CHECKED_IN')}
@@ -1153,6 +1174,28 @@ export const OrdensServico: React.FC = () => {
                 {getStatusBadge(selectedOrder.status)}
               </div>
 
+              {selectedOrder.status === 'QA' && (
+                <div className="bg-purple-50 border border-purple-200 p-3.5 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <ClipboardCheck size={18} />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-xs text-[#0E1116]">Aguardando Vistoria de Qualidade (QA)</h5>
+                      <p className="text-[11px] text-[#5B6674]">Serviço finalizado pelo técnico. Realize a auditoria para liberar o carro.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenQaModal(selectedOrder)}
+                    className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all text-xs cursor-pointer whitespace-nowrap"
+                  >
+                    <ClipboardCheck size={14} />
+                    <span>Iniciar QA</span>
+                  </button>
+                </div>
+              )}
+
               <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-2">
                 <div className="flex items-center gap-3">
                   <Car size={18} className="text-[#0E1116]" />
@@ -1469,6 +1512,16 @@ export const OrdensServico: React.FC = () => {
             </div>
 
             <div className="p-4 bg-[#F8FAFC] border-t border-[#E1E6EC] flex items-center justify-end gap-2">
+              {selectedOrder.status === 'QA' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenQaModal(selectedOrder)}
+                  className="px-3.5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <ClipboardCheck size={14} />
+                  Vistoria QA
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleOpenWhatsAppModal(selectedOrder)}
@@ -1711,6 +1764,26 @@ export const OrdensServico: React.FC = () => {
                 setInspectionsList(list);
               })
               .catch(() => {});
+          }}
+        />
+      )}
+
+      {/* Modal de Auditoria e Inspeção de Qualidade (QA) */}
+      {isQaModalOpen && qaTargetOrder && (
+        <QaChecklistModal
+          os={qaTargetOrder}
+          isOpen={isQaModalOpen}
+          onClose={() => {
+            setIsQaModalOpen(false);
+            setQaTargetOrder(null);
+          }}
+          onSuccess={() => {
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
+            if (selectedOrder?.id === qaTargetOrder?.id) {
+              setSelectedOrder({ ...selectedOrder, status: 'READY', progress: 100 });
+            }
           }}
         />
       )}

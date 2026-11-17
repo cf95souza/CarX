@@ -97,7 +97,10 @@ export const QaChecklistModal: React.FC<QaChecklistModalProps> = ({
 
       // Invalida filas e painel
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['technicians-ranking'] });
       queryClient.invalidateQueries({ queryKey: ['technicians-ranking'] });
 
       onSuccess?.();
@@ -171,9 +174,26 @@ export const QaChecklistModal: React.FC<QaChecklistModalProps> = ({
             <h5 className="text-[11px] font-black uppercase tracking-wider text-muted flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-volt" /> Critérios de Conformidade de Qualidade
             </h5>
-            <span className="text-[10px] font-bold text-muted">
-              {Object.values(checks).filter(Boolean).length}/5 Concluídos
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setChecks({
+                    acabamento: true,
+                    bordas: true,
+                    montagem: true,
+                    limpeza: true,
+                    vcrFinal: true,
+                  })
+                }
+                className="text-[10px] font-bold text-volt hover:underline cursor-pointer"
+              >
+                Marcar Todos Conformes
+              </button>
+              <span className="text-[10px] font-bold text-muted">
+                {Object.values(checks).filter(Boolean).length}/5 Concluídos
+              </span>
+            </div>
           </div>
 
           <div className="space-y-2">
