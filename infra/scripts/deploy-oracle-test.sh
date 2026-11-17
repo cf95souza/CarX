@@ -50,9 +50,8 @@ docker compose -f infra/compose.oracle-test.yml exec -T carx-api node dist/datab
 echo "👤 Semeando credenciais do SuperAdmin..."
 docker compose -f infra/compose.oracle-test.yml exec -T carx-api node dist/scripts/seed-superadmin.js
 
-# 8. Limpar eventuais mocks garantindo apenas os planos ativos
-echo "🧹 Garantindo banco limpo com planos cadastrados..."
-docker compose -f infra/compose.oracle-test.yml exec -T carx-api node dist/scripts/clean-mock-data.js
+# 8. Preservação Total de Dados do Banco (Nenhum truncate nem reset)
+echo "🛡️ Dados operacionais e relacionais do PostgreSQL 100% preservados intactos."
 
 echo "======================================================================"
 echo "🎉 DEPLOY CONCLUÍDO COM SUCESSO!"
