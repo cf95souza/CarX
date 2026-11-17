@@ -49,7 +49,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 62: Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty) (100% Concluído e Validado)
       - [T8.2f] Esteira Operacional: QA, Entrega com Garantia e Histórico do Operador (Itens 63 a 65 — EXECUÇÃO SEQUENCIAL 1 A 1):
         * [x] Item 63: Vistoria de QA Guiada (Controle de Qualidade) em Ordens de Serviço (Botão Roxo em Destaque + Checklist Técnico + Aprovação para Pronto) (100% Concluído e Validado)
-        * [ ] Item 64: Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Botão "Entregar Veículo" + Conferência Financeira + Assinatura + Transição DELIVERED)
+        * [x] Item 64: Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Botão "Entregar Carro" + Conferência Financeira + Assinatura + Transição DELIVERED + Visualizador de Certificado) (100% Concluído e Validado)
         * [ ] Item 65: Histórico Reativo de Serviços Concluídos do Operador (/operador -> Histórico com dados completos, sincronização pós-finalização e suporte offline)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
@@ -2898,18 +2898,23 @@ Onda 3 Roadmap de Execução:
 
 ---
 
-### [ ] Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia `(Backlog Sequencial)`
-- **Problema Reportado**: Quando o veículo está no status `READY` (`Pronto / Aguardando Retirada`), não há botão claro de entrega ao cliente na coluna AÇÕES nem modal formal de encerramento com conferência financeira, assinatura do termo de entrega e emissão do Certificado de Garantia Digital.
-- **Escopo a Executar**:
-  - Na tabela de `OrdensServico.tsx`:
-    - Quando `os.status === 'READY'`, exibir botão de ação primária destacado: **"Entregar Carro"** (estilo CarX Volt `#C8F52E` com ícone `CheckCircle2` ou `KeyRound`).
-  - Modal Guiado de **Entrega de Veículo ao Cliente** (`ModalEntregaVeiculo.tsx`):
-    - Conferência Financeira: Se houver saldo devedor pendente (`balanceCents > 0`), alerta amarelo/vermelho com botão direto "Receber Saldo no Caixa (Pix/Cartão/Dinheiro)" antes de liberar;
-    - Marcador de Entrega: Conferência de quilometragem de saída (`km_saida`) e nível de combustível de entrega;
-    - Assinatura do Cliente: Assinatura digital do termo de retirada;
-    - Certificado de Garantia Digital: Ativação formal da garantia dos serviços (PPF, Vitrificação, Película) com token público `/v/:token`;
-    - Confirmação de Entrega: Atualização de status da OS para `DELIVERED` e arquivamento formal no Pátio.
-- **Critério de Aceite**: O gestor clica em "Entregar Carro", confere pendências financeiras, assina o termo e conclui a entrega com emissão de garantia digital e movimentação da OS para `DELIVERED`.
+### [x] Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia `(100% Concluído e Validado)`
+- **Status**: Concluído e Validado com compilação `@carx/web` e `@carx/api` em 0 erros.
+- **Problema Reportado**: Quando o veículo estava no status `READY` (`Pronto / Aguardando Retirada`), não havia botão evidente de entrega ao cliente na coluna AÇÕES nem modal formal de encerramento com conferência financeira, assinatura do termo de entrega e emissão do Certificado de Garantia Digital.
+- **Implementação Realizada**:
+  1. **Ação Primária em Ordens de Serviço (`OrdensServico.tsx`)**:
+     - Quando `os.status === 'READY'`, exibe o botão Volt de destaque com ícone `KeyRound`: **"Entregar Carro"**;
+     - Quando `os.status === 'DELIVERED'` ou `'COMPLETED'`, exibe botão esmeralda com ícone `Award`: **"Garantia"** (abre visualizador do certificado);
+     - Dentro dos detalhes da OS (`selectedOrder`), adicionados banners contextuais no topo e botões de ação correspondentes no rodapé.
+  2. **Modal Guiado de Entrega Técnica (`ModalEntregaVeiculo.tsx`)**:
+     - **Conferência Financeira de Caixa**: Detecta se há saldo devedor em aberto (`balanceCents > 0`). Exibe card âmbar com valor restante e botão **"Receber no Caixa"**, ou checkbox de autorização para entrega com faturamento a prazo;
+     - **Vistoria de Saída**: Registro do Km final de devolução (`finalKm`) e conferência do nível de combustível (Reserva a Cheio);
+     - **Responsável e Documento**: Campos para registrar o nome e CPF/RG de quem retirou o veículo;
+     - **Garantia Digital com Seleção de Vigência**: Opção de emitir e ativar o Certificado de Garantia com prazo selecionável (3, 6, 12, 24, 36 ou 60 meses para PPF/Ceramic) e recomendações de cura;
+     - **Assinatura Touch/Digital**: Canvas touch interativo para assinatura presencial do cliente no momento da retirada.
+  3. **Visualizador e Impressão de Certificado (`CertificadoGarantia.jsx`)**:
+     - Integração direta pós-entrega: ao confirmar a entrega, a OS transiciona para `DELIVERED` e abre imediatamente o certificado para impressão ou envio via WhatsApp/link ao cliente.
+- **Critério de Aceite**: O gestor clica no botão "Entregar Carro", confere pendências financeiras, assina o termo e conclui a entrega com emissão de garantia digital e movimentação atômica da OS para `DELIVERED`, com compilação 100% limpa.
 
 ---
 

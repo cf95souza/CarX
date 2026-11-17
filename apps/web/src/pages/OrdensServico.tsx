@@ -10,6 +10,8 @@ import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import CarVisualChecklist from '../components/features/CarVisualChecklist';
 import { VcrReportModal } from '../components/features/VcrReportModal';
 import QaChecklistModal from '../components/features/QaChecklistModal';
+import ModalEntregaVeiculo from '../components/features/ModalEntregaVeiculo';
+import CertificadoGarantia from '../components/features/CertificadoGarantia';
 import {
   Wrench,
   Search,
@@ -45,6 +47,8 @@ import {
   Ban,
   Receipt,
   ClipboardCheck,
+  KeyRound,
+  Award,
 } from 'lucide-react';
 import type {
   WorkOrderStatusType,
@@ -216,6 +220,46 @@ export const OrdensServico: React.FC = () => {
     setQaTargetOrder(order);
     setIsQaModalOpen(true);
   };
+
+  // Estados para Entrega Técnica do Veículo & Garantia (Item 64)
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState<boolean>(false);
+  const [deliveryTargetOrder, setDeliveryTargetOrder] = useState<any | null>(null);
+  const [isCertificadoModalOpen, setIsCertificadoModalOpen] = useState<boolean>(false);
+  const [certificadoTargetOrder, setCertificadoTargetOrder] = useState<any | null>(null);
+
+  const handleOpenDeliveryModal = (order: any) => {
+    setDeliveryTargetOrder(order);
+    setIsDeliveryModalOpen(true);
+  };
+
+  const handleOpenCertificadoModal = (order: any) => {
+    setCertificadoTargetOrder(order);
+    setIsCertificadoModalOpen(true);
+  };
+
+  const normalizedForCertificate = useMemo(() => {
+    if (!certificadoTargetOrder) return null;
+    return {
+      ...certificadoTargetOrder,
+      id: certificadoTargetOrder.osNumber || certificadoTargetOrder.os_number || certificadoTargetOrder.id,
+      cliente_nome:
+        certificadoTargetOrder.customer?.name ||
+        certificadoTargetOrder.cliente_nome ||
+        certificadoTargetOrder.cliente ||
+        'Cliente',
+      cliente_telefone:
+        certificadoTargetOrder.customer?.phone || certificadoTargetOrder.cliente_telefone || '',
+      veiculo_desc: certificadoTargetOrder.vehicle
+        ? `${certificadoTargetOrder.vehicle.brand || ''} ${certificadoTargetOrder.vehicle.model || ''} ${
+            certificadoTargetOrder.vehicle.year ? `(${certificadoTargetOrder.vehicle.year})` : ''
+          }`.trim()
+        : certificadoTargetOrder.veiculo_desc || certificadoTargetOrder.veiculo || 'Veículo',
+      placa: certificadoTargetOrder.vehicle?.plate || certificadoTargetOrder.placa || '',
+      servicos_detalhados:
+        certificadoTargetOrder.items || certificadoTargetOrder.servicos_detalhados || [],
+      garantia: `${certificadoTargetOrder.warrantyMonths || 12} Meses`,
+    };
+  }, [certificadoTargetOrder]);
 
   // Carregar laudos de inspeção quando uma OS é selecionada
   React.useEffect(() => {
@@ -849,11 +893,23 @@ export const OrdensServico: React.FC = () => {
 
                           {os.status === 'READY' && (
                             <button
-                              onClick={() => handleTransition(os.id, 'DELIVERED')}
-                              className="p-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-colors"
-                              title="Confirmar Entrega ao Cliente"
+                              onClick={() => handleOpenDeliveryModal(os)}
+                              className="px-2.5 py-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-all font-bold flex items-center gap-1.5 shadow-sm text-xs cursor-pointer border border-[#0E1116]/10"
+                              title="Realizar Entrega Técnica do Veículo e Emitir Certificado de Garantia"
                             >
-                              <CheckCircle2 size={16} />
+                              <KeyRound size={14} className="text-[#0E1116]" />
+                              <span>Entregar Carro</span>
+                            </button>
+                          )}
+
+                          {(os.status === 'DELIVERED' || os.status === 'COMPLETED') && (
+                            <button
+                              onClick={() => handleOpenCertificadoModal(os)}
+                              className="px-2.5 py-1.5 text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-all font-bold flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
+                              title="Visualizar / Imprimir Certificado de Garantia Digital"
+                            >
+                              <Award size={14} className="text-emerald-700" />
+                              <span>Garantia</span>
                             </button>
                           )}
                         </div>
@@ -1196,6 +1252,50 @@ export const OrdensServico: React.FC = () => {
                 </div>
               )}
 
+              {selectedOrder.status === 'READY' && (
+                <div className="bg-[#C8F52E]/15 border border-[#C8F52E]/40 p-3.5 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-[#C8F52E] text-[#0E1116] flex items-center justify-center shrink-0 shadow-sm font-bold">
+                      <KeyRound size={18} />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-xs text-[#0E1116]">Veículo Pronto para Devolução</h5>
+                      <p className="text-[11px] text-[#5B6674]">Vistoria técnica aprovada. Realize a entrega técnica e emita o certificado de garantia.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDeliveryModal(selectedOrder)}
+                    className="px-3.5 py-2 bg-[#0E1116] hover:bg-black text-[#C8F52E] font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all text-xs cursor-pointer whitespace-nowrap font-['Space_Grotesk']"
+                  >
+                    <KeyRound size={14} />
+                    <span>Entregar Carro</span>
+                  </button>
+                </div>
+              )}
+
+              {(selectedOrder.status === 'DELIVERED' || selectedOrder.status === 'COMPLETED') && (
+                <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <Award size={18} />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-xs text-emerald-950">Veículo Entregue & Garantia Ativa</h5>
+                      <p className="text-[11px] text-emerald-700">Entrega finalizada com sucesso. Certificado digital emitido.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenCertificadoModal(selectedOrder)}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all text-xs cursor-pointer whitespace-nowrap"
+                  >
+                    <Award size={14} />
+                    <span>Ver Certificado</span>
+                  </button>
+                </div>
+              )}
+
               <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E1E6EC] space-y-2">
                 <div className="flex items-center gap-3">
                   <Car size={18} className="text-[#0E1116]" />
@@ -1522,6 +1622,26 @@ export const OrdensServico: React.FC = () => {
                   Vistoria QA
                 </button>
               )}
+              {selectedOrder.status === 'READY' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenDeliveryModal(selectedOrder)}
+                  className="px-3.5 py-2 text-xs font-bold text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm font-['Space_Grotesk']"
+                >
+                  <KeyRound size={14} />
+                  Entregar Carro
+                </button>
+              )}
+              {(selectedOrder.status === 'DELIVERED' || selectedOrder.status === 'COMPLETED') && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenCertificadoModal(selectedOrder)}
+                  className="px-3.5 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <Award size={14} />
+                  Certificado de Garantia
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleOpenWhatsAppModal(selectedOrder)}
@@ -1784,6 +1904,45 @@ export const OrdensServico: React.FC = () => {
             if (selectedOrder?.id === qaTargetOrder?.id) {
               setSelectedOrder({ ...selectedOrder, status: 'READY', progress: 100 });
             }
+          }}
+        />
+      )}
+
+      {/* Modal de Entrega Técnica do Veículo (Item 64) */}
+      {isDeliveryModalOpen && deliveryTargetOrder && (
+        <ModalEntregaVeiculo
+          isOpen={isDeliveryModalOpen}
+          os={deliveryTargetOrder}
+          onClose={() => {
+            setIsDeliveryModalOpen(false);
+            setDeliveryTargetOrder(null);
+          }}
+          onOpenPaymentModal={(order) => {
+            handleOpenPaymentModal(order);
+          }}
+          onSuccess={(deliveredOs) => {
+            setIsDeliveryModalOpen(false);
+            setDeliveryTargetOrder(null);
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
+            if (selectedOrder?.id === deliveredOs?.id) {
+              setSelectedOrder({ ...selectedOrder, status: 'DELIVERED', progress: 100 });
+            }
+            // Abre o Certificado de Garantia Digital automaticamente após a entrega
+            setCertificadoTargetOrder(deliveredOs);
+            setIsCertificadoModalOpen(true);
+          }}
+        />
+      )}
+
+      {/* Modal de Certificado de Garantia Digital (Item 64) */}
+      {isCertificadoModalOpen && normalizedForCertificate && (
+        <CertificadoGarantia
+          os={normalizedForCertificate}
+          onClose={() => {
+            setIsCertificadoModalOpen(false);
+            setCertificadoTargetOrder(null);
           }}
         />
       )}

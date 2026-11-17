@@ -2235,6 +2235,18 @@ export class WorkOrderService {
       const title = `OS #${workOrder.osNumber} · ${workOrder.customer?.name || 'Cliente'}`;
       const serviceSummary = workOrder.items?.map((i) => i.name).join(', ') || 'Serviço Automotivo';
 
+      let mappedAppStatus = 'scheduled';
+      const woStatusUpper = String(workOrder.status || '').toUpperCase();
+      if (['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatusUpper)) {
+        mappedAppStatus = 'completed';
+      } else if (woStatusUpper === 'IN_PROGRESS') {
+        mappedAppStatus = 'in_progress';
+      } else if (woStatusUpper === 'CHECKED_IN') {
+        mappedAppStatus = 'confirmed';
+      } else if (['CANCELED', 'CANCELADO', 'QUOTE'].includes(woStatusUpper)) {
+        mappedAppStatus = 'canceled';
+      }
+
       if (appRes.rows.length > 0) {
         await tenantQuery(
           tenantId,
@@ -2245,7 +2257,7 @@ export class WorkOrderService {
                bay_id = COALESCE($6, bay_id),
                title = $7,
                service_summary = $8,
-               status = 'scheduled',
+               status = $9,
                updated_at = NOW()
            WHERE tenant_id = $1 AND id = $2`,
           [
@@ -2257,6 +2269,7 @@ export class WorkOrderService {
             targetBayId,
             title,
             serviceSummary,
+            mappedAppStatus,
           ]
         );
       } else {
@@ -2280,7 +2293,7 @@ export class WorkOrderService {
              customer_phone,
              vehicle_plate,
              vehicle_model
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled', 'INTERNAL', $11, $12, $13, $14, $15)`,
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'INTERNAL', $12, $13, $14, $15, $16)`,
           [
             tenantId,
             workOrder.id,
@@ -2292,6 +2305,7 @@ export class WorkOrderService {
             startTime.toISOString(),
             endTime.toISOString(),
             estMin,
+            mappedAppStatus,
             serviceSummary,
             workOrder.customer?.name || null,
             workOrder.customer?.phone || null,

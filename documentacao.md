@@ -4750,15 +4750,26 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
     - Ao aprovar o QA ou transitar a OS para `READY`/`DELIVERED`, o agendamento vinculado transita automaticamente para `status = 'completed'`, liberando a ocupação do box e eliminando o alerta de atraso.
     - No `appointment-service.ts` e `Agenda.tsx`, agendamentos de OSs concluídas são renderizados em verde (`#DCFCE7`) com badge de confirmação e banner de sucesso.
 
-### Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Planejado)
-- **Problema Reportado pelo Usuário**:
-  - O gestor não possui botão e fluxo intuitivo para entregar formalmente o veículo quando ele fica pronto, verificar débitos financeiros, registrar a saída do veículo e emitir a garantia digital.
-- **Arquitetura da Solução**:
-  - Botão destacado **"Entregar Carro"** na coluna de ações quando a OS estiver no status `READY`;
-  - Modal com conferência de saldo financeiro, quilometragem de saída, assinatura digital do termo de entrega e emissão automática do Certificado de Garantia;
-  - Transição de status para `DELIVERED`.
+### Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Concluído)
+- **Problema Resolvido**:
+  - O gestor não possuía um botão claro e destacado de entrega na tabela de Ordens de Serviço (`/ordens-servico`), dependendo de um ícone genérico `CheckCircle2` sem texto. Além disso, não havia conferência de débitos no caixa antes da liberação, nem registro de Km/combustível de saída, nem emissão guiada do Certificado de Garantia Digital no ato da entrega.
+- **Arquitetura da Solução Implementada**:
+  1. **Ação Primária em Ordens de Serviço (`OrdensServico.tsx`)**:
+     - Quando `os.status === 'READY'`, a coluna AÇÕES renderiza o botão Volt de alto impacto: **"Entregar Carro"** (`KeyRound` + `#C8F52E`);
+     - Quando `os.status === 'DELIVERED'` ou `'COMPLETED'`, exibe o botão esmeralda: **"Garantia"** (`Award` + `bg-emerald-100`);
+     - Dentro dos detalhes da OS (`selectedOrder`), adicionados banners contextuais superiores (alerta de veículo pronto) e botões correspondentes no rodapé.
+  2. **Modal Guiado de Entrega Técnica (`ModalEntregaVeiculo.tsx`)**:
+     - **Conferência Financeira de Caixa**: Validação rigorosa de saldo devedor (`balanceCents`). Se houver valor pendente, exibe alerta âmbar e botão direto **"Receber no Caixa"** (abrindo o fluxo Pix Bacen/Cartão), além de checkbox formal para casos autorizados de faturamento a prazo / convênio;
+     - **Vistoria de Saída**: Registro do Km final de devolução (`finalKm`) e conferência tátil do nível de combustível (Reserva, 1/4, 1/2, 3/4, Cheio);
+     - **Identificação do Retirante**: Registro do Nome Completo e CPF/RG de quem retirou o veículo;
+     - **Garantia Digital com Vigência Selecionável**: Configuração do prazo de garantia (3, 6, 12, 24, 36 ou 60 meses) e recomendações de cuidados/cura para o cliente;
+     - **Assinatura Touch/Digital**: Canvas touch interativo para assinatura presencial do termo de retirada;
+     - **Transição Atômica para `DELIVERED`**: Chama `api.qa.createWarranty` (se configurado) e `api.workOrders.updateStatus(id, 'DELIVERED')` com metadata completa na timeline da OS.
+  3. **Visualizador e Impressão de Certificado (`CertificadoGarantia.jsx`)**:
+     - Ao concluir a entrega, o sistema abre imediatamente o modal do Certificado de Garantia oficial com dados da oficina, QR Code de validação nacional, resumo dos serviços executados e prazo de vigência, pronto para impressão ou envio.
+- **Validação de Qualidade**: Compilação do `@carx/web` e `@carx/api` 100% limpa com 0 erros.
 
-### Item 65 — Histórico Reativo de Serviços Concluídos do Operador (Planejado)
+### Item 65 — Histórico Reativo de Serviços Concluídos do Operador (Próximo Passo)
 - **Problema Reportado pelo Usuário**:
   - Ao finalizar um serviço no box pelo app móvel do operador (`/operador`), o serviço não fica gravado na aba "Histórico" ("Seus Serviços Concluídos").
 - **Arquitetura da Solução**:
