@@ -4769,11 +4769,23 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
      - Ao concluir a entrega, o sistema abre imediatamente o modal do Certificado de Garantia oficial com dados da oficina, QR Code de validação nacional, resumo dos serviços executados e prazo de vigência, pronto para impressão ou envio.
 - **Validação de Qualidade**: Compilação do `@carx/web` e `@carx/api` 100% limpa com 0 erros.
 
-### Item 65 — Histórico Reativo de Serviços Concluídos do Operador (Próximo Passo)
-- **Problema Reportado pelo Usuário**:
-  - Ao finalizar um serviço no box pelo app móvel do operador (`/operador`), o serviço não fica gravado na aba "Histórico" ("Seus Serviços Concluídos").
-- **Arquitetura da Solução**:
-  - Substituir o hook estático `useOrders` na aba Histórico do operador por uma consulta reativa com `useQuery` (`['technician-history', user?.id]`), compatibilizando os status `QA`, `READY` e `DELIVERED` e atualizando a visualização no momento em que `onComplete` for executado.
+### Item 65 — Histórico Reativo de Serviços Concluídos do Operador (Concluído)
+- **Problema Resolvido**:
+  - Ao finalizar um serviço no box pelo app móvel do operador (`/operador`), o serviço não ficava gravado na aba "Histórico" ("Seus Serviços Concluídos") porque a tela filtrava estaticamente o estado em memória de um hook legado (`useOrders`), que não re-executava consulta após a finalização nem sincronizava com o React Query.
+- **Arquitetura da Solução Implementada**:
+  1. **Componente Reativo Dedicado (`OperadorHistorico.tsx`)**:
+     - Criado o componente [`OperadorHistorico.tsx`](file:///d:/Repositorios/CarX/apps/web/src/pages/OperadorHistorico.tsx) integrado diretamente no layout mobile do operador (`App.jsx`);
+     - Conectado via `useQuery` com a chave `['technician-history', currentUserId]`, buscando as ordens atualizadas em tempo real via `api.workOrders.list({ limit: 100 })` com refetch automático a cada 15s;
+     - Filtragem inteligente: exibe ordens concluídas nos status `QA`, `READY`, `DELIVERED` e `COMPLETED`, vinculadas ao técnico logado ou sem técnico explícito (equipe geral);
+  2. **Recursos de Usabilidade e Produtividade**:
+     - Barra de busca instantânea por placa, modelo do carro, nome do cliente ou número da OS;
+     - Tabs táteis de filtro rápido: `Todos`, `Em QA`, `Prontos` e `Entregues` com contadores numéricos dinâmicos;
+     - Cards modernos com Design System CarX Rebrand Dark (`#171C24`, `#262D35`, `#C8F52E`), badge de placa em mono, cliente, resumo do serviço executado e data/hora formatada;
+     - Botão de recarregar manual com feedback tátil de vibração (`navigator.vibrate`) e spinner animado;
+     - Modal de detalhes completos da OS concluída com serviços, garantias e observações.
+  3. **Invalidação Atômica no Término do Serviço (`ExecutorView.tsx`)**:
+     - Adicionada a invalidação de cache `queryClient.invalidateQueries({ queryKey: ['technician-history'] })` tanto no encerramento online (`onSuccess`) quanto na gravação offline (`onError`), garantindo que ao concluir o serviço e ser redirecionado para a aba Histórico, o veículo apareça instantaneamente no topo da lista.
+- **Validação de Qualidade**: Compilação do `@carx/web` e `@carx/api` 100% limpa com 0 erros.
 
 
 

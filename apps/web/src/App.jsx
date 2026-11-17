@@ -42,6 +42,7 @@ const SettingsPage = safeLazy(() => import('./pages/Settings'));
 const Trabalhos = safeLazy(() => import('./pages/Trabalhos'));
 const MonitorTV = safeLazy(() => import('./pages/MonitorTV'));
 const OperadorHome = safeLazy(() => import('./pages/OperadorHome'));
+const OperadorHistorico = safeLazy(() => import('./pages/OperadorHistorico'));
 const LoginPage = safeLazy(() => import('./pages/LoginPage'));
 const ExecutorView = safeLazy(() => import('./pages/ExecutorView'));
 const ProfilePage = safeLazy(() => import('./pages/Profile'));
@@ -210,10 +211,8 @@ const getStatusClasses = (status) => {
 
 // Layout para o Operador (Mobile Friendly)
 const OperadorLayoutWrapper = () => {
-  const { profile } = useAuth();
   const [opView, setOpView] = useState('tarefas');
   const [selectedOS, setSelectedOS] = useState(null);
-  const { orders } = useOrders();
 
   const navItems = [
     { id: 'tarefas', icon: ClipboardList, label: 'Tarefas' },
@@ -242,77 +241,7 @@ const OperadorLayoutWrapper = () => {
       ) : (
         <>
           {opView === 'tarefas' && <OperadorHome onSelectOS={setSelectedOS} />}
-          {opView === 'historico' && (
-            <div className="fade-in space-y-3">
-              <h3 className="text-xs font-bold text-[#9AA7B8] uppercase tracking-[0.2em] pt-2 px-1">
-                Seus Serviços Concluídos
-              </h3>
-              {(() => {
-                const history = (orders || []).filter((os) => {
-                  if (!os) return false;
-                  const st = String(os.status || '').toUpperCase();
-                  const isDoneStatus = [
-                    'QA',
-                    'READY',
-                    'DELIVERED',
-                    'ENTREGUE',
-                    'CONCLUIDO',
-                    'CONCLUÍDO',
-                    'PRONTO',
-                  ].includes(st) || st.includes('CONCLU');
-
-                  const isMyTech =
-                    !profile?.id ||
-                    os.technicianId === profile?.id ||
-                    os.technician_id === profile?.id ||
-                    os.tecnico_id === profile?.id ||
-                    !os.technician_id;
-
-                  return isDoneStatus && isMyTech;
-                });
-
-                if (history.length === 0) {
-                  return (
-                    <div className="py-16 text-center bg-[#171C24] rounded-3xl border border-[#2E3744] p-6 space-y-2">
-                      <div className="w-12 h-12 bg-[#232A35] rounded-2xl border border-[#2E3744] text-[#C8F52E] flex items-center justify-center mx-auto mb-2">
-                        <CheckCircle2 size={24} />
-                      </div>
-                      <h4 className="text-sm font-bold text-[#F2F5F8] uppercase tracking-wide">
-                        Nenhum serviço concluído
-                      </h4>
-                      <p className="text-xs text-[#9AA7B8]">
-                        Os serviços finalizados por você na oficina aparecerão arquivados aqui.
-                      </p>
-                    </div>
-                  );
-                }
-
-                return history.map((os) => (
-                  <div
-                    key={os.id}
-                    className="bg-[#171C24] rounded-3xl p-4 md:p-5 border border-[#2E3744] flex items-center gap-4 transition-all"
-                  >
-                    <div className="w-12 h-12 bg-[#C8F52E]/15 text-[#C8F52E] rounded-2xl flex items-center justify-center border border-[#C8F52E]/30 shrink-0">
-                      <CheckCircle2 size={22} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start gap-2">
-                        <h4 className="text-sm font-bold text-[#F2F5F8] uppercase truncate leading-tight font-grotesk">
-                          {os.veiculo_desc || 'Veículo'}
-                        </h4>
-                        <span className="text-[10px] font-mono font-bold text-[#9AA7B8] shrink-0">
-                          #{String(os.osNumber || os.os_number || os.id).slice(0, 8)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-[#9AA7B8] font-medium mt-1 truncate">
-                        {os.servico || 'Serviço Executado'}
-                      </p>
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-          )}
+          {opView === 'historico' && <OperadorHistorico />}
           {opView === 'perfil' && <ProfilePage />}
         </>
       )}

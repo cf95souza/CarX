@@ -362,6 +362,7 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
       toast.success('Serviço concluído com sucesso! Encaminhado para Inspeção QA.');
       setShowConfirmFinish(false);
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['technician-history'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       onComplete();
@@ -374,6 +375,8 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
         await enqueueOfflineAction(workOrderId, 'ADD_NOTE', { note: notes });
       }
       await offlineStorage.clearLocalTimer(workOrderId).catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['technician-history'] });
       toast.warning('Modo offline: Conclusão gravada no IndexedDB! Será sincronizada quando houver rede.');
       setShowConfirmFinish(false);
       onComplete();
