@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { dispatchQuoteNotification, getBudgetMsg } from '../utils/whatsappUtils';
 import { toast } from '../utils/toast';
-import { Copy, Check, ExternalLink } from 'lucide-react';
+import { Copy, Check, ExternalLink, X, Tag } from 'lucide-react';
 
 interface ServiceItem {
   id: string;
@@ -106,6 +106,10 @@ export const NovaOrdemServico: React.FC = () => {
   // Catálogo de serviços reais do backend da oficina
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [comboActive, setComboActive] = useState<boolean>(false);
+  const [manualDiscount, setManualDiscount] = useState<number>(0);
+  const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('fixed');
+  const [isEditingDiscount, setIsEditingDiscount] = useState<boolean>(false);
+  const [tempDiscountValue, setTempDiscountValue] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Consulta serviços reais do backend
@@ -147,15 +151,30 @@ export const NovaOrdemServico: React.FC = () => {
     return selectedServices.reduce((sum, s) => sum + s.price, 0);
   }, [selectedServices]);
 
-  // Combo sugerido: se Insulfilme e Vitrificação estiverem selecionados, aplica 10% de desconto
+  // Cálculo do desconto: suporta combo sugerido e/ou desconto manual (em R$ ou %)
   const discountAmount = useMemo(() => {
+    let amount = 0;
     if (comboActive) {
-      return subtotal * 0.1;
+      amount += subtotal * 0.1;
     }
-    const hasInsulfilm = selectedServices.some((s) => s.name.toLowerCase().includes('insulfilme'));
-    const hasVitrif = selectedServices.some((s) => s.name.toLowerCase().includes('vitrificação'));
-    return hasInsulfilm && hasVitrif ? subtotal * 0.1 : 0;
-  }, [comboActive, selectedServices, subtotal]);
+    if (manualDiscount > 0) {
+      if (discountType === 'percent') {
+        amount += (subtotal * manualDiscount) / 100;
+      } else {
+        amount += manualDiscount;
+      }
+    }
+    return Math.min(subtotal, Math.round(amount * 100) / 100);
+  }, [comboActive, manualDiscount, discountType, subtotal]);
+
+  // Remover e zerar qualquer desconto aplicado
+  const handleRemoveDiscount = () => {
+    setComboActive(false);
+    setManualDiscount(0);
+    setTempDiscountValue('');
+    setIsEditingDiscount(false);
+    toast.info('Desconto removido.');
+  };
 
   const total = Math.max(0, subtotal - discountAmount);
   const depositPix = total > 0 ? 50 : 0;
@@ -234,6 +253,7 @@ export const NovaOrdemServico: React.FC = () => {
         vehicleId: resolvedVehId,
         status: isQuote ? 'QUOTE' : 'SCHEDULED',
         depositRequiredCents: Math.round(depositPix * 100),
+        discountCents: Math.round(discountAmount * 100),
         services: selectedServices.map((s) => ({
           serviceId: s.id,
           name: s.name,
@@ -665,8 +685,8 @@ export const NovaOrdemServico: React.FC = () => {
             {/* Banner Combo sugerido */}
             <div
               style={{
-                background: '#F6FBE6',
-                border: '1px solid #C8F52E',
+                background: comboActive ? '#F0FDF4' : '#F6FBE6',
+                border: comboActive ? '1px solid #86EFAC' : '1px solid #C8F52E',
                 borderRadius: '12px',
                 padding: '10px 14px',
                 fontSize: '14px',
@@ -674,34 +694,62 @@ export const NovaOrdemServico: React.FC = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
+                transition: 'all 0.2s ease',
               }}
             >
-              <span>Combo sugerido: Insulfilme + Vitrificação com 10% de desconto</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setServices((prev) =>
-                    prev.map((s) => {
-                      if (s.name.includes('Insulfilme') || s.name.includes('Vitrificação')) {
-                        return { ...s, selected: true };
-                      }
-                      return s;
-                    })
-                  );
-                  setComboActive(true);
-                }}
-                style={{
-                  border: 0,
-                  background: 'transparent',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  color: '#0E1116',
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
-                }}
-              >
-                Aplicar
-              </button>
+              <span>
+                {comboActive
+                  ? '✓ Combo promocional ativo: 10% de desconto aplicado'
+                  : 'Combo sugerido: Insulfilme + Vitrificação com 10% de desconto'}
+              </span>
+              {comboActive ? (
+                <button
+                  type="button"
+                  onClick={handleRemoveDiscount}
+                  style={{
+                    border: '1px solid #FCA5A5',
+                    background: '#FEE2E2',
+                    borderRadius: '8px',
+                    padding: '4px 10px',
+                    fontWeight: 700,
+                    fontSize: '12px',
+                    color: '#DC2626',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <X size={13} /> Remover desconto
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServices((prev) =>
+                      prev.map((s) => {
+                        if (s.name.includes('Insulfilme') || s.name.includes('Vitrificação')) {
+                          return { ...s, selected: true };
+                        }
+                        return s;
+                      })
+                    );
+                    setComboActive(true);
+                    toast.success('Combo aplicado com 10% de desconto!');
+                  }}
+                  style={{
+                    border: 0,
+                    background: 'transparent',
+                    fontWeight: 700,
+                    fontSize: '13px',
+                    color: '#0E1116',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Aplicar
+                </button>
+              )}
             </div>
 
             {/* Lista de Serviços */}
@@ -833,20 +881,186 @@ export const NovaOrdemServico: React.FC = () => {
             </div>
           ))}
 
+          {/* Linha de Desconto com suporte a Remoção e Edição */}
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '15px',
-              color: '#5B6674',
+              flexDirection: 'column',
+              gap: '6px',
             }}
           >
-            <span>Desconto</span>
-            <b style={{ color: '#0E1116', fontWeight: 600 }}>
-              {discountAmount > 0
-                ? `- ${discountAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
-                : 'R$ 0,00'}
-            </b>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '15px',
+                color: '#5B6674',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Desconto</span>
+                {discountAmount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveDiscount}
+                    title="Remover desconto"
+                    style={{
+                      background: '#FEE2E2',
+                      border: '1px solid #FCA5A5',
+                      color: '#DC2626',
+                      borderRadius: '6px',
+                      padding: '2px 8px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
+                    <X size={12} /> Remover
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <b style={{ color: discountAmount > 0 ? '#DC2626' : '#0E1116', fontWeight: 600 }}>
+                  {discountAmount > 0
+                    ? `- ${discountAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+                    : 'R$ 0,00'}
+                </b>
+                {!isEditingDiscount && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingDiscount(true);
+                      setTempDiscountValue(manualDiscount > 0 ? String(manualDiscount) : '');
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 0,
+                      color: '#059669',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {discountAmount > 0 ? 'Editar' : '+ Outro valor'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Painel expansível de desconto customizado */}
+            {isEditingDiscount && (
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '10px',
+                  padding: '10px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                }}
+              >
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setDiscountType('fixed')}
+                    style={{
+                      flex: 1,
+                      padding: '4px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      borderRadius: '6px',
+                      border: discountType === 'fixed' ? '1px solid #0E1116' : '1px solid #CBD5E1',
+                      background: discountType === 'fixed' ? '#0E1116' : '#FFFFFF',
+                      color: discountType === 'fixed' ? '#FFFFFF' : '#64748B',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Reais (R$)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiscountType('percent')}
+                    style={{
+                      flex: 1,
+                      padding: '4px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      borderRadius: '6px',
+                      border: discountType === 'percent' ? '1px solid #0E1116' : '1px solid #CBD5E1',
+                      background: discountType === 'percent' ? '#0E1116' : '#FFFFFF',
+                      color: discountType === 'percent' ? '#FFFFFF' : '#64748B',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Porcentagem (%)
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={tempDiscountValue}
+                    onChange={(e) => setTempDiscountValue(e.target.value)}
+                    placeholder={discountType === 'fixed' ? 'Valor em R$ (Ex: 50)' : 'Percentual (Ex: 10%)'}
+                    style={{
+                      flex: 1,
+                      padding: '6px 10px',
+                      fontSize: '13px',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const parsed = parseFloat(tempDiscountValue.replace(',', '.'));
+                      if (!isNaN(parsed) && parsed > 0) {
+                        setManualDiscount(parsed);
+                        setIsEditingDiscount(false);
+                        toast.success('Desconto aplicado!');
+                      } else {
+                        handleRemoveDiscount();
+                      }
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      background: '#C8F52E',
+                      color: '#0E1116',
+                      fontWeight: 700,
+                      fontSize: '12px',
+                      borderRadius: '6px',
+                      border: 0,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Aplicar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingDiscount(false)}
+                    style={{
+                      padding: '6px 8px',
+                      background: 'transparent',
+                      color: '#64748B',
+                      fontSize: '12px',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <div

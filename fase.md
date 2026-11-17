@@ -29,6 +29,15 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * Item 44: Resiliência de Storage Local (Fix Erro 500 MinIO), Agendamento com Seleção de Box em Orçamentos e Data de Cadastro em Clientes
         * Item 45: Resolução de Agenda Real, Auto-Sync Retroativo, Laudo Técnico & PDF na OS e Redirecionamento de Orçamento para Vendas
          * Item 46: Novo Layout da Vistoria Digital (Design System Rebrand), Resolução de Cliente e Veículo, Silhuetas Hatch 3D e Botões de Alto Contraste (100% sem perda de dados)
+     - [T8.2d] Refinamento Cirúrgico de Usabilidade, Portal do Cliente e Vistoria (Itens 47 a 54 — BACKLOG DETALHADO):
+       * [x] Item 47: Remoção / Edição de Desconto Aplicado em Nova OS e Orçamentos (Print 1)
+       * [ ] Item 48: Correção HTTP 400 ao Salvar Laudo pela tela de Ordens de Serviço (Payload Zod de Inspeção)
+       * [ ] Item 49: Sincronização de Apontamentos do Laudo entre Operador e Gestor + Marcador de Combustível no Gestor
+       * [ ] Item 50: Modernização do Diagrama no PDF do Laudo VCR (Substituir retângulo esquemático 2D por silhuetas do sistema — Print 2)
+       * [ ] Item 51: TV Operacional: Exibição em Tempo Real de Veículos em Execução no Pátio (Prints 3 e 4)
+       * [ ] Item 52: Persistência do Percentual de Conclusão (Progresso) da OS no Banco e Refletir no Gestor/Operador/Portal
+       * [ ] Item 53: Correção do Duplo '+' no Botão Nova OS (Print 5)
+       * [ ] Item 54: Portal do Cliente: Login Direto por Número da OS + Placa e URL Isolada por Slug da Loja (/:slug/portal — Print 6)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
    • Item 38: Teste E2E de Fluxo Sistêmico Completo 100% Visual pela Tela (Frontend)
@@ -2542,3 +2551,95 @@ Onda 3 Roadmap de Execução:
   - **Data de Cadastro na Tela de Clientes**: Corrigida a discrepância entre `createdAt` (retornado pelo Fastify) e `created_at` (esperado pelo frontend) em `apps/web/src/hooks/useClients.js` e `apps/web/src/pages/Clientes.jsx`, exibindo a data de cadastro correta tanto na listagem quanto no perfil de clientes cadastrados automaticamente pela Nova OS.
 
 
+
+
+---
+
+## 📌 [T8.2d] Detalhamento Técnico dos Itens 47 a 54 (Execução Sequencial 1 a 1)
+
+### 📋 Item 47 — Remoção e Edição de Desconto Aplicado (Print 1) [CONCLUÍDO]
+- **Problema**: Na criação de Nova OS / Orçamento (`NovaOrdemServico.tsx`), após aplicar um desconto (valor ou percentual), o usuário não consegue zerar ou remover o desconto do Resumo.
+- **Escopo**:
+  - Adicionar botão de exclusão/limpeza de desconto (ex: ícone de lixeira ou botão 'Remover' ao lado de 'Desconto: - R$ XX,XX') no Resumo.
+  - Permitir que o input de desconto aceite '0' ou vazio para restaurar o valor integral da OS.
+  - Atualizar o cálculo de totalização e sinal instantaneamente.
+- **Critério de Aceite**: O gestor consegue aplicar um desconto, alterar o valor do desconto livremente ou excluí-lo, retornando o Total ao valor bruto original.
+
+---
+
+### 📋 Item 48 — Correção HTTP 400 ao Salvar Laudo em Ordens de Serviço
+- **Problema**: Ao salvar o laudo interativo pela tela de Ordens de Serviço (`OrdensServico.tsx` -> `CarVisualChecklist.jsx`), o servidor retorna:
+  `Failed to load resource: 400 (Bad Request) - Dados de inspeção inválidos`.
+- **Causa Raiz Técnica**:
+  - O controller Fastify de inspeções valida o schema Zod `createInspectionBodySchema`.
+  - O enum de `view` no backend exige `'isometric' | 'front' | 'rear' | 'right' | 'left'`, enquanto o frontend pode estar enviando `'superior'`, `'frontal'`, etc.
+  - O campo `damageType` no backend exige enums específicos (`'scratch' | 'dent' | 'paint_chip' | 'stain' | 'crack' | 'repainted'`), enquanto o frontend pode estar enviando o label com emoji (ex: `'⚡ Risco / Arranhão'`).
+- **Escopo**:
+  - Mapear bidirecionalmente em `CarVisualChecklist.jsx` e `useOrders.js` as propriedades de avaria (`view` e `damageType`) para os enums canônicos exigidos pelo backend.
+  - Testar envio com 0 avarias e com N avarias, garantindo resposta HTTP 201 Created.
+- **Critério de Aceite**: O gestor clica em 'Finalizar e Assinar' na tela de OS, assina, e o laudo é persistido no banco com sucesso (status 201), sem nenhum erro 400 no console.
+
+---
+
+### 📋 Item 49 — Sincronização de Apontamentos do Laudo entre Operador e Gestor + Marcador de Combustível
+- **Problema**:
+  - Laudo feito pelo operador não carrega seus apontamentos quando aberto pelo usuário do gestor.
+  - No laudo visual do gestor não existe o seletor/marcador de combustível (`fuelLevel`: Reserva, 1/4, 1/2, 3/4, Cheio) que existe na tela do operador.
+- **Escopo**:
+  - Unificar a consulta de inspeção (`api.inspections.getByWorkOrder`) em `OrdensServico.tsx` e `CarVisualChecklist.jsx` para mapear corretamente os `damagePoints` salvos pelo operador (convertendo de `isometric/front/rear/left/right` para as visualizações do gestor).
+  - Incluir seletor de nível de combustível no painel lateral do `CarVisualChecklist.jsx` do gestor.
+- **Critério de Aceite**: Ao abrir a OS no perfil de gestor, todos os danos apontados pelo operador aparecem marcados sobre a silhueta 3D, com suas observações, fotos e o nível de combustível selecionado.
+
+---
+
+### 📋 Item 50 — Modernização do Diagrama no PDF do Laudo VCR (Print 2)
+- **Problema**: No laudo PDF gerado (`VcrReportModal.tsx` / serviço de geração de laudo), o diagrama de avarias ainda utiliza um retângulo esquemático 2D geométrico preto e branco genérico, que não condiz com a identidade visual do sistema nem com a categoria do veículo.
+- **Escopo**:
+  - Substituir o wireframe retangular do PDF/laudo de impressão pelas silhuetas oficiais do sistema (Hatch, Sedan, SUV, Picape, Moto) com fundo neutro e pinos numerados.
+  - Garantir fidelidade estética ao Design System do CarX no documento impresso/PDF.
+- **Critério de Aceite**: O PDF/laudo impresso exibe a silhueta correspondente ao porte do carro com as avarias plotadas de forma profissional e elegante.
+
+---
+
+### 📋 Item 51 — TV Operacional: Exibição em Tempo Real de Veículos em Execução no Pátio (Prints 3 e 4)
+- **Problema**: A OS #1 já teve seu serviço iniciado no app do operador (cronômetro rodando 'EM EXECUÇÃO' no Box 1), mas a tela da TV Operacional da oficina exibe 'PÁTIO OPERACIONAL LIVRE - Nenhum veículo em execução ou aguardando'.
+- **Causa Raiz Técnica**:
+  - O endpoint de SSE ou a query de busca da TV Operacional filtra apenas status específicos ou não está considerando OSs vinculadas à unidade/box ativo, ou falha no lookup do slug do tenant.
+- **Escopo**:
+  - Inspecionar a consulta de pátio da TV Operacional (`Tv360OfficeView.jsx` / `MonitorTV.tsx` / API Fastify de Monitoramento).
+  - Garantir que qualquer OS com status `IN_PROGRESS`, `CHECKED_IN`, `APPROVED` ou `SCHEDULED` apareça nos cards da TV com contadores e tempo de atendimento em tempo real.
+- **Critério de Aceite**: Ao iniciar o serviço no app do operador, o monitor da TV exibe imediatamente o card do veículo (ex: Ford Fiesta no Box 1 · Principal) sem necessidade de refresh manual.
+
+---
+
+### 📋 Item 52 — Persistência Real do Percentual de Conclusão (Progresso) da OS
+- **Problema**: Quando o operador ou gestor define um percentual de conclusão (ex: 40%, 75%) e sai da OS, ao retornar o valor está zerado (0%). Além disso, na lista geral de OSs não sai de 0%.
+- **Causa Raiz Técnica**:
+  - Falta de persistência do campo `progress` na tabela `work_orders` ou mutação do frontend não enviando o payload para a rota `PATCH /work-orders/:id`.
+- **Escopo**:
+  - Implementar/corrigir a atualização atômica do campo `progress` (0 a 100) no backend e no frontend.
+  - Atualizar a barra de progresso na lista de OSs do gestor, no app do operador e no Portal do Cliente.
+- **Critério de Aceite**: O operador altera o progresso para 60%, salva ou avança uma etapa; ao recarregar a tela ou consultar a OS, o progresso permanece em 60% em todos os módulos.
+
+---
+
+### 📋 Item 53 — Correção do Duplo '+' no Botão Nova OS (Print 5)
+- **Problema**: Na tela de Ordens de Serviço (`OrdensServico.tsx`), o botão verde exibe o texto duplicado `+ + Nova OS`.
+- **Escopo**:
+  - Remover o caractere '+' excedente no JSX (onde já existe o ícone `<Plus size={...} />` e texto '+ Nova OS').
+- **Critério de Aceite**: O botão renderiza elegantemente como `+ Nova OS` com um único sinal de adição.
+
+---
+
+### 📋 Item 54 — Portal do Cliente: Login Direto por Número da OS + Placa e URL Isolada por Slug (Print 6)
+- **Problema**:
+  - A tela atual pede celular ou e-mail com envio de código OTP de 6 dígitos via WhatsApp/SMS, gerando bloqueio para oficinas/planos sem o gateway de disparo ativo.
+  - A rota está genérica em `/meuportal`, correndo o risco de cruzar tenants ou falhar no isolamento de dados.
+- **Regra de Negócio Definida pelo Usuário**:
+  - Acesso simplificado e universal: O cliente digita apenas o **Número da Ordem de Serviço** e a **Placa do Carro**.
+  - Acesso direto sem exigência de código SMS/WhatsApp.
+  - Rota com slug da oficina: `/:slug/portal` ou `/portal/:slug`, garantindo isolamento total por tenant.
+- **Escopo**:
+  - Criar/adaptar a rota pública de login por `osNumber` + `plate` validando contra a tabela `work_orders` filtrada pelo `tenant_id` do slug da URL.
+  - Retornar a visualização dos dados daquela OS específica (progresso em tempo real, laudo de vistoria, fotos antes/durante/depois e termo de garantia).
+- **Critério de Aceite**: O cliente acessa `http://.../caiocar/portal`, digita o número da OS (ex: 1) e a placa (EVH0H11) e acessa imediatamente o status do seu veículo sem código SMS/WhatsApp.

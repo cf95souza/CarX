@@ -4545,3 +4545,9 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - **Integridade do Banco de Dados**: Preservação total de 100% dos dados relacionais existentes (clientes, veículos, OSs e pagamentos mantidos intactos).
 
 
+
+- **Item 47 — Remoção e Edição Flexível de Desconto Aplicado (Nova OS / Orçamentos)**:
+  - **Ação de Remoção com 1 Clique**: No card lateral de Resumo (`NovaOrdemServico.tsx`), adicionado o botão 'Remover' com ícone `X` ao lado da linha de Desconto quando há qualquer desconto ativo, restaurando o valor integral da OS imediatamente.
+  - **Banner Dinâmico do Combo**: Quando o combo sugerido (10% OFF) é ativado, o banner altera seu estado visual para ativo (`✓ Combo promocional ativo: 10% de desconto aplicado`) e exibe o botão 'Remover desconto' em vermelho suave, permitindo desativar o combo a qualquer momento.
+  - **Desconto Customizado (R$ ou %)**: Implementado painel expansível com opção de desconto fixo (Reais) ou percentual (%), com campos de entrada, botão 'Aplicar' e validação contra o subtotal.
+  - **Persistência Relacional**: A chamada de criação da OS (`api.workOrders.create`) agora repassa `discountCents: Math.round(discountAmount * 100)`, gravando o desconto oficial no PostgreSQL.
