@@ -113,14 +113,15 @@ export async function qaRoutes(app: FastifyInstance) {
     },
     async (request: FastifyRequest<{ Body: unknown }>, reply: FastifyReply) => {
       const tenantId = request.tenantId!;
-      const inspectorId = (request.user as any)?.userId || (request.user as any)?.sub;
+      const inspectorId = (request.user as any)?.userId || (request.user as any)?.sub || (request.user as any)?.id;
 
       const parseResult = CreateQaAuditSchema.safeParse(request.body);
       if (!parseResult.success) {
+        request.log.warn({ errors: parseResult.error.format() }, 'Falha na validação de auditoria QA');
         return reply.code(400).send({
           statusCode: 400,
           error: 'VALIDATION_ERROR',
-          message: 'Dados de auditoria inválidos',
+          message: 'Dados de auditoria inválidos: ' + JSON.stringify(parseResult.error.flatten().fieldErrors),
           details: parseResult.error.format(),
         });
       }

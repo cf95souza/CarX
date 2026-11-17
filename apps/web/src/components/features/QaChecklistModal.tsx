@@ -72,20 +72,20 @@ export const QaChecklistModal: React.FC<QaChecklistModalProps> = ({
       reworkReason?: string;
     }) => {
       const checklistPayload = [
-        { id: 'acabamento', label: 'Acabamento superficial e ausência de bolhas/marcas', checked: checks.acabamento },
-        { id: 'bordas', label: 'Alinhamento e refile perfeito das bordas', checked: checks.bordas },
-        { id: 'montagem', label: 'Remontagem de componentes e acabamentos internos', checked: checks.montagem },
-        { id: 'limpeza', label: 'Higienização e desengraxe final do veículo', checked: checks.limpeza },
-        { id: 'vcrFinal', label: 'Inspeção de saída (VCR) e fotos finais registradas', checked: checks.vcrFinal },
+        { id: 'acabamento', label: 'Acabamento superficial e ausência de bolhas/marcas', passed: Boolean(checks.acabamento), checked: Boolean(checks.acabamento), notes: null },
+        { id: 'bordas', label: 'Alinhamento e refile perfeito das bordas', passed: Boolean(checks.bordas), checked: Boolean(checks.bordas), notes: null },
+        { id: 'montagem', label: 'Remontagem de componentes e acabamentos internos', passed: Boolean(checks.montagem), checked: Boolean(checks.montagem), notes: null },
+        { id: 'limpeza', label: 'Higienização e desengraxe final do veículo', passed: Boolean(checks.limpeza), checked: Boolean(checks.limpeza), notes: null },
+        { id: 'vcrFinal', label: 'Inspeção de saída (VCR) e fotos finais registradas', passed: Boolean(checks.vcrFinal), checked: Boolean(checks.vcrFinal), notes: null },
       ];
 
       return api.qa.createAudit({
         workOrderId,
         status: payload.status,
-        score: payload.score,
+        score: Math.max(1, Math.min(5, Math.round(payload.score || 5))),
         checklistItems: checklistPayload,
-        reworkReason: payload.reworkReason,
-        notes: observacao,
+        reworkReason: payload.reworkReason?.trim() || undefined,
+        notes: observacao?.trim() || undefined,
       });
     },
     onSuccess: (_, variables) => {

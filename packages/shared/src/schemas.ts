@@ -1694,18 +1694,27 @@ export const WarrantyStatusEnum = {
 } as const;
 export type WarrantyStatusType = (typeof WarrantyStatusEnum)[keyof typeof WarrantyStatusEnum];
 
-export const QaChecklistItemSchema = z.object({
-  id: z.string().min(1),
-  label: z.string().min(2),
-  passed: z.boolean(),
-  notes: z.string().optional().nullable(),
-});
+export const QaChecklistItemSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    passed: z.boolean().optional(),
+    checked: z.boolean().optional(),
+    notes: z.string().optional().nullable(),
+  })
+  .transform((item) => ({
+    id: item.id,
+    label: item.label,
+    passed: Boolean(item.passed ?? item.checked ?? true),
+    checked: Boolean(item.checked ?? item.passed ?? true),
+    notes: item.notes || null,
+  }));
 export type QaChecklistItem = z.infer<typeof QaChecklistItemSchema>;
 
 export const CreateQaAuditSchema = z.object({
   workOrderId: z.string().uuid(),
   status: z.enum(['approved', 'rejected_rework']),
-  score: z.number().int().min(1).max(5).optional().nullable(),
+  score: z.coerce.number().int().min(1).max(5).optional().nullable(),
   checklistItems: z.array(QaChecklistItemSchema).default([]),
   reworkReason: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),

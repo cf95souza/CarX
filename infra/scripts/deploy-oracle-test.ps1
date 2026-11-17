@@ -17,5 +17,6 @@ scp -i $KeyPath -o StrictHostKeyChecking=no "d:\Repositorios\CarX\infra\scripts\
 
 # 2. Executar script remotamente
 Write-Host "⚡ Executando deploy remoto na VPS..." -ForegroundColor Green
-ssh -i $KeyPath -o StrictHostKeyChecking=no $VpsHost "sed -i -e 's/\r$//' /tmp/deploy-oracle-test.sh; chmod +x /tmp/deploy-oracle-test.sh; /tmp/deploy-oracle-test.sh"
+ssh -i $KeyPath -o StrictHostKeyChecking=no $VpsHost 'sed -i -e "s/\r$//" /tmp/deploy-oracle-test.sh; chmod +x /tmp/deploy-oracle-test.sh; /tmp/deploy-oracle-test.sh'
+
 

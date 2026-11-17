@@ -1017,7 +1017,7 @@ export const api = {
       workOrderId: string;
       status: 'approved' | 'rejected_rework';
       score: number;
-      checklistItems: Array<{ id: string; label: string; checked: boolean }>;
+      checklistItems: Array<{ id: string; label: string; passed?: boolean; checked?: boolean; notes?: string | null }>;
       reworkReason?: string;
       notes?: string;
     }) =>
