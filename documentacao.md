@@ -4746,6 +4746,9 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
     - Campo de parecer técnico / observações de auditoria;
     - Fluxo de Retrabalho: Botão "Apontar Retrabalho", retornando o status para `IN_PROGRESS` com justificativa técnica;
     - Fluxo de Liberação: Botão "Aprovar Qualidade & Liberar Veículo", transicionando o status para `READY` (Pronto), atualizando o progresso para 95%-100% e notificando o sistema.
+  - **Sincronização Atômica com a Agenda Inteligente (`appointments`)**:
+    - Ao aprovar o QA ou transitar a OS para `READY`/`DELIVERED`, o agendamento vinculado transita automaticamente para `status = 'completed'`, liberando a ocupação do box e eliminando o alerta de atraso.
+    - No `appointment-service.ts` e `Agenda.tsx`, agendamentos de OSs concluídas são renderizados em verde (`#DCFCE7`) com badge de confirmação e banner de sucesso.
 
 ### Item 64 — Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Planejado)
 - **Problema Reportado pelo Usuário**:

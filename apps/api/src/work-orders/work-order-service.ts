@@ -693,14 +693,34 @@ export class WorkOrderService {
         );
       } else if (targetStatus === WorkOrderStatus.CHECKED_IN) {
         timestampUpdates.push('checked_in_at = COALESCE(checked_in_at, NOW())');
+        await client.query(
+          `UPDATE appointments SET status = 'confirmed', updated_at = NOW() WHERE tenant_id = $1 AND work_order_id = $2`,
+          [tenantId, id]
+        );
       } else if (targetStatus === WorkOrderStatus.IN_PROGRESS) {
         timestampUpdates.push('started_at = COALESCE(started_at, NOW())');
+        await client.query(
+          `UPDATE appointments SET status = 'in_progress', updated_at = NOW() WHERE tenant_id = $1 AND work_order_id = $2`,
+          [tenantId, id]
+        );
       } else if (targetStatus === WorkOrderStatus.QA || targetStatus === WorkOrderStatus.READY) {
         timestampUpdates.push('completed_at = COALESCE(completed_at, NOW())');
+        await client.query(
+          `UPDATE appointments SET status = 'completed', updated_at = NOW() WHERE tenant_id = $1 AND work_order_id = $2`,
+          [tenantId, id]
+        );
       } else if (targetStatus === WorkOrderStatus.DELIVERED) {
         timestampUpdates.push('delivered_at = NOW()');
+        await client.query(
+          `UPDATE appointments SET status = 'completed', updated_at = NOW() WHERE tenant_id = $1 AND work_order_id = $2`,
+          [tenantId, id]
+        );
       } else if (targetStatus === WorkOrderStatus.CANCELED) {
         timestampUpdates.push('canceled_at = NOW()');
+        await client.query(
+          `UPDATE appointments SET status = 'canceled', updated_at = NOW() WHERE tenant_id = $1 AND work_order_id = $2`,
+          [tenantId, id]
+        );
         if (input.cancelReason) {
           updateParams.push(input.cancelReason);
           timestampUpdates.push(`cancel_reason = $${updateParams.length}`);

@@ -1223,6 +1223,18 @@ export class AppointmentService {
         const end = new Date(a.endTime);
         const s = a.status.toLowerCase();
 
+        // Sincronização inteligente com o ciclo de vida da OS vinculada
+        const woStatus = String((a as any).workOrderStatus || '').toUpperCase();
+        const isWoFinished = ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
+        const isWoCanceled = ['CANCELED', 'CANCELADO', 'QUOTE'].includes(woStatus);
+
+        let effectiveStatus: SmartAppointmentDto['status'] = a.status as SmartAppointmentDto['status'];
+        if (isWoFinished || s === 'completed') {
+          effectiveStatus = 'completed';
+        } else if (isWoCanceled || s === 'canceled') {
+          effectiveStatus = 'canceled';
+        }
+
         const titleAndSummary = `${a.title} ${a.serviceSummary || ''}`.toLowerCase();
         let category: SmartAppointmentDto['category'] = 'outro';
         let statusColor = '#E8EEF4';
@@ -1242,16 +1254,18 @@ export class AppointmentService {
           statusColor = '#C8F52E';
         }
 
-        if (s === 'scheduled' || s === 'confirmed') {
+        if (effectiveStatus === 'scheduled' || effectiveStatus === 'confirmed') {
           if (category === 'outro') statusColor = '#FFE2A8';
         }
 
         const isPastEnd = now > end;
-        const isNotFinished = s !== 'completed' && s !== 'canceled' && s !== 'no_show';
+        const isNotFinished = effectiveStatus !== 'completed' && effectiveStatus !== 'canceled' && effectiveStatus !== 'no_show';
         const isDelayed = isPastEnd && isNotFinished;
         const delayMinutes = isDelayed ? Math.max(1, Math.round((now.getTime() - end.getTime()) / 60000)) : 0;
 
-        if (isDelayed) {
+        if (effectiveStatus === 'completed') {
+          statusColor = '#DCFCE7';
+        } else if (isDelayed) {
           statusColor = '#FEE2E2';
           delayedCount++;
         }
@@ -1262,6 +1276,7 @@ export class AppointmentService {
 
         return {
           ...a,
+          status: effectiveStatus,
           isDelayed,
           delayMinutes,
           category,

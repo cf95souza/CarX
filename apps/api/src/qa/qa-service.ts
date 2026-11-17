@@ -127,6 +127,16 @@ export class QaService {
         [tenantId, input.workOrderId]
       );
 
+      // Sincroniza agendamento no box para 'completed' (libera box na Agenda Inteligente)
+      await tenantQuery(
+        tenantId,
+        `UPDATE appointments
+         SET status = 'completed',
+             updated_at = NOW()
+         WHERE tenant_id = $1 AND work_order_id = $2;`,
+        [tenantId, input.workOrderId]
+      );
+
       // Registra na trilha de auditoria
       await auditService.record({
         tenantId,

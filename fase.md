@@ -2891,6 +2891,10 @@ Onda 3 Roadmap de Execução:
     - Fluxo de Retrabalho Técnico: Botão "Reprovar / Retrabalho" que abre justificativa obrigatória e devolve a OS para `IN_PROGRESS` com prioridade máxima na fila do operador;
     - Fluxo de Aprovação: Botão primário Volt **"Aprovar Vistoria & Liberar Veículo"**, acionando `api.qa.createAudit`, transicionando a OS para `READY` (Pronto), elevando o progresso para 100% e invalidando em tempo real as queries de OS e painéis.
 - **Critério de Aceite**: Na tela de OSs, a ordem em `Vistoria QA` exibe o botão roxo "Vistoria QA" na coluna de Ações e dentro dos detalhes da OS. O gestor abre o modal, audita os critérios e aprova a qualidade com 1 clique, transicionando a OS para `READY` e atualizando a interface instantaneamente. Compilação do `@carx/web` validada com 100% de sucesso em 8.24s.
+- **Sincronização Bidirecional com a Agenda Inteligente (Appointments)**:
+  - No backend (`work-order-service.ts` e `qa-service.ts`), ao mover a OS para `QA`, `READY` ou `DELIVERED`, o agendamento correspondente na tabela `appointments` transita atômicamente para `status = 'completed'`, liberando o box e eliminando falsos positivos de atraso.
+  - No `appointment-service.ts` (`getSmartScheduleOverview`), se a OS vinculada estiver concluída (`workOrderStatus` em `QA`, `READY`, `DELIVERED`, `COMPLETED`), o agendamento é computado como finalizado (`effectiveStatus = 'completed'`, `isDelayed = false`, `delayMinutes = 0`, cor verde `#DCFCE7`).
+  - No frontend (`Agenda.tsx`), o card na grade e o modal de detalhes exibem badge verde "Concluído / Entregue: Veículo vistoriado e finalizado no box", removendo o banner vermelho de atraso.
 
 ---
 

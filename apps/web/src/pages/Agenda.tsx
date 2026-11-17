@@ -214,10 +214,16 @@ export const Agenda: React.FC = () => {
           const top = Math.max(0, Math.round((startHour - 8) * 56));
           const height = Math.max(48, Math.round(durationHours * 56) - 4);
 
+          const woStatus = String(app.workOrderStatus || app.raw?.workOrderStatus || '').toUpperCase();
+          const isFinished = app.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
+
           let bg = app.statusColor || '#E8EEF4';
           let borderColor = undefined;
 
-          if (app.isDelayed) {
+          if (isFinished) {
+            bg = '#DCFCE7';
+            borderColor = '#22C55E';
+          } else if (app.isDelayed) {
             bg = '#FEE2E2';
             borderColor = '#EF4444';
           }
@@ -232,8 +238,8 @@ export const Agenda: React.FC = () => {
             height,
             bg,
             borderColor,
-            isDelayed: app.isDelayed,
-            delayMinutes: app.delayMinutes,
+            isDelayed: isFinished ? false : app.isDelayed,
+            delayMinutes: isFinished ? 0 : app.delayMinutes,
             raw: app,
           });
         });
@@ -869,23 +875,48 @@ export const Agenda: React.FC = () => {
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        {app.isDelayed ? (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              color: '#DC2626',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              marginBottom: '2px',
-                            }}
-                          >
-                            <AlertTriangle size={12} /> Atraso (+{app.delayMinutes || 15}m)
-                          </div>
-                        ) : (
-                          <span />
-                        )}
+                        {(() => {
+                          const rawWoStatus = String(app.raw?.workOrderStatus || '').toUpperCase();
+                          const isFinished = app.raw?.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(rawWoStatus);
+
+                          if (isFinished) {
+                            return (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  color: '#15803D',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  marginBottom: '2px',
+                                }}
+                              >
+                                <CheckCircle2 size={12} color="#16A34A" /> Concluído
+                              </div>
+                            );
+                          }
+
+                          if (app.isDelayed) {
+                            return (
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  color: '#DC2626',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  marginBottom: '2px',
+                                }}
+                              >
+                                <AlertTriangle size={12} /> Atraso (+{app.delayMinutes || 15}m)
+                              </div>
+                            );
+                          }
+
+                          return <span />;
+                        })()}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <button
                             type="button"
@@ -1350,26 +1381,59 @@ export const Agenda: React.FC = () => {
               </button>
             </div>
 
-            {selectedDetailApp.isDelayed && (
-              <div
-                style={{
-                  background: '#FEE2E2',
-                  border: '1px solid #FCA5A5',
-                  color: '#991B1B',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <AlertTriangle size={18} />
-                <span>
-                  <b>Atraso detectado:</b> Agendamento ultrapassou o término previsto em {selectedDetailApp.delayMinutes} minutos.
-                </span>
-              </div>
-            )}
+            {(() => {
+              const woStatus = String(selectedDetailApp.workOrderStatus || selectedDetailApp.raw?.workOrderStatus || '').toUpperCase();
+              const isFinished = selectedDetailApp.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
+
+              if (isFinished) {
+                return (
+                  <div
+                    style={{
+                      background: '#DCFCE7',
+                      border: '1px solid #86EFAC',
+                      color: '#15803D',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <CheckCircle2 size={18} color="#16A34A" />
+                    <span>
+                      <b>Serviço Concluído / Entregue:</b> Veículo vistoriado e finalizado no box.
+                    </span>
+                  </div>
+                );
+              }
+
+              if (selectedDetailApp.isDelayed) {
+                return (
+                  <div
+                    style={{
+                      background: '#FEE2E2',
+                      border: '1px solid #FCA5A5',
+                      color: '#991B1B',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <AlertTriangle size={18} />
+                    <span>
+                      <b>Atraso detectado:</b> Agendamento ultrapassou o término previsto em {selectedDetailApp.delayMinutes} minutos.
+                    </span>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#0E1116' }}>
@@ -1425,35 +1489,65 @@ export const Agenda: React.FC = () => {
               >
                 <Edit3 size={15} color="#C8F52E" /> Remanejar / Editar
               </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await api.appointments.updateStatus(selectedDetailApp.id, 'completed');
-                    queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
-                    setSelectedDetailApp(null);
-                  } catch (e: any) {
-                    alert(e.message || 'Erro ao atualizar');
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  height: '44px',
-                  border: 0,
-                  borderRadius: '12px',
-                  background: '#C8F52E',
-                  color: '#0E1116',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                }}
-              >
-                <CheckCircle2 size={15} /> Concluir
-              </button>
+              {(() => {
+                const woStatus = String(selectedDetailApp.workOrderStatus || selectedDetailApp.raw?.workOrderStatus || '').toUpperCase();
+                const isFinished = selectedDetailApp.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
+
+                if (isFinished) {
+                  return (
+                    <div
+                      style={{
+                        flex: 1,
+                        height: '44px',
+                        borderRadius: '12px',
+                        background: '#DCFCE7',
+                        color: '#15803D',
+                        border: '1px solid #86EFAC',
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <CheckCircle2 size={16} color="#16A34A" /> Concluído
+                    </div>
+                  );
+                }
+
+                return (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await api.appointments.updateStatus(selectedDetailApp.id, 'completed');
+                        queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
+                        setSelectedDetailApp(null);
+                      } catch (e: any) {
+                        alert(e.message || 'Erro ao atualizar');
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      height: '44px',
+                      border: 0,
+                      borderRadius: '12px',
+                      background: '#C8F52E',
+                      color: '#0E1116',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <CheckCircle2 size={15} /> Concluir
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 onClick={() => setSelectedDetailApp(null)}
