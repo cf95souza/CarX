@@ -585,6 +585,67 @@ export class CustomerPortalService {
       warrantyMonths: Number(item.warranty_months || 0),
     }));
 
+    // Carrega inspeção veicular (VCR)
+    let inspectionData: PortalWorkOrderDetailDto['inspection'] = null;
+    try {
+      const inspRes = await tenantQuery<{
+        id: string;
+        current_km: number | null;
+        fuel_level: string | null;
+        status: string;
+        checklist_items: any;
+      }>(
+        tenantId,
+        `SELECT id, current_km, fuel_level, status, checklist_items
+         FROM inspections
+         WHERE work_order_id = $1 AND tenant_id = $2
+         ORDER BY created_at DESC
+         LIMIT 1;`,
+        [workOrderId, tenantId]
+      );
+
+      if (inspRes.rows.length > 0) {
+        const inspRow = inspRes.rows[0];
+        const dpRes = await tenantQuery<{
+          id: string;
+          part: string;
+          damage_type: string;
+          severity: string;
+          view: string;
+          notes: string | null;
+          x_percent: string | null;
+          y_percent: string | null;
+        }>(
+          tenantId,
+          `SELECT id, part, damage_type, severity, view, notes, x_percent, y_percent
+           FROM inspection_damage_points
+           WHERE tenant_id = $1 AND inspection_id = $2
+           ORDER BY created_at ASC;`,
+          [tenantId, inspRow.id]
+        );
+
+        inspectionData = {
+          id: inspRow.id,
+          currentKm: inspRow.current_km,
+          fuelLevel: inspRow.fuel_level,
+          status: inspRow.status,
+          damages: dpRes.rows.map((d) => ({
+            id: d.id,
+            part: d.part,
+            type: d.damage_type,
+            severity: d.severity,
+            view: d.view,
+            notes: d.notes || undefined,
+            x: d.x_percent ? parseFloat(d.x_percent) : undefined,
+            y: d.y_percent ? parseFloat(d.y_percent) : undefined,
+          })),
+          checklistAnswers: inspRow.checklist_items,
+        };
+      }
+    } catch {
+      // Falha não-bloqueante na busca do laudo
+    }
+
     return {
       id: row.id,
       osNumber: Number(row.os_number),
@@ -606,6 +667,7 @@ export class CustomerPortalService {
       deliveredAt: row.delivered_at ? new Date(row.delivered_at).toISOString() : null,
       createdAt: new Date(row.created_at).toISOString(),
       items,
+      inspection: inspectionData,
     };
   }
 

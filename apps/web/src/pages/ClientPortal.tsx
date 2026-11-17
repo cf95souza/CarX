@@ -39,6 +39,7 @@ import {
   setStoredPortalCustomer,
   clearStoredPortalAuth,
   setStoredTenantSlug,
+  getStoredTenantSlug,
 } from '../services/api';
 import type {
   PortalCustomerDto,
@@ -61,6 +62,8 @@ export const ClientPortal: React.FC = () => {
   const brand = useBrand();
   const queryClient = useQueryClient();
 
+  const effectiveSlug = slug || (typeof window !== 'undefined' ? getStoredTenantSlug() : null) || 'caiocar';
+
   if (slug && typeof window !== 'undefined') {
     setStoredTenantSlug(slug);
   }
@@ -69,8 +72,10 @@ export const ClientPortal: React.FC = () => {
     if (slug) {
       setStoredTenantSlug(slug);
       api.branding.get(slug).catch(() => {});
+    } else if (effectiveSlug) {
+      api.branding.get(effectiveSlug).catch(() => {});
     }
-  }, [slug]);
+  }, [slug, effectiveSlug]);
 
   // ============================================================================
   // ESTADO DE AUTENTICAÇÃO DO PORTAL (ISOLADO DA EQUIPE DA LOJA)
@@ -155,7 +160,7 @@ export const ClientPortal: React.FC = () => {
     directLoginMutation.mutate({
       phone: cleanPhone,
       plate: cleanPlate,
-      slug: slug || getStoredTenantSlug() || undefined,
+      slug: slug || effectiveSlug,
     });
   };
 
@@ -870,6 +875,109 @@ const WorkOrderCard: React.FC<WorkOrderCardProps> = ({
       {isExpanded && (
         <div className="mt-5 pt-5 border-t border-[#232A35] space-y-6 animate-in fade-in duration-300">
           
+          {/* LAUDO DE VISTORIA TÉCNICA DIGITAL (VCR TOUCH) */}
+          {detail?.inspection && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-[#0E1116] border border-[#262D35] space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#262D35]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#C8F52E]/10 border border-[#C8F52E]/30 text-[#C8F52E] flex items-center justify-center text-sm font-bold">
+                    📋
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-2">
+                      Laudo de Vistoria de Entrada (VCR)
+                      <span className="text-[10px] font-bold text-[#C8F52E] bg-[#C8F52E]/10 px-2 py-0.5 rounded-full border border-[#C8F52E]/20">
+                        Auditado
+                      </span>
+                    </h4>
+                    <span className="text-[11px] text-slate-400">
+                      Condições de recebimento e integridade registradas na entrada do veículo
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      toast.info('Baixando laudo oficial em PDF...');
+                      const blob = await api.portal.downloadWorkOrderInspectionPdf(order.id);
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `laudo_vistoria_${order.vehiclePlate}.pdf`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(url);
+                      toast.success('Laudo baixado com sucesso!');
+                    } catch (err: any) {
+                      toast.error(err.message || 'Erro ao baixar o laudo em PDF.');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#C8F52E] hover:bg-[#B8E622] text-[#0E1116] font-bold text-xs flex items-center gap-1.5 transition-all shadow-md self-start sm:self-auto cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Baixar Laudo Oficial (PDF)</span>
+                </button>
+              </div>
+
+              {/* Métricas do Laudo: KM e Combustível */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 rounded-xl bg-[#171C24] border border-[#262D35]">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Quilometragem</span>
+                  <span className="text-sm font-bold text-white font-mono mt-0.5 block">
+                    {detail.inspection.currentKm ? `${detail.inspection.currentKm.toLocaleString('pt-BR')} km` : 'Registrada'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#171C24] border border-[#262D35]">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Marcador de Combustível</span>
+                  <span className="text-sm font-bold text-[#C8F52E] font-mono mt-0.5 block">
+                    Tanque {detail.inspection.fuelLevel || '1/2'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#171C24] border border-[#262D35] col-span-2">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Integridade da Vistoria</span>
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    {detail.inspection.status === 'signed' ? 'Assinatura Digital do Cliente Coletada' : 'Check-in Técnico Registrado no Pátio'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Avarias Apontadas */}
+              {detail.inspection.damages && detail.inspection.damages.length > 0 ? (
+                <div>
+                  <span className="text-[11px] font-bold text-slate-300 block mb-1.5">
+                    Avarias Pré-existentes Registradas ({detail.inspection.damages.length})
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {detail.inspection.damages.map((d, idx) => (
+                      <div key={d.id || idx} className="p-2.5 rounded-xl bg-[#171C24] border border-[#262D35] text-xs flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-slate-200">{d.part || 'Componente'}</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {d.notes || d.type || 'Pequeno risco / marca'} {d.view ? `· Vista ${d.view}` : ''}
+                          </span>
+                        </div>
+                        <span className="text-[10px] uppercase font-black px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                          {d.severity || 'Leve'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-[#171C24]/60 border border-[#262D35] text-xs text-slate-400 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#C8F52E] flex-shrink-0" />
+                  <span>Veículo recebido sem avarias aparentes de lataria ou pintura no check-in de entrada.</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ITENS E SERVIÇOS CONTRATADOS */}
           {detail?.items && detail.items.length > 0 && (
             <div>

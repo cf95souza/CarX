@@ -252,34 +252,34 @@ const SelfBooking = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-[#0E1116] text-slate-100 flex flex-col font-sans selection:bg-[#C8F52E] selection:text-[#0E1116]">
       {/* Top Header Glassmorphic */}
-      <header className="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 py-4 px-4 sm:px-8 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-[#0E1116]/90 backdrop-blur-md border-b border-[#262D35] py-4 px-4 sm:px-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {brand.logoUrl ? (
             <img src={brand.logoUrl} alt={brand.name} className="h-10 w-auto object-contain" />
           ) : (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-900/40 font-black text-white text-xl">
-              {brand.name ? brand.name.charAt(0) : 'O'}
+            <div className="w-10 h-10 rounded-xl bg-[#C8F52E] flex items-center justify-center shadow-lg shadow-[#C8F52E]/10 font-bold text-[#0E1116] text-xl">
+              {brand.name ? brand.name.charAt(0) : 'C'}
             </div>
           )}
           <div>
-            <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-              {brand.name || 'OsSystem'}
-              <span className="text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Self-Booking
+            <h1 className="text-lg font-bold font-['Space_Grotesk'] tracking-tight text-white flex items-center gap-2">
+              {brand.name || 'CarX'}
+              <span className="text-[10px] font-extrabold bg-[#C8F52E]/10 text-[#C8F52E] border border-[#C8F52E]/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Agendamento Online
               </span>
             </h1>
-            <p className="text-xs text-slate-400 hidden sm:block">Agendamento Online Rápido e Inteligente</p>
+            <p className="text-xs text-[#94A3B8] hidden sm:block">Agendamento Rápido com Reserva por Box</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           {brand.whatsapp && (
             <button 
               onClick={() => sendWhatsApp(brand.whatsapp, `Olá, estou no agendamento online e gostaria de tirar uma dúvida.`)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all border border-slate-700"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#171C24] hover:bg-[#1F242D] text-slate-200 text-xs font-semibold transition-all border border-[#262D35]"
             >
-              <Phone className="w-3.5 h-3.5 text-emerald-400" />
+              <Phone className="w-3.5 h-3.5 text-[#C8F52E]" />
               <span className="hidden md:inline">Ajuda pelo WhatsApp</span>
             </button>
           )}
@@ -292,9 +292,9 @@ const SelfBooking = () => {
           <div className="mb-8">
             {/* Wizard Progress Bar */}
             <div className="flex items-center justify-between relative max-w-2xl mx-auto mb-4 px-2 sm:px-6">
-              <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-slate-800 -translate-y-1/2 z-0" />
+              <div className="absolute top-1/2 left-6 right-6 h-0.5 bg-[#262D35] -translate-y-1/2 z-0" />
               <div 
-                className="absolute top-1/2 left-6 h-0.5 bg-gradient-to-r from-emerald-500 to-teal-400 -translate-y-1/2 z-0 transition-all duration-500" 
+                className="absolute top-1/2 left-6 h-0.5 bg-[#C8F52E] -translate-y-1/2 z-0 transition-all duration-500" 
                 style={{ width: `${((step - 1) / 3) * 100}%` }}
               />
               {[
@@ -313,14 +313,14 @@ const SelfBooking = () => {
                       disabled={step < s.num && step !== s.num}
                       onClick={() => s.num < step && setStep(s.num)}
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all shadow-lg ${
-                        isDone ? 'bg-emerald-500 text-slate-950 shadow-emerald-900/50 scale-105' :
-                        isActive ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 text-white ring-4 ring-emerald-500/20 scale-110 shadow-emerald-950' :
-                        'bg-slate-800 text-slate-500 border border-slate-700'
+                        isDone ? 'bg-[#C8F52E] text-[#0E1116] shadow-[#0E1116] scale-105' :
+                        isActive ? 'bg-[#C8F52E] text-[#0E1116] ring-4 ring-[#C8F52E]/20 scale-110 shadow-lg' :
+                        'bg-[#171C24] text-slate-500 border border-[#262D35]'
                       }`}
                     >
                       {isDone ? <Check className="w-5 h-5 stroke-[3]" /> : <IconComp className="w-4 h-4" />}
                     </button>
-                    <span className={`text-[11px] font-bold mt-2 tracking-wide uppercase ${isActive ? 'text-emerald-400 font-extrabold' : isDone ? 'text-slate-300' : 'text-slate-500'}`}>
+                    <span className={`text-[11px] font-bold mt-2 tracking-wide uppercase ${isActive ? 'text-[#C8F52E] font-extrabold' : isDone ? 'text-slate-300' : 'text-slate-500'}`}>
                       {s.label}
                     </span>
                   </div>
@@ -332,10 +332,10 @@ const SelfBooking = () => {
 
         {/* Step 1: Escolha do Veículo */}
         {step === 1 && (
-          <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-[#171C24] border border-[#262D35] rounded-3xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="text-center max-w-xl mx-auto mb-8">
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight">Qual é o seu veículo?</h2>
-              <p className="text-slate-400 text-sm">Selecione a categoria e informe o modelo para um atendimento super personalizado e estimativa precisa.</p>
+              <h2 className="text-2xl sm:text-3xl font-bold font-['Space_Grotesk'] text-white mb-2 tracking-tight">Qual é o seu veículo?</h2>
+              <p className="text-[#94A3B8] text-sm">Selecione a categoria e informe o modelo para um atendimento super personalizado e estimativa precisa.</p>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 mb-8">
@@ -346,32 +346,32 @@ const SelfBooking = () => {
                     key={vc.id}
                     type="button"
                     onClick={() => setVehicleClass(vc.id)}
-                    className={`p-4 rounded-xl border text-left flex flex-col gap-2 transition-all group ${
+                    className={`p-4 rounded-2xl border text-left flex flex-col gap-2 transition-all group ${
                       isSelected 
-                        ? 'bg-gradient-to-br from-emerald-500/15 to-teal-500/5 border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-950/50' 
-                        : 'bg-slate-900/60 border-slate-700/80 hover:border-slate-600 hover:bg-slate-800/40'
+                        ? 'bg-[#1F242D] border-[#C8F52E] ring-2 ring-[#C8F52E]/30 shadow-lg shadow-[#0E1116]' 
+                        : 'bg-[#0E1116] border-[#262D35] hover:border-slate-500 hover:bg-[#1F242D]/40'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-2xl group-hover:scale-110 transition-transform">{vc.icon}</span>
                       {isSelected && (
-                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold text-xs">
+                        <span className="w-5 h-5 rounded-full bg-[#C8F52E] text-[#0E1116] flex items-center justify-center font-bold text-xs">
                           ✓
                         </span>
                       )}
                     </div>
                     <div>
                       <h3 className="font-bold text-white text-sm">{vc.label}</h3>
-                      <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{vc.desc}</p>
+                      <p className="text-[11px] text-[#94A3B8] mt-0.5 line-clamp-1">{vc.desc}</p>
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 sm:p-6 mb-8">
-              <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                <Car className="w-4 h-4 text-emerald-400" /> Identificação do Veículo
+            <div className="bg-[#0E1116] border border-[#262D35] rounded-2xl p-4 sm:p-6 mb-8">
+              <h3 className="text-xs font-bold text-[#C8F52E] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+                <Car className="w-4 h-4 text-[#C8F52E]" /> Identificação do Veículo
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
@@ -381,7 +381,7 @@ const SelfBooking = () => {
                     placeholder="Ex: BMW 320i, Toyota Corolla, Onix 1.0..."
                     value={vehicleModel}
                     onChange={(e) => setVehicleModel(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600"
+                    className="w-full bg-[#171C24] border border-[#262D35] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all placeholder:text-slate-600"
                   />
                 </div>
                 <div>
@@ -392,7 +392,7 @@ const SelfBooking = () => {
                     maxLength="4"
                     value={vehicleYear}
                     onChange={(e) => setVehicleYear(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600"
+                    className="w-full bg-[#171C24] border border-[#262D35] rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all placeholder:text-slate-600"
                   />
                 </div>
               </div>
@@ -408,7 +408,7 @@ const SelfBooking = () => {
                   }
                   setStep(2);
                 }}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-900/40 hover:shadow-emerald-900/60 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#B8E622] text-[#0E1116] font-bold text-sm shadow-lg shadow-[#C8F52E]/10 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
               >
                 <span>Avançar para Escolha de Serviços</span>
                 <ArrowRight className="w-4 h-4" />
@@ -419,20 +419,20 @@ const SelfBooking = () => {
 
         {/* Step 2: Escolha de Serviços */}
         {step === 2 && (
-          <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-700/80">
+          <div className="bg-[#171C24] border border-[#262D35] rounded-3xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[#262D35]">
               <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">O que deseja fazer no veículo?</h2>
-                <p className="text-slate-400 text-sm">Selecione um ou mais serviços ou aproveite nossos combos com preço promocional.</p>
+                <h2 className="text-2xl font-bold font-['Space_Grotesk'] text-white tracking-tight">O que deseja fazer no veículo?</h2>
+                <p className="text-[#94A3B8] text-sm">Selecione um ou mais serviços ou aproveite nossos combos com preço promocional.</p>
               </div>
-              <div className="bg-slate-900/80 border border-slate-700/80 px-4 py-2 rounded-xl flex items-center gap-3">
+              <div className="bg-[#0E1116] border border-[#262D35] px-4 py-2 rounded-xl flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Selecionado</span>
-                  <span className="text-lg font-black text-emerald-400">
+                  <span className="text-[10px] uppercase font-bold text-[#94A3B8] block">Total Selecionado</span>
+                  <span className="text-lg font-bold text-[#C8F52E]">
                     {totalEstimated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </span>
                 </div>
-                <span className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                <span className="w-7 h-7 rounded-lg bg-[#C8F52E] text-[#0E1116] flex items-center justify-center font-bold text-xs">
                   {selectedServiceIds.length}
                 </span>
               </div>
@@ -445,38 +445,38 @@ const SelfBooking = () => {
                   <div
                     key={serv.id}
                     onClick={() => toggleService(serv.id)}
-                    className={`p-5 rounded-xl border cursor-pointer flex flex-col justify-between gap-4 transition-all relative ${
+                    className={`p-5 rounded-2xl border cursor-pointer flex flex-col justify-between gap-4 transition-all relative ${
                       isChecked
-                        ? 'bg-gradient-to-br from-emerald-950/40 to-slate-800/90 border-emerald-500/80 ring-1 ring-emerald-500/30 shadow-md shadow-emerald-950/50'
-                        : 'bg-slate-900/50 border-slate-700/80 hover:border-slate-600 hover:bg-slate-800/60'
+                        ? 'bg-[#1F242D] border-[#C8F52E] ring-1 ring-[#C8F52E]/30 shadow-md shadow-[#0E1116]'
+                        : 'bg-[#0E1116] border-[#262D35] hover:border-slate-500 hover:bg-[#1F242D]/40'
                     }`}
                   >
                     {serv.is_combo && (
-                      <span className="absolute -top-2.5 right-4 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
-                        <Star className="w-3 h-3 fill-slate-950" /> Combo Promocional
+                      <span className="absolute -top-2.5 right-4 bg-[#C8F52E] text-[#0E1116] text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-[#0E1116]" /> Combo Promocional
                       </span>
                     )}
 
                     <div className="flex items-start gap-3.5">
                       <div className={`w-6 h-6 rounded-lg border mt-0.5 flex items-center justify-center flex-shrink-0 transition-all ${
-                        isChecked ? 'bg-emerald-500 border-emerald-500 text-slate-950' : 'border-slate-600 bg-slate-950'
+                        isChecked ? 'bg-[#C8F52E] border-[#C8F52E] text-[#0E1116]' : 'border-slate-600 bg-[#0E1116]'
                       }`}>
                         {isChecked && <Check className="w-4 h-4 stroke-[3]" />}
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400/90 block mb-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#C8F52E] block mb-0.5">
                           {serv.categoria}
                         </span>
                         <h3 className="font-bold text-white text-base leading-snug">{serv.nome}</h3>
-                        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{serv.desc}</p>
+                        <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">{serv.desc}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-800/80 text-xs">
-                      <span className="flex items-center gap-1 text-slate-400 font-medium">
+                    <div className="flex items-center justify-between pt-3 border-t border-[#262D35] text-xs">
+                      <span className="flex items-center gap-1 text-[#94A3B8] font-medium">
                         <Clock className="w-3.5 h-3.5 text-slate-500" /> Estimativa: {serv.tempo_estimado}
                       </span>
-                      <span className="font-black text-white text-sm bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
+                      <span className="font-bold text-white text-sm bg-[#0E1116] px-2.5 py-1 rounded-lg border border-[#262D35]">
                         A partir de {Number(serv.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </span>
                     </div>
@@ -485,11 +485,11 @@ const SelfBooking = () => {
               })}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-700/80">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#262D35]">
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0E1116] hover:bg-[#1F242D] text-slate-300 font-bold text-sm flex items-center justify-center gap-2 transition-all border border-[#262D35]"
               >
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </button>
@@ -502,7 +502,7 @@ const SelfBooking = () => {
                   }
                   setStep(3);
                 }}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#B8E622] text-[#0E1116] font-bold text-sm shadow-lg shadow-[#C8F52E]/10 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
               >
                 <span>Escolher Data e Horário</span>
                 <ArrowRight className="w-4 h-4" />
@@ -513,16 +513,16 @@ const SelfBooking = () => {
 
         {/* Step 3: Escolha de Data e Horário */}
         {step === 3 && (
-          <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="max-w-xl mb-6 pb-4 border-b border-slate-700/80">
-              <h2 className="text-2xl font-black text-white tracking-tight">Quando deseja nos visitar?</h2>
-              <p className="text-slate-400 text-sm">Selecione o melhor dia e horário. Nossa equipe reservará sua vaga de imediato.</p>
+          <div className="bg-[#171C24] border border-[#262D35] rounded-3xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="max-w-xl mb-6 pb-4 border-b border-[#262D35]">
+              <h2 className="text-2xl font-bold font-['Space_Grotesk'] text-white tracking-tight">Quando deseja nos visitar?</h2>
+              <p className="text-[#94A3B8] text-sm">Selecione o melhor dia e horário. Nossa equipe reservará sua vaga de imediato.</p>
             </div>
 
             {/* Carrossel / Grid de Dias */}
             <div className="mb-8">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <CalendarIcon className="w-4 h-4 text-emerald-400" /> 1. Escolha o Dia da Semana
+              <label className="block text-xs font-bold text-[#C8F52E] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <CalendarIcon className="w-4 h-4 text-[#C8F52E]" /> 1. Escolha o Dia da Semana
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2.5">
                 {availableDays.map((d) => {
@@ -535,13 +535,13 @@ const SelfBooking = () => {
                         setSelectedDate(d.dateStr);
                         setSelectedTime(''); // Reseta horário ao trocar dia
                       }}
-                      className={`p-3 rounded-xl border text-center flex flex-col items-center justify-center transition-all ${
+                      className={`p-3 rounded-2xl border text-center flex flex-col items-center justify-center transition-all ${
                         isSelected
-                          ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-slate-950 border-emerald-400 font-black shadow-lg shadow-emerald-950/60 scale-105'
-                          : 'bg-slate-900/70 border-slate-700/80 text-slate-300 hover:border-slate-500 hover:bg-slate-800/60'
+                          ? 'bg-[#C8F52E] text-[#0E1116] border-[#C8F52E] font-black shadow-lg shadow-[#C8F52E]/10 scale-105'
+                          : 'bg-[#0E1116] border-[#262D35] text-slate-300 hover:border-slate-500 hover:bg-[#1F242D]/40'
                       }`}
                     >
-                      <span className={`text-[10px] uppercase font-bold tracking-wider ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>
+                      <span className={`text-[10px] uppercase font-bold tracking-wider ${isSelected ? 'text-[#0E1116]' : 'text-[#94A3B8]'}`}>
                         {d.dayName}
                       </span>
                       <span className="text-base font-extrabold mt-0.5">{d.dayNum}</span>
@@ -549,7 +549,7 @@ const SelfBooking = () => {
                   );
                 })}
               </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-400 px-1">
+              <div className="mt-3 flex items-center justify-between text-xs text-[#94A3B8] px-1">
                 <span>Deseja agendar para uma data posterior?</span>
                 <input
                   type="date"
@@ -559,18 +559,18 @@ const SelfBooking = () => {
                     setSelectedDate(e.target.value);
                     setSelectedTime('');
                   }}
-                  className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1 text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="bg-[#0E1116] border border-[#262D35] rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#C8F52E]"
                 />
               </div>
             </div>
 
             {/* Grid de Horários */}
             <div className="mb-8">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-emerald-400" /> 2. Escolha o Horário de Chegada
+              <label className="block text-xs font-bold text-[#C8F52E] uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-[#C8F52E]" /> 2. Escolha o Horário de Chegada
               </label>
               {!selectedDate ? (
-                <div className="p-6 rounded-xl bg-slate-900/40 border border-dashed border-slate-700 text-center text-slate-500 text-sm">
+                <div className="p-6 rounded-2xl bg-[#0E1116] border border-dashed border-[#262D35] text-center text-[#94A3B8] text-sm">
                   👆 Selecione um dia acima para visualizar os horários disponíveis.
                 </div>
               ) : (
@@ -586,10 +586,10 @@ const SelfBooking = () => {
                         onClick={() => setSelectedTime(slot)}
                         className={`py-3 px-4 rounded-xl border text-center font-bold text-sm transition-all relative ${
                           taken
-                            ? 'bg-slate-950/60 border-slate-800/80 text-slate-600 cursor-not-allowed'
+                            ? 'bg-[#0E1116]/60 border-[#262D35] text-slate-600 cursor-not-allowed'
                             : isSelected
-                            ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-950 ring-2 ring-emerald-500/30 font-black'
-                            : 'bg-slate-900/80 border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800'
+                            ? 'bg-[#C8F52E] text-[#0E1116] border-[#C8F52E] shadow-md shadow-[#C8F52E]/10 ring-2 ring-[#C8F52E]/30 font-black'
+                            : 'bg-[#0E1116] border-[#262D35] text-slate-200 hover:border-slate-500 hover:bg-[#1F242D]/40'
                         }`}
                       >
                         {slot}
@@ -605,11 +605,11 @@ const SelfBooking = () => {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-700/80">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#262D35]">
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm flex items-center justify-center gap-2 transition-all"
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#0E1116] hover:bg-[#1F242D] text-slate-300 font-bold text-sm flex items-center justify-center gap-2 transition-all border border-[#262D35]"
               >
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </button>
@@ -622,7 +622,7 @@ const SelfBooking = () => {
                   }
                   setStep(4);
                 }}
-                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-sm shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#B8E622] text-[#0E1116] font-bold text-sm shadow-lg shadow-[#C8F52E]/10 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
               >
                 <span>Preencher Meus Dados</span>
                 <ArrowRight className="w-4 h-4" />
@@ -633,10 +633,10 @@ const SelfBooking = () => {
 
         {/* Step 4: Seus Dados & Resumo Final */}
         {step === 4 && (
-          <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="max-w-xl mb-6 pb-4 border-b border-slate-700/80">
-              <h2 className="text-2xl font-black text-white tracking-tight">Estamos quase lá!</h2>
-              <p className="text-slate-400 text-sm">Informe seus dados para contato e confira o resumo da sua solicitação.</p>
+          <div className="bg-[#171C24] border border-[#262D35] rounded-3xl p-6 sm:p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="max-w-xl mb-6 pb-4 border-b border-[#262D35]">
+              <h2 className="text-2xl font-bold font-['Space_Grotesk'] text-white tracking-tight">Estamos quase lá!</h2>
+              <p className="text-[#94A3B8] text-sm">Informe seus dados para contato e confira o resumo da sua solicitação.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -651,7 +651,7 @@ const SelfBooking = () => {
                       placeholder="Ex: Carlos Eduardo de Souza"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600"
+                      className="w-full bg-[#0E1116] border border-[#262D35] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all placeholder:text-slate-600"
                     />
                   </div>
                 </div>
@@ -666,7 +666,7 @@ const SelfBooking = () => {
                         placeholder="(11) 99999-9999"
                         value={clientPhone}
                         onChange={handlePhoneChange}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600 font-medium"
+                        className="w-full bg-[#0E1116] border border-[#262D35] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all placeholder:text-slate-600 font-medium"
                       />
                     </div>
                   </div>
@@ -679,7 +679,7 @@ const SelfBooking = () => {
                         placeholder="seu@email.com"
                         value={clientEmail}
                         onChange={(e) => setClientEmail(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600"
+                        className="w-full bg-[#0E1116] border border-[#262D35] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all placeholder:text-slate-600"
                       />
                     </div>
                   </div>
@@ -692,12 +692,12 @@ const SelfBooking = () => {
                     placeholder="Ex: Gostaria de prioridade na entrega, o carro possui pequenos riscos na lateral direita..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all placeholder:text-slate-600 resize-none"
+                    className="w-full bg-[#0E1116] border border-[#262D35] rounded-xl p-3 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all placeholder:text-slate-600 resize-none"
                   />
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-start gap-3 text-xs text-slate-400">
-                  <Shield className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div className="p-4 rounded-xl bg-[#0E1116] border border-[#262D35] flex items-start gap-3 text-xs text-[#94A3B8]">
+                  <Shield className="w-5 h-5 text-[#C8F52E] flex-shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-slate-200 block mb-0.5">Agendamento Sujeito à Confirmação</span>
                     Sua solicitação enviará um alerta em tempo real para a gerência da loja. Entraremos em contato via WhatsApp em minutos para validar sua reserva.
@@ -706,34 +706,34 @@ const SelfBooking = () => {
               </div>
 
               {/* Card de Resumo Lateral */}
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-5 flex flex-col justify-between h-fit shadow-xl">
+              <div className="bg-[#0E1116] border border-[#262D35] rounded-2xl p-5 flex flex-col justify-between h-fit shadow-xl">
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-emerald-400 mb-4 pb-2 border-b border-slate-800 flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold font-['Space_Grotesk'] uppercase tracking-wider text-[#C8F52E] mb-4 pb-2 border-b border-[#262D35] flex items-center gap-1.5">
                     <FileText className="w-4 h-4" /> Resumo da Solicitação
                   </h3>
 
                   <div className="space-y-3.5 mb-6 text-xs">
                     <div>
-                      <span className="text-slate-500 font-bold uppercase block text-[10px]">Veículo Selecionado</span>
+                      <span className="text-[#94A3B8] font-bold uppercase block text-[10px]">Veículo Selecionado</span>
                       <p className="font-bold text-white text-sm mt-0.5">{vehicleModel || 'Veículo Não Especificado'}</p>
                       <span className="text-slate-400 text-[11px]">{vehicleClass} {vehicleYear ? `(${vehicleYear})` : ''}</span>
                     </div>
 
                     <div>
-                      <span className="text-slate-500 font-bold uppercase block text-[10px]">Data & Horário</span>
-                      <p className="font-bold text-emerald-400 text-sm mt-0.5 flex items-center gap-1.5">
+                      <span className="text-[#94A3B8] font-bold uppercase block text-[10px]">Data & Horário</span>
+                      <p className="font-bold text-[#C8F52E] text-sm mt-0.5 flex items-center gap-1.5">
                         <CalendarIcon className="w-3.5 h-3.5" />
                         {selectedDate ? selectedDate.split('-').reverse().join('/') : ''} às {selectedTime}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-slate-500 font-bold uppercase block text-[10px] mb-1">Serviços ({selectedServicesList.length})</span>
+                      <span className="text-[#94A3B8] font-bold uppercase block text-[10px] mb-1">Serviços ({selectedServicesList.length})</span>
                       <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                         {selectedServicesList.map(s => (
-                          <li key={s.id} className="flex items-center justify-between text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/60">
+                          <li key={s.id} className="flex items-center justify-between text-slate-300 bg-[#171C24] p-2.5 rounded-xl border border-[#262D35]">
                             <span className="font-medium truncate pr-2" title={s.nome}>{s.nome}</span>
-                            <span className="font-bold text-slate-200 whitespace-nowrap">
+                            <span className="font-bold text-white whitespace-nowrap">
                               {Number(s.preco).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                             </span>
                           </li>
@@ -743,10 +743,10 @@ const SelfBooking = () => {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800">
+                <div className="pt-4 border-t border-[#262D35]">
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs text-slate-400 font-semibold">Valor Estimado:</span>
-                    <span className="text-xl font-black text-emerald-400">
+                    <span className="text-xs text-[#94A3B8] font-semibold">Valor Estimado:</span>
+                    <span className="text-xl font-bold font-['Space_Grotesk'] text-[#C8F52E]">
                       {totalEstimated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
                   </div>
@@ -755,11 +755,11 @@ const SelfBooking = () => {
                     type="button"
                     disabled={isSubmitting}
                     onClick={handleSubmitBooking}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-900/50 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
+                    className="w-full py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#B8E622] text-[#0E1116] font-bold text-sm shadow-lg shadow-[#C8F52E]/10 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                        <div className="w-4 h-4 border-2 border-[#0E1116] border-t-transparent rounded-full animate-spin" />
                         <span>Enviando...</span>
                       </>
                     ) : (
@@ -773,11 +773,11 @@ const SelfBooking = () => {
               </div>
             </div>
 
-            <div className="flex justify-start pt-4 border-t border-slate-700/80">
+            <div className="flex justify-start pt-4 border-t border-[#262D35]">
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm flex items-center gap-2 transition-all"
+                className="px-6 py-3 rounded-xl bg-[#0E1116] hover:bg-[#1F242D] text-slate-300 font-bold text-sm flex items-center gap-2 transition-all border border-[#262D35]"
               >
                 <ArrowLeft className="w-4 h-4" /> Voltar
               </button>
@@ -787,36 +787,36 @@ const SelfBooking = () => {
 
         {/* Step 5: Sucesso / Confirmação */}
         {step === 5 && submittedOrder && (
-          <div className="bg-slate-800/60 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-8 sm:p-12 shadow-2xl text-center max-w-2xl mx-auto animate-in zoom-in-95 duration-500">
-            <div className="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-emerald-500/10 shadow-lg shadow-emerald-950">
+          <div className="bg-[#171C24] border border-[#262D35] rounded-3xl p-8 sm:p-12 shadow-2xl text-center max-w-2xl mx-auto animate-in zoom-in-95 duration-500">
+            <div className="w-20 h-20 bg-[#C8F52E]/20 text-[#C8F52E] rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ring-[#C8F52E]/10 shadow-lg">
               <Check className="w-10 h-10 stroke-[3]" />
             </div>
 
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-3 inline-block">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#C8F52E] bg-[#C8F52E]/10 border border-[#C8F52E]/20 px-3 py-1 rounded-full mb-3 inline-block">
               Solicitação Recebida!
             </span>
 
-            <h2 className="text-3xl font-black text-white mb-3 tracking-tight">Agendamento Solicitado com Sucesso!</h2>
+            <h2 className="text-3xl font-bold font-['Space_Grotesk'] text-white mb-3 tracking-tight">Agendamento Solicitado com Sucesso!</h2>
             <p className="text-slate-300 text-sm sm:text-base leading-relaxed mb-8 max-w-lg mx-auto">
-              Olá, <strong className="text-white">{submittedOrder.clientName}</strong>! Nós já recebemos seu agendamento para o veículo <strong className="text-emerald-400">{submittedOrder.veiculoTexto}</strong> e enviamos um alerta em tempo real para o gestor.
+              Olá, <strong className="text-white">{submittedOrder.clientName}</strong>! Nós já recebemos seu agendamento para o veículo <strong className="text-[#C8F52E]">{submittedOrder.veiculoTexto}</strong> e enviamos um alerta em tempo real para o gestor.
             </p>
 
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 mb-8 text-left text-xs space-y-2.5 max-w-md mx-auto">
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500 font-semibold">Status:</span>
+            <div className="bg-[#0E1116] border border-[#262D35] rounded-2xl p-5 mb-8 text-left text-xs space-y-2.5 max-w-md mx-auto">
+              <div className="flex justify-between border-b border-[#262D35] pb-2">
+                <span className="text-[#94A3B8] font-semibold">Status:</span>
                 <span className="text-amber-400 font-bold flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5" /> Aguardando Validação
                 </span>
               </div>
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-500 font-semibold">Data e Hora:</span>
+              <div className="flex justify-between border-b border-[#262D35] pb-2">
+                <span className="text-[#94A3B8] font-semibold">Data e Hora:</span>
                 <span className="text-white font-bold">
                   {selectedDate.split('-').reverse().join('/')} às {selectedTime}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500 font-semibold">Valor Estimado:</span>
-                <span className="text-emerald-400 font-extrabold text-sm">
+                <span className="text-[#94A3B8] font-semibold">Valor Estimado:</span>
+                <span className="text-[#C8F52E] font-bold font-['Space_Grotesk'] text-sm">
                   {totalEstimated.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </span>
               </div>
@@ -826,18 +826,18 @@ const SelfBooking = () => {
               <button
                 type="button"
                 onClick={() => setShowSyncModal(true)}
-                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-sm border border-emerald-500/30 flex items-center justify-center gap-2 shadow-lg transition-all"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#0E1116] hover:bg-[#1F242D] text-[#C8F52E] font-bold text-sm border border-[#C8F52E]/30 flex items-center justify-center gap-2 shadow-lg transition-all"
               >
-                <CalendarIcon className="w-5 h-5 text-emerald-400" />
+                <CalendarIcon className="w-4 h-4 text-[#C8F52E]" />
                 <span>Adicionar ao Meu Calendário 🗓️</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleSendWhatsAppShop}
-                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-sm shadow-xl shadow-emerald-950/60 flex items-center justify-center gap-2.5 transition-all transform hover:-translate-y-0.5"
+                className="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#B8E622] text-[#0E1116] font-bold text-sm shadow-lg shadow-[#C8F52E]/10 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5"
               >
-                <MessageCircle className="w-5 h-5 fill-slate-950" />
+                <MessageCircle className="w-4 h-4 fill-[#0E1116]" />
                 <span>Confirmar no WhatsApp da Loja</span>
               </button>
               
@@ -851,7 +851,7 @@ const SelfBooking = () => {
                   setNotes('');
                   setSelectedTime('');
                 }}
-                className="w-full sm:w-auto px-6 py-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-sm border border-slate-700 transition-all"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-[#0E1116] hover:bg-[#1F242D] text-slate-300 font-bold text-sm border border-[#262D35] transition-all"
               >
                 Fazer Novo Agendamento
               </button>
@@ -861,8 +861,8 @@ const SelfBooking = () => {
       </main>
 
       {/* Footer minimalista */}
-      <footer className="border-t border-slate-800/80 py-6 px-4 text-center text-xs text-slate-500">
-        <p>© {new Date().getFullYear()} {brand.name || 'OsSystem'}. Todos os direitos reservados. Powered by White Label PWA.</p>
+      <footer className="border-t border-[#262D35] py-6 px-4 text-center text-xs text-[#94A3B8]">
+        <p>© {new Date().getFullYear()} {brand.name || 'CarX Automotive'}. Todos os direitos reservados. Powered by CarX White Label.</p>
       </footer>
 
       {/* Modal Sincronização iCal / Google */}
@@ -878,7 +878,7 @@ const SelfBooking = () => {
             clientes: { nome: submittedOrder.clientName, telefone: clientPhone },
             veiculos: { marca: vehicleClass, modelo: vehicleModel, placa: vehiclePlate }
           }}
-          shopName={brand.name || 'OsSystem Automotivo'}
+          shopName={brand.name || 'CarX Automotive'}
           isManagerView={false}
         />
       )}

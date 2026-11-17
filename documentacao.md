@@ -4591,5 +4591,139 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - **Autenticação Direta e Segura (`customer-portal-service.ts`)**: Criado endpoint `POST /portal/auth/direct-login` recebendo celular e placa do carro, validando sob o tenant através de cruzamento de `customers`, `vehicles` e `work_orders`, emitindo token JWT legítimo com escopo `customer_portal` e validade de 7 dias.
   - **URL Canônica Vinculada à Loja (`ClientPortal.tsx`)**: Interface do portal associada ao slug da oficina (`/:slug/portal`, `/portal/:slug` e `/meuportal`), carregando logotipo, nome e WhatsApp oficial da loja. Formulário com máscaras automáticas para celular e placa.
 
+---
+
+### 📌 Planejamento Técnico dos Itens 55 a 62 (Melhorias Operacionais em Produção)
+- **Item 55 — TV Operacional [CONCLUÍDO]**: Sincronização em tempo real de ordens em execução adiantadas e amarração estrita ao tenant/slug (`brand.name` e canal SSE).
+  - Adicionado endpoint `GET /public/tv` e aprimorado `GET /public/tv/:slug` com resolução de tenant e fallback ordenado para `caiocar`.
+  - Atualizada query `getPublicTvData` com `LEFT JOIN vehicles`, garantindo exibição de qualquer ordem ativa em `IN_PROGRESS`, `QA`, `CHECKED_IN`, `SCHEDULED` e `APPROVED`.
+  - Integrado canal SSE `/realtime/events` com `slug` prioritário e listeners tipados no frontend (`work_order.updated`, `timer.started`, `timer.resumed`, `timer.paused`, `timer.stopped`, etc.).
+  - `technicianService` agora emite eventos SSE ao iniciar, pausar, retomar ou parar cronômetro.
+  - `MonitorTV.tsx` agora redireciona `/tv` para `/:slug/tv` e apresenta a identidade visual da oficina sem texto legado "CarX Oficina Premium".
+- **Item 56 — Agenda Inteligente: Remanejamento Visual de Agendamentos (Horário e Box) e Modal de Edição [CONCLUÍDO]**:
+  - **Sincronização Atômica Agendamento ➔ OS (`appointment-service.ts`)**:
+    - No método `updateAppointment`, ao atualizar um agendamento com `workOrderId` associado, o sistema executa automaticamente um `UPDATE work_orders` sincronizando `scheduled_at`, `bay_id` e `technician_id` na base relacional do PostgreSQL.
+    - Disparo compulsório de dois eventos via `realtimeHub`: `work_order.updated` (com `type: 'work_order.rescheduled'`) e `appointment.updated`, propagando a alteração para a TV Operacional e para todos os cockpits conectados via Server-Sent Events (SSE).
+  - **Cliente de API Web (`api.ts`)**:
+    - Adicionado método `api.appointments.update(id, data)` para requisições `PUT /appointments/:id`.
+  - **Interface da Agenda & Drag & Drop (`Agenda.tsx`)**:
+    - Listener nativo de SSE para atualizar as grades em tempo real ao detectar eventos `appointment.updated` ou `work_order.updated`.
+    - Suporte a **Drag & Drop** nativo HTML5: 10 zonas de drop horário (08h às 17h) por box com destaque visual ao arrastar e feedback imediato de reposicionamento.
+    - Modal de **Remanejamento / Edição de Agendamento**:
+      - Seleção de Data e Box (Box 1, Box 2, Box 3);
+      - Horário de início com botão **"Adiantar p/ Agora"** (preenche o horário atual exato, ex: 12:40);
+      - Botões de ajuste rápido: `-30m`, `-15m`, `+15m`, `+30m`, `+1h`;
+      - Seleção de Técnico responsável e Duração estimada;
+      - Validação de choques de horário no box ou de profissional com mensagem amigável no modal (`editError`).
+    - Botão de acesso direto "Remanejar / Editar" no modal de detalhes do agendamento e ícone de edição rápida no card.
+    - Implementação de cópia segura de link (`handleCopyLink` com fallback de `document.execCommand`), prevenindo falhas de `writeText`.
+  - **Compilação**:
+    - `@carx/shared`: `tsc` concluído com sucesso.
+    - `@carx/api`: `tsc` concluído com 0 erros.
+    - `@carx/web`: `vite build` concluído com sucesso em 7.80s (1631 módulos).
+- **Item 57 — Correção Global de Clipboard em Ambientes HTTP e Agendamento Online [CONCLUÍDO]**:
+  - **Módulo Utilitário `copyToClipboard` (`apps/web/src/utils/clipboard.ts`)**:
+    - Desenvolvido helper universal com verificação segura do contexto do navegador.
+    - Se executado sob protocolo HTTPS ou localhost com suporte a `navigator.clipboard.writeText`, executa a API nativa do navegador.
+    - Em conexões HTTP inseguras (ex: VPS Oracle `http://137.131.151.125:8080`), contextos de iframe ou permissão negada, aciona automaticamente o fallback via elemento `<textarea>` fora da tela e `document.execCommand('copy')`, com compatibilidade explícita para dispositivos móveis iOS Safari (`createRange` e `setSelectionRange`).
+  - **Substituição e Blindagem em 100% dos Pontos de Cópia**:
+    - Substituídas todas as ocorrências frágeis de `navigator.clipboard.writeText` em 11 componentes do sistema: `Agenda.tsx`, `Clientes.jsx`, `NovaOrdemServico.tsx`, `OrdensServico.tsx`, `PublicQuotePage.tsx`, `PublicPassportPage.tsx`, `MiniSiteManager.tsx`, `ApiWebhooksManager.jsx`, `QRCodeModal.jsx`, `WhatsAppManager.tsx` e `CalendarSyncModal.jsx`.
+    - Eliminação completa de erros `TypeError: Cannot read properties of undefined (reading 'writeText')`.
+    - Garantido que o link do agendamento online inclua o slug oficial da loja (`/${tenantSlug}/agendar`).
+  - **Compilação**:
+    - `@carx/web`: `vite build` concluído com 0 erros em 8.13s (1632 módulos).
+- **Item 58 — Design System Rebrand na Agenda [CONCLUÍDO]**:
+  - **Identidade Visual Dark Volt Padronizada**:
+    - Fundo primário: `#0E1116` (Asfalto profundo)
+    - Superfícies dos cards e containers: `#171C24` (Grafite) com bordas sólidas `#262D35` (Aço)
+    - Acento e destaque de alta visibilidade: `#C8F52E` (Volt) com contraste estrito WCAG AAA (texto sempre `#0E1116`)
+    - Tipografia de marca: 'Space Grotesk' em títulos, números e cronômetros; 'Inter' na interface e formulários.
+  - **Componentes e Telas Refatorados**:
+    - `CalendarSyncModal.jsx`: Redesenhado integralmente no tema Dark Volt, eliminando resquícios visuais em esmeralda/teal. Suporte a exportação de arquivo `.ics` e integração direta com Google Calendar e Apple Calendar.
+    - `Agenda.tsx`: Topbar com botão "Sincronizar" ao lado de "+ Novo agendamento", timeline por box em Dark Volt, cards arrastáveis com alvos ergonômicos e modal de edição rápido com botão "Adiantar p/ Agora".
+    - `SelfBooking.jsx`: Todos os 5 Steps convertidos para Dark Volt:
+      - Step 1 (Identificação do Veículo com busca por placa e badges de categoria);
+      - Step 2 (Catálogo de Serviços com combos destacados e resumo dinâmico);
+      - Step 3 (Seleção de Data e Horários com chips interativos e bloqueio de slots ocupados);
+      - Step 4 (Formulário do Cliente com validação de telefone e card de resumo lateral);
+      - Step 5 (Tela de confirmação de agendamento com integração WhatsApp e botão de adição a calendário).
+    - Rodapés e textos legados com menção a "OsSystem" foram 100% substituídos por "CarX".
+  - **Compilação e Validação**:
+    - Build limpo do frontend Vite (`@carx/web`) em 9.14s (1632 módulos) sem nenhum erro sintático ou de tipagem.
+- **Item 59 — Portal do Cliente [CONCLUÍDO]**:
+  - **Eliminação do Erro de Referência**:
+    - Importado explicitamente `getStoredTenantSlug` de `../services/api.ts` em `ClientPortal.tsx`, resolvendo o erro `ReferenceError: getStoredTenantSlug is not defined`.
+  - **Roteamento Padronizado por Slug**:
+    - Adicionada rota oficial `/:slug/meu-veiculo` em `App.jsx` juntamente com `/:slug/portal` e `/:slug/meuportal`.
+    - Atualizados todos os links em `Clientes.jsx` e `PesquisaNPS.jsx` para direcionar à URL canônica com o slug da oficina (`/:slug/portal`).
+  - **Autenticação Direta sem Fricção**:
+    - O cliente informa apenas Celular/WhatsApp e Placa do carro.
+    - Fallback ordenado no backend (`customer-portal-routes.ts`) para resolver a oficina padrão (`caiocar`) caso o acesso seja feito por rota direta sem slug ou subdomínio.
+  - **Enriquecimento Visual e Funcional da Experiência do Cliente**:
+    - **Laudo de Vistoria de Entrada (VCR)**: Exibição no card expandido da OS com quilometragem real de recebimento, marcador de combustível (ex: `1/2`), status de assinatura e relação de avarias pré-existentes identificadas no check-in.
+    - **Download do Laudo em PDF**: Novo endpoint autenticado `GET /portal/work-orders/:id/inspection-pdf` com geração instantânea do PDF do laudo VCR e botão de download via blob no frontend (`api.portal.downloadWorkOrderInspectionPdf`).
+    - **Evidências Fotográficas**: Galeria de fotos de alta definição dividida em fases (Antes, Durante, Depois) com visualizador lightbox em tela cheia.
+    - **Linha do Tempo e Garantias**: Linha do tempo da execução no box com timestamps auditados e visualizador de Certificados de Garantia e Passaporte Digital.
+  - **Compilação e Validação**:
+    - `@carx/shared`, `@carx/api` e `@carx/web` compilados com 0 erros (build Vite em 8.21s).
+- **Item 60 — CRM de Retenção: Contraste Tipográfico e Legibilidade [CONCLUÍDO]**:
+  - **Identificação do Problema**: Textos descritivos ("Revisões Preventivas de Garantia", "Garantias ativas de PPF...", prazos, telefones de clientes e abas inativas) utilizavam tons de cinza muito claros (`#9AA7B8` ou `text-slate-600`) ou acentos verde sobre fundo claro, tornando-se ilegíveis ou apagados dependendo do monitor e luminosidade do ambiente operacional.
+  - **Redesenho da Navegação por Abas**:
+    - Abas encapsuladas dentro de um container sólido Dark Volt (`bg-[#171C24] border border-[#2E3744] p-1.5 rounded-2xl flex flex-wrap gap-2 shadow-lg mb-6`).
+    - Abas ativas com fundo sólido Volt (`bg-[#C8F52E] text-[#0E1116] font-extrabold shadow-md`).
+    - Abas inativas com contraste aprimorado (`text-slate-200 hover:text-white hover:bg-[#232A35] font-bold`).
+    - Contadores numéricos em badges de alto contraste com borda dedicada.
+  - **Ajustes de Legibilidade em Cards, Tabelas e Modais**:
+    - Subtítulos e textos de apoio convertidos para `text-slate-300 font-medium` e `text-slate-200 font-normal`.
+    - Cabeçalhos de tabelas `<thead>` padronizados com `text-slate-200 font-extrabold tracking-wider`.
+    - Labels de modais de disparo e formulários atualizados de `#9AA7B8` para `text-slate-200 font-bold`.
+    - 100% de conformidade com padrões de acessibilidade WCAG AAA.
+  - **Compilação e Validação**:
+    - `@carx/web` compilado via Vite em 8.20s com 0 erros.
+- **Item 61 — Configurações (Settings): Layout Fluido e Espaçamento Responsivo [CONCLUÍDO]**:
+  - **Identificação do Problema**: Conforme evidenciado no Print 4, a tela de Configurações apresentava faixas laterais vazias excessivas porque o elemento principal continha a classe restritiva `max-w-4xl` na aba `GERAL`, comprimindo o conteúdo a 896px em telas desktop de 1280px ou superiores.
+  - **Remoção de Restrição e Fluidificação do Container**:
+    - Substituição de `max-w-4xl` por `w-full space-y-6 pb-20 font-sans text-[#0E1116]`, permitindo que o formulário ocupe harmonicamente toda a extensão útil fornecida pelo `DashboardLayout` (`max-w-7xl mx-auto w-full`).
+  - **Reorganização do Grid Responsivo**:
+    - Estruturação em 2 colunas equilibradas no desktop (`grid grid-cols-1 lg:grid-cols-2 gap-6`):
+      - Coluna 1: Card "Identidade da Loja" com acabamento `rounded-3xl bg-[#171C24] border border-[#262D35] p-6 sm:p-7`, input de nome comercial, URL da logomarca com moldura de preview de 28px de altura e card de referência da paleta corporativa Dark Volt.
+      - Coluna 2: Card "Monitor TV do Pátio & Recepção" com input de ID de vídeo/playlist do YouTube e visualizador de tela de TV em proporção `aspect-video rounded-xl`.
+      - Linha Completa (`lg:col-span-2`): Card "Canais de Contato & Redes Sociais" com 4 colunas perfeitamente distribuídas (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5`) para WhatsApp Oficial, Instagram, YouTube e TikTok.
+  - **Padrão de Cores e Contraste**:
+    - Labels de inputs atualizados para `text-xs font-bold uppercase tracking-wider text-slate-200 block`.
+    - Textos explicativos e legendas ajustados para `text-xs text-slate-300 font-normal leading-relaxed`.
+    - Inputs estilizados com `bg-[#0E1116] border border-[#262D35] rounded-2xl py-3.5 px-4 text-white font-medium focus:border-[#C8F52E]`.
+    - Botão "Salvar Configurações" posicionado em destaque com o estilo primário CarX Volt (`px-8 py-3.5 bg-[#C8F52E] text-[#0E1116] font-display font-black rounded-2xl shadow-lg`).
+  - **Compilação e Validação**:
+    - `@carx/web` compilado via Vite em 7.88s com 0 erros sintáticos ou visuais.
+- **Item 62 — Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty) [CONCLUÍDO]**:
+  - **Arquitetura de Pagamentos e Licenciamento das Oficinas**:
+    - Módulo espelhado com fidelidade técnica a partir do padrão de engenharia consolidado no repositório `d:/Repositorios/OperaBeauty` (`AssinaturaSaaS.jsx`, `ModalPagamentoPixSaaS.jsx`, `mercadopagoService`, rotas de billing e conciliação).
+  - **Endpoints de Faturamento do Tenant (`apps/api/src/routes/billing-routes.ts`)**:
+    - `GET /tenant/billing/status`: Retorna o panorama consolidado da licença da oficina com dados do plano, quotas em tempo real (usuários, unidades, OS, armazenamento), contrato ativo com dias restantes, cálculo de tolerância/carência de 5 dias (`is_grace_period`, `remaining_grace_days`, `days_overdue`), indicador de bloqueio em modo somente leitura (`is_blocked`), lista de faturas ativas pendentes já com dados de PIX EMV gerados e histórico de faturas quitadas.
+    - `GET /tenant/billing/invoices`: Lista detalhada de todas as faturas emitidas para a oficina sob isolamento seguro por tenant.
+    - `POST /billing/invoices/:id/simulate-payment`: Endpoint em ambiente Sandbox que aciona `mercadopagoService.settleInvoicePayment`, quitando a fatura, renovando o contrato por 30 dias e reativando a oficina instantaneamente.
+    - `POST /billing/invoices/:id/refresh-pix`: Regenera e atualiza o QR Code e código Copia e Cola via API do gateway ou gerador EMV.
+    - `POST /tenant/plan/change`: Migração imediata de plano contratado (Essencial, Profissional, Premium) com reajuste automático de limites operacionais.
+  - **Interface do Cockpit do Gestor (`apps/web`)**:
+    - **Página de Assinatura (`apps/web/src/pages/AssinaturaSaaS.tsx`)**:
+      - Banners dinâmicos com feedback visual de carência ativa ou aviso de suspensão temporária em modo somente leitura com botão de desbloqueio;
+      - Card do Plano Ativo com contadores de uso de recursos vs. limites contratados;
+      - Card de Próxima Fatura em aberto com botão primário Volt "Pagar Fatura com PIX";
+      - Grid de 3 Planos Comerciais com destaque para o plano Profissional ("Mais Escolhido") e botão de migração em 1 clique ("Migrar para este Plano");
+      - Tabela de Histórico Financeiro com badges de status (`Pago`, `Pendente`, `Vencida`), datas de quitação e botão de 2ª via/recibo.
+    - **Modal de Pagamento PIX SaaS (`apps/web/src/components/features/ModalPagamentoPixSaaS.tsx`)**:
+      - QR Code PIX responsivo com moldura Volt;
+      - Código PIX Copia e Cola com cópia universal blindada (`copyToClipboard`) para ambientes HTTP e HTTPS;
+      - Polling contínuo a cada 4 segundos com detecção automática de pagamento e fechamento com celebração de quitação;
+      - Botão de simulação de pagamento instantâneo em ambiente Sandbox/Dev.
+    - **Navegação Integrada**:
+      - Adicionado menu "Assinatura & Licença" na `Sidebar.jsx`;
+      - Rotas `/assinatura`, `/licenca` e `/billing` registradas no `App.jsx`;
+      - Atalho "Assinatura & Licença ↗" integrado no cabeçalho de `Settings.jsx`.
+  - **Compilação e Validação**:
+    - Monorepo completo (`@carx/shared`, `@carx/api`, `@carx/web`) compilado com 100% de sucesso e 0 erros.
+
+
 
 

@@ -21,6 +21,7 @@ import {
   exportShopAgendaIcs 
 } from '../../utils/calendarUtils';
 import { toast } from '../../utils/toast';
+import { copyToClipboard } from '../../utils/clipboard';
 
 const CalendarSyncModal = ({ 
   isOpen, 
@@ -51,10 +52,10 @@ const CalendarSyncModal = ({
     }
   };
 
-  const handleCopyEventSummary = () => {
+  const handleCopyEventSummary = async () => {
     if (!singleEvent) return;
     const text = `${singleEvent.title}\n📅 Data: ${new Date(singleEvent.start).toLocaleString('pt-BR')}\n📍 Local: ${singleEvent.location}\n\n${singleEvent.description}`;
-    navigator.clipboard.writeText(text);
+    await copyToClipboard(text);
     toast.success('Resumo do agendamento copiado para a área de transferência! 📋');
   };
 
@@ -65,24 +66,24 @@ const CalendarSyncModal = ({
     >
       <div 
         onClick={(e) => e.stopPropagation()}
-        className="bg-slate-900 border border-slate-700/80 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-slate-100 animate-in zoom-in-95 duration-200"
+        className="bg-[#0E1116] border border-[#262D35] rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative text-slate-100 animate-in zoom-in-95 duration-200"
       >
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-all"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#171C24] text-slate-400 hover:text-white hover:bg-[#262D35] flex items-center justify-center transition-all"
         >
           <X className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-900/40 text-white flex-shrink-0">
+        <div className="flex items-center gap-3.5 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-[#C8F52E] flex items-center justify-center shadow-lg shadow-[#C8F52E]/10 text-[#0E1116] flex-shrink-0">
             <CalendarIcon className="w-6 h-6 stroke-[2.5]" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight">
+            <h2 className="text-xl font-bold font-['Space_Grotesk'] text-white tracking-tight">
               {isManagerView ? 'Sincronizar Agenda da Loja' : 'Adicionar ao seu Calendário'}
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#94A3B8]">
               {isManagerView 
                 ? 'Exporte os agendamentos da loja para seu iPhone, Android ou Google Calendar.' 
                 : 'Não perca o dia do serviço! Adicione um lembrete com 1 clique.'}
@@ -92,9 +93,9 @@ const CalendarSyncModal = ({
 
         {/* Resumo visual do agendamento se for único */}
         {singleEvent && (
-          <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 mb-6 space-y-2 text-xs">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <span className="font-mono text-emerald-400 font-bold uppercase tracking-wider">{singleEvent.title}</span>
+          <div className="bg-[#171C24] border border-[#262D35] rounded-2xl p-4 mb-6 space-y-2 text-xs">
+            <div className="flex items-center justify-between border-b border-[#262D35] pb-2">
+              <span className="font-mono text-[#C8F52E] font-bold uppercase tracking-wider">{singleEvent.title}</span>
             </div>
             <div className="text-slate-300 flex items-center gap-2 font-semibold">
               <span className="text-slate-500 font-normal">Data & Hora:</span>
@@ -116,7 +117,7 @@ const CalendarSyncModal = ({
               href={getGoogleCalendarUrl(singleEvent)}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/50 flex items-center justify-between transition-all group"
+              className="w-full p-4 rounded-2xl bg-[#171C24] hover:bg-[#1F242D] border border-[#262D35] hover:border-[#C8F52E]/60 flex items-center justify-between transition-all group"
             >
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
@@ -126,10 +127,10 @@ const CalendarSyncModal = ({
                   <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
                     Google Calendar <ExternalLink className="w-3 h-3 text-slate-400" />
                   </h3>
-                  <p className="text-[11px] text-slate-400">Adicionar instantaneamente (Web, Android e iOS)</p>
+                  <p className="text-[11px] text-[#94A3B8]">Adicionar instantaneamente (Web, Android e iOS)</p>
                 </div>
               </div>
-              <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all">
+              <span className="px-3 py-1.5 rounded-xl bg-[#C8F52E]/10 text-[#C8F52E] text-xs font-bold border border-[#C8F52E]/30 group-hover:bg-[#C8F52E] group-hover:text-[#0E1116] transition-all">
                 + Adicionar
               </span>
             </a>
@@ -140,7 +141,7 @@ const CalendarSyncModal = ({
             <button
               type="button"
               onClick={handleDownloadSingleIcs}
-              className="w-full p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-sky-500/50 flex items-center justify-between transition-all group text-left"
+              className="w-full p-4 rounded-2xl bg-[#171C24] hover:bg-[#1F242D] border border-[#262D35] hover:border-[#C8F52E]/60 flex items-center justify-between transition-all group text-left"
             >
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
@@ -150,7 +151,7 @@ const CalendarSyncModal = ({
                   <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
                     Apple Calendar & Outlook <Download className="w-3 h-3 text-slate-400" />
                   </h3>
-                  <p className="text-[11px] text-slate-400">Baixar arquivo iCal (.ics) para iPhone, iPad, Mac ou Windows</p>
+                  <p className="text-[11px] text-[#94A3B8]">Baixar arquivo iCal (.ics) para iPhone, iPad, Mac ou Windows</p>
                 </div>
               </div>
               <span className="px-3 py-1.5 rounded-xl bg-sky-500/10 text-sky-400 text-xs font-bold border border-sky-500/20 group-hover:bg-sky-500 group-hover:text-slate-950 transition-all">
@@ -165,7 +166,7 @@ const CalendarSyncModal = ({
               href={getOutlookCalendarUrl(singleEvent)}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-blue-500/50 flex items-center justify-between transition-all group"
+              className="w-full p-4 rounded-2xl bg-[#171C24] hover:bg-[#1F242D] border border-[#262D35] hover:border-[#C8F52E]/60 flex items-center justify-between transition-all group"
             >
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition-transform">
@@ -175,7 +176,7 @@ const CalendarSyncModal = ({
                   <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
                     Microsoft Outlook / 365 <ExternalLink className="w-3 h-3 text-slate-400" />
                   </h3>
-                  <p className="text-[11px] text-slate-400">Abrir no Outlook Web ou aplicativo de e-mail</p>
+                  <p className="text-[11px] text-[#94A3B8]">Abrir no Outlook Web ou aplicativo de e-mail</p>
                 </div>
               </div>
               <span className="px-3 py-1.5 rounded-xl bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20 group-hover:bg-blue-500 group-hover:text-white transition-all">
@@ -186,26 +187,26 @@ const CalendarSyncModal = ({
 
           {/* 4. Opção do Gestor: Exportar Toda a Agenda da Loja */}
           {(isManagerView || ordersList.length > 0) && (
-            <div className="pt-2 border-t border-slate-800">
+            <div className="pt-2 border-t border-[#262D35]">
               <button
                 type="button"
                 onClick={handleExportAllIcs}
-                className="w-full p-4 rounded-2xl bg-gradient-to-br from-emerald-950/60 to-slate-800 border border-emerald-500/60 hover:border-emerald-400 flex items-center justify-between transition-all group text-left shadow-lg shadow-emerald-950/40"
+                className="w-full p-4 rounded-2xl bg-[#171C24] hover:bg-[#1F242D] border border-[#C8F52E]/60 hover:border-[#C8F52E] flex items-center justify-between transition-all group text-left shadow-lg shadow-[#0E1116]"
               >
                 <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-lg group-hover:scale-110 transition-transform shadow-md">
+                  <div className="w-10 h-10 rounded-xl bg-[#C8F52E] text-[#0E1116] flex items-center justify-center font-black text-lg group-hover:scale-110 transition-transform shadow-md">
                     📅
                   </div>
                   <div>
-                    <h3 className="font-black text-white text-sm flex items-center gap-1.5">
+                    <h3 className="font-bold font-['Space_Grotesk'] text-white text-sm flex items-center gap-1.5">
                       Exportar Toda a Agenda da Loja (.ics)
                     </h3>
-                    <p className="text-[11px] text-slate-300">
-                      Baixe o feed completo com todos os {ordersList.filter(o => o.data_agendamento).length || 'atuais'} agendamentos da loja
+                    <p className="text-[11px] text-[#94A3B8]">
+                      Baixe o feed completo com todos os agendamentos da loja
                     </p>
                   </div>
                 </div>
-                <span className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black shadow-md group-hover:bg-emerald-400 transition-all flex items-center gap-1">
+                <span className="px-3.5 py-1.5 rounded-xl bg-[#C8F52E] text-[#0E1116] text-xs font-black shadow-md hover:bg-[#B8E622] transition-all flex items-center gap-1">
                   <Download className="w-3.5 h-3.5 stroke-[2.5]" /> Feed
                 </span>
               </button>
@@ -215,14 +216,14 @@ const CalendarSyncModal = ({
         </div>
 
         {/* Botões de rodapé: Copiar Resumo & Fechar */}
-        <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-800">
+        <div className="flex items-center justify-between gap-3 pt-4 border-t border-[#262D35]">
           {singleEvent && (
             <button
               type="button"
               onClick={handleCopyEventSummary}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-700"
+              className="px-4 py-2.5 rounded-xl bg-[#171C24] hover:bg-[#1F242D] text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5 border border-[#262D35]"
             >
-              <Copy className="w-3.5 h-3.5 text-emerald-400" />
+              <Copy className="w-3.5 h-3.5 text-[#C8F52E]" />
               <span>Copiar Texto</span>
             </button>
           )}
@@ -230,7 +231,7 @@ const CalendarSyncModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all"
+            className="ml-auto px-6 py-2.5 rounded-xl bg-[#171C24] hover:bg-[#1F242D] text-white text-xs font-bold transition-all border border-[#262D35]"
           >
             Fechar
           </button>

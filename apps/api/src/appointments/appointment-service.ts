@@ -1,5 +1,6 @@
 import { tenantQuery, tenantTransaction } from '../database/tenant-query.js';
 import { auditService } from '../audit/audit-service.js';
+import { realtimeHub } from '../realtime/realtime-hub.js';
 import {
   BayDto,
   CreateBayInputDto,
@@ -934,6 +935,49 @@ export class AppointmentService {
         newValues: updated as unknown as Record<string, unknown>,
       });
     }
+
+    // Sincronização atômica com a Ordem de Serviço associada
+    if (updated.workOrderId) {
+      try {
+        await tenantQuery(
+          tenantId,
+          `UPDATE work_orders
+           SET scheduled_at = $3,
+               bay_id = COALESCE($4, bay_id),
+               technician_id = COALESCE($5, technician_id),
+               updated_at = NOW()
+           WHERE tenant_id = $1 AND id = $2;`,
+          [
+            tenantId,
+            updated.workOrderId,
+            updated.startTime,
+            updated.bayId || null,
+            updated.technicianId || null,
+          ]
+        );
+
+        realtimeHub.publish(tenantId, 'work_order.updated', {
+          type: 'work_order.rescheduled',
+          workOrderId: updated.workOrderId,
+          scheduledAt: updated.startTime,
+          bayId: updated.bayId,
+          technicianId: updated.technicianId,
+        });
+      } catch (syncWoErr) {
+        console.warn('[AppointmentService] Aviso na sincronização da OS atrelada ao agendamento:', syncWoErr);
+      }
+    }
+
+    // Notificação em tempo real para a Agenda e TV Operacional
+    realtimeHub.publish(tenantId, 'appointment.updated', {
+      type: 'appointment.updated',
+      appointmentId: updated.id,
+      workOrderId: updated.workOrderId,
+      bayId: updated.bayId,
+      startTime: updated.startTime,
+      endTime: updated.endTime,
+      status: updated.status,
+    });
 
     return updated;
   }

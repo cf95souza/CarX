@@ -60,6 +60,7 @@ const PublicPassportPage = safeLazy(() => import('./pages/PublicPassportPage'));
 const MiniSiteOficina = safeLazy(() => import('./pages/MiniSiteOficina'));
 const CorporatePage = safeLazy(() => import('./pages/Corporate'));
 const CrmRetencaoPage = safeLazy(() => import('./pages/CrmRetencao'));
+const AssinaturaSaaS = safeLazy(() => import('./pages/AssinaturaSaaS'));
 
 // Componente de Loading Premium para Transições de Rota
 const PageLoading = () => {
@@ -455,6 +456,9 @@ function App() {
               <Route path="/crm" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><CrmRetencaoPage /></AppLayout></ProtectedRoute>} />
               <Route path="/retencao" element={<Navigate to="/crm" replace />} />
               <Route path="/pos-venda" element={<Navigate to="/crm" replace />} />
+              <Route path="/assinatura" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR', 'OWNER']}><AppLayout><AssinaturaSaaS /></AppLayout></ProtectedRoute>} />
+              <Route path="/licenca" element={<Navigate to="/assinatura" replace />} />
+              <Route path="/billing" element={<Navigate to="/assinatura" replace />} />
               <Route path="/settings" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/ajuda" element={<ProtectedRoute allowedRoles={['ADM', 'GESTOR']}><AppLayout><Ajuda /></AppLayout></ProtectedRoute>} />
 
@@ -465,6 +469,7 @@ function App() {
               <Route path="/:slug/login" element={<LoginPage />} />
               <Route path="/:slug/tv" element={<MonitorTV />} />
               <Route path="/:slug/monitor-tv" element={<MonitorTV />} />
+              <Route path="/:slug/meu-veiculo" element={<ClientPortal />} />
               <Route path="/:slug/meuportal" element={<ClientPortal />} />
               <Route path="/:slug/portal" element={<ClientPortal />} />
               <Route path="/:slug/agendar" element={<SelfBooking />} />

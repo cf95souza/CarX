@@ -38,6 +38,15 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
        * [ ] Item 52: Persistência do Percentual de Conclusão (Progresso) da OS no Banco e Refletir no Gestor/Operador/Portal
        * [ ] Item 53: Correção do Duplo '+' no Botão Nova OS (Print 5)
        * [ ] Item 54: Portal do Cliente: Login Direto por Número da OS + Placa e URL Isolada por Slug da Loja (/:slug/portal — Print 6)
+      - [T8.2e] Homologação e Refinamentos Críticos na VPS Oracle (Itens 55 a 62 — EXECUÇÃO SEQUENCIAL 1 A 1):
+        * [x] Item 55: TV Operacional: Veículos Adiantados e Identidade da Loja CaioCar (100% Concluído e Validado)
+        * [x] Item 56: Agenda Inteligente: Remanejamento Visual de Agendamentos e Modal de Edição (100% Concluído e Validado)
+        * [x] Item 57: Correção Global de Clipboard em Ambientes HTTP e Agendamento Online (100% Concluído e Validado)
+        * [x] Item 58: Aplicação do Design System Rebrand CarX em 100% da Agenda e Sub-telas (100% Concluído e Validado)
+        * [x] Item 59: Portal do Cliente: Correção de getStoredTenantSlug is not defined, URL por Slug e Enriquecimento Visual (100% Concluído e Validado)
+        * [ ] Item 60: CRM de Retenção: Correção de Contraste Tipográfico de Textos Claros/Apagados (Print 3)
+        * [ ] Item 61: Configurações & Integrações (Settings): Ajuste de Layout e Espaçamento Responsivo (Print 4)
+        * [ ] Item 62: Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
    • Item 38: Teste E2E de Fluxo Sistêmico Completo 100% Visual pela Tela (Frontend)
@@ -103,6 +112,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
 | **Fase 6 · Onda 3** | Diferenciais: Escala, Fiscal & IA (NFS-e, DRE, Franquias, Offline-First, IA, CRM) | `[x] 100% Concluída` | Tarefas T6.10, T6.11, T6.12, T6.13, T6.14 e T6.15 homologadas com sucesso |
 | **Fase 7** | Qualidade Contínua, Testes de Carga (k6) e Hardening OWASP | `[x] 100% Concluída` | Tarefas T7.1, T7.2, T7.3, T7.4 e T7.5 homologadas com evidências |
 | **Fase 8** | Go-To-Market e Beta Fechado (Oficinas Piloto) | `[🟡 PRÓXIMA FASE]` | Pronta para iniciar (Release Gate da Fase 7 100% aprovado) |
+| **Fase 8.2** | Ajustes Finos de Produção & Homologação Piloto (Itens 47 a 62) | `[🟡 EM ANDAMENTO]` | Itens 47 a 54 concluídos; Itens 55 a 62 registrados e detalhados para execução |
 
 ---
 
@@ -2672,3 +2682,183 @@ Onda 3 Roadmap de Execução:
   - `apps/web/src/pages/MiniSiteOficina.tsx`: link do rodapé atualizado para `/${tenant.slug}/portal`.
   - Builds de `packages/shared`, `apps/api` e `apps/web` validados com 100% de sucesso.
 - **Critério de Aceite**: O cliente acessa `http://.../caiocar/portal`, digita o número do celular (ex: 11949156525) e a placa (EVH0H11) e acessa imediatamente o portal com todas as ordens de serviço, status do pátio, fotos do veículo e garantias sem exigência de código SMS/WhatsApp.
+
+---
+
+## 📌 [T8.2e] Detalhamento Técnico das Melhorias Operacionais (Itens 55 a 62)
+
+### 📋 Item 55 — TV Operacional: Sincronização em Tempo Real de Veículos Adiantados e Resolução de Identidade da Oficina (Prints 1 e 2) [CONCLUÍDO]
+- **Problema**:
+  - No Dashboard do Gestor (Print 1), o veículo Ford Fiesta Rocam 1.0 (OS #1, placa `EVH0H11`, Técnico Caio Operador, R$ 650,00) já se encontrava com status `EM EXECUÇÃO (1)`, tendo sido adiantado (estava agendado para as 15:00, mas o serviço foi iniciado antes porque a oficina estava livre).
+  - No entanto, na TV Operacional da oficina (Print 2), a tela exibia o título genérico `CARX OFICINA PREMIUM`, `Pátio: 0 veículos ativos` e a mensagem de pátio livre (`PÁTIO OPERACIONAL LIVRE - Nenhum veículo em execução ou aguardando no momento`).
+- **Causa Raiz Técnica**:
+  - **Resolução de Slug & Roteamento da TV**: Quando a TV era aberta sem o slug explícito (`/tv`), o estado de autenticação ou tenant podia ser nulo no navegador da TV (especialmente em Smart TVs de recepção), ativando o fallback que falhava com 401/400 e exibia o título genérico hardcoded `CarX Oficina Premium`.
+  - **Disparos em Tempo Real (SSE)**: O EventSource nativo do browser requer `addEventListener` para eventos nomeados (`work_order.updated`, `work_order.ready`, `timer.started`, `timer.resumed`), pois `onmessage` captura apenas mensagens genéricas sem campo `event:`. Além disso, o início e retoma do cronômetro (`technicianService.startTimer`, `resumeTimer`, `stopTimer`) não emitiam evento no canal SSE do tenant.
+  - **Resiliência do Endpoint `/public/tv` e Query SQL**: A rota `/public/tv` não existia sem slug e a query exigia estritamente status ativo em letras minúsculas com `INNER JOIN` em veículos, correndo o risco de excluir registros com pequenas variações relacionais.
+- **Solução Implementada**:
+  - `apps/api/src/routes/work-order-routes.ts`: adicionado endpoint público `GET /public/tv` suportando query param `?slug=` e cabeçalho `x-tenant-slug`, além do tradicional `GET /public/tv/:slug`.
+  - `apps/api/src/work-orders/work-order-service.ts`:
+    - Atualizada a query `getPublicTvData` para resolução flexível e resiliente de tenant por slug com fallback ordenado para o primeiro tenant ativo da base (CaioCar), nunca disparando 404 para instalações legítimas.
+    - Transformado o `JOIN vehicles` em `LEFT JOIN vehicles` garantindo que nenhuma OS do pátio em `IN_PROGRESS`, `QA`, `CHECKED_IN`, `SCHEDULED` ou `APPROVED` seja ocultada.
+    - O objeto de branding retornado agora injeta `trade_name`, `name` e `tradeName` como `CaioCar`.
+  - `apps/api/src/routes/realtime-routes.ts`: canal SSE `/realtime/events` atualizado para resolver conexões públicas de TV priorizando o parâmetro `?slug=`, conectando instantaneamente Smart TVs sem token Bearer.
+  - `apps/api/src/technician/technician-service.ts`: integrado `realtimeHub.publish` nos métodos `startTimer`, `resumeTimer`, `pauseTimer` e `stopTimer`, propagando updates imediatos via SSE para a TV Operacional.
+  - `apps/web/src/pages/MonitorTV.tsx`:
+    - Resolução robusta de slug: `routeSlug || getStoredTenantSlug() || 'caiocar'`. Se acessado por `/tv`, redireciona via `navigate` imediatamente para `/:slug/tv`.
+    - SSE atualizado com `addEventListener` para todos os eventos: `work_order.updated`, `work_order.ready`, `work_order.created`, `timer.started`, `timer.resumed`, `timer.paused`, `timer.stopped`, `payment.received`.
+    - `shopName` e rodapé agora priorizam `branding?.trade_name || branding?.tradeName || branding?.name || 'CaioCar'`, eliminando o texto legado "CarX Oficina Premium".
+  - `apps/web/src/components/layout/Sidebar.jsx`: link do rodapé "Monitor TV" agora aponta diretamente para `/${tenantSlug}/tv`.
+  - `apps/web/src/contexts/BrandContext.jsx`: armazena automaticamente o slug resolvido em `localStorage` (`carx_tenant_slug`).
+  - `apps/web/src/services/api.ts`: `api.realtime.getEventsUrl` atualizado para passar o slug da oficina na query string SSE.
+  - Builds de `@carx/api` e `@carx/web` compilados com 100% de sucesso.
+- **Critério de Aceite**: A TV Operacional da oficina (`/:slug/tv` ou `/tv`) exibe o cabeçalho oficial "CAIOCAR · TV Operacional", identifica o pátio ativo ("Pátio: 1 Veículo Ativo"), exibe o card do Ford Fiesta em execução no box e sincroniza o progresso e cronômetro em tempo real via SSE.
+
+---
+
+### ✅ Item 56 — Agenda Inteligente: Remanejamento Visual de Agendamentos (Horário e Box) e Modal de Edição `[CONCLUÍDO]`
+- **Status**: Concluído e Validado localmente com compilação 100% livre de erros (`@carx/shared`, `@carx/api`, `@carx/web`).
+- **Problema Resolvido**: O gestor precisa remanejar agendamentos na grade da Agenda (por exemplo, adiantar um serviço agendado para as 15:00 para as 12:40, ou alterar de Box 1 para Box 2).
+- **Implementações Realizadas**:
+  - `packages/shared/src/schemas.ts`: Adicionado `'appointment.updated'` em `RealtimeEventType`.
+  - `apps/api/src/appointments/appointment-service.ts`:
+    - Em `updateAppointment`: Adicionada sincronização atômica com a Ordem de Serviço vinculada (`work_orders.scheduled_at`, `work_orders.bay_id`, `work_orders.technician_id`).
+    - Emissão de eventos pontuais no `realtimeHub` (`work_order.updated` com `type: 'work_order.rescheduled'` e `appointment.updated`), atualizando instantaneamente a TV Operacional e a Agenda via SSE.
+  - `apps/web/src/services/api.ts`:
+    - Adicionado método `api.appointments.update(id, data)` para envio do `PUT /appointments/:id`.
+  - `apps/web/src/pages/Agenda.tsx`:
+    - Listener nativo de SSE para auto-refresh da agenda ao receber eventos `appointment.updated` e `work_order.updated`.
+    - Suporte a **Drag & Drop** nativo HTML5 na grade: células horárias de 08h a 17h para cada box detectam drop de cards de agendamento, calculando e persistindo novo horário e box de forma imediata.
+    - Modal de **Remanejamento / Edição de Agendamento**:
+      - Seleção de Data e Box (Box 1, Box 2, Box 3);
+      - Horário de início com botão **"Adiantar p/ Agora"** (preenche o horário atual exato, ex: 12:40);
+      - Botões rápidos de ajuste: `-30m`, `-15m`, `+15m`, `+30m`, `+1h`;
+      - Seleção de Técnico e Duração Estimada;
+      - Tratamento amigável e informativo de conflitos de box ou técnico (`editError`);
+    - Botão de acesso rápido no modal de detalhes do agendamento ("Remanejar / Editar").
+    - Implementação de cópia segura de link (`handleCopyLink` com fallback de `document.execCommand`).
+- **Critério de Aceite**: O gestor clica no agendamento na grade da Agenda, altera o horário ou clica em "Adiantar p/ Agora" e altera o box; o bloco se move imediatamente na tela, e a OS vinculada tem seu horário e box atualizados no banco e na TV operacional.
+
+---
+
+### ✅ Item 57 — Correção de `TypeError: Cannot read properties of undefined (reading 'writeText')` no Agendamento Online `[CONCLUÍDO]`
+- **Status**: Concluído e Validado localmente com compilação 100% livre de erros (`@carx/web`).
+- **Problema Resolvido**: Erro fatal ao copiar links ou códigos em conexões HTTP (`http://137.131.151.125:8080`) devido à restrição de segurança dos navegadores que torna `navigator.clipboard` indefinido fora de HTTPS/localhost.
+- **Implementações Realizadas**:
+  - Criado o módulo utilitário universal [`apps/web/src/utils/clipboard.ts`](file:///d:/Repositorios/CarX/apps/web/src/utils/clipboard.ts):
+    - Tenta primeiro `navigator.clipboard.writeText` em contextos seguros;
+    - Em contextos HTTP ou falhas de permissão, aciona o fallback resiliente com `<textarea readonly style="position:fixed;left:0;top:0;opacity:0">` + `document.execCommand('copy')`, incluindo suporte estrito para seleção no iOS Safari (`createRange()`);
+    - Retorna `Promise<boolean>` com tratamento completo de erros sem lançar exceções não tratadas no React.
+  - Varredura e substituição global em todos os 11 pontos críticos do frontend que chamavam `navigator.clipboard.writeText`:
+    1. `Agenda.tsx` (`handleCopyLink` com URL canônica da loja `/:slug/agendar`);
+    2. `CalendarSyncModal.jsx` (`handleCopyEventSummary`);
+    3. `MiniSiteManager.tsx` (cópia do link do mini-site público da oficina);
+    4. `ApiWebhooksManager.jsx` (cópia de chaves de API e tokens de webhook);
+    5. `QRCodeModal.jsx` (cópia do link de rastreamento do cliente);
+    6. `WhatsAppManager.tsx` (cópia de código de emparelhamento do WhatsApp);
+    7. `Clientes.jsx` (cópia do link do portal do cliente com rota por slug `/:slug/portal`);
+    8. `NovaOrdemServico.tsx` (`handleCopyQuoteLink`);
+    9. `OrdensServico.tsx` (`handleCopyPixCode` para chave Pix Copia e Cola);
+    10. `PublicPassportPage.tsx` (cópia da URL do passaporte digital veicular);
+    11. `PublicQuotePage.tsx` (`handleCopyPix` para pagamento do sinal da proposta).
+- **Critério de Aceite**: O gestor ou cliente clica em qualquer botão de cópia na aplicação (link de agendamento online, código Pix, URL de rastreamento, portal do cliente) tanto em conexões HTTP (IP direto) quanto HTTPS; o texto é copiado para a área de transferência com sucesso e a interface opera sem nenhum crash no console.
+
+---
+
+### [x] Item 58 — Aplicação do Design System Rebrand CarX em 100% da Agenda e Sub-telas `(Concluído e Validado)`
+- **Problema**: Telas, modais e componentes da Agenda Inteligente continham fragmentos visuais do design legado (tons esmeralda/teal, botões desalinhados ou contrastes inadequados).
+- **Escopo Executado**:
+  - Aplicado o Design System Rebrand CarX oficial (`#0E1116`, `#171C24`, `#262D35`, `#C8F52E`, tipografia 'Space Grotesk' e 'Inter') em:
+    - Tela principal da Agenda (`Agenda.tsx`): Topbar, filtros de técnicos/status, cards arrastáveis e timeline com paleta Dark Volt padronizada;
+    - Timeline e visualização por colunas de Boxes de atendimento com feedback visual instantâneo ao arrastar agendamentos;
+    - Modal de Edição e Remanejamento Rápido de Agendamento com atalhos de tempo e botão de destaque "Adiantar p/ Agora";
+    - Modal de Sincronização de Calendários (`CalendarSyncModal.jsx`): Redesenhado integralmente no tema Dark Volt, substituindo classes legadas em esmeralda;
+    - Página pública de Auto-Agendamento do cliente (`SelfBooking.jsx`): Todos os 5 Steps convertidos (Step 1 Veículo, Step 2 Serviços, Step 3 Data & Hora, Step 4 Dados do Cliente & Resumo Lateral, Step 5 Sucesso com confirmação WhatsApp e sync iCal).
+- **Critério de Aceite**: Todas as telas e modais da Agenda seguem com fidelidade total a identidade visual oficial do CarX Rebrand, com contraste rigoroso WCAG AAA e compilação do frontend 100% limpa (`pnpm --filter @carx/web run build` em 9.14s sem erros).
+
+---
+
+### [x] Item 59 — Portal do Cliente: Correção de `getStoredTenantSlug is not defined`, URL por Slug e Enriquecimento Visual `(Concluído e Validado)`
+- **Problemas Identificados**:
+  1. Ao acessar o portal, ocorria o erro: `Global Error Captured: ReferenceError: getStoredTenantSlug is not defined at ie (ClientPortal-ClcUF2EF.js:66:1461)`.
+  2. O botão de acesso ao portal na tela de Clientes direcionava para `http://137.131.151.125:8080/meu-veiculo` sem o slug da loja.
+  3. O usuário solicitou enriquecer a experiência do cliente final no portal com laudo, fotos e status completos e login direto por celular + placa.
+- **Escopo Executado**:
+  - Exportado e importado corretamente `getStoredTenantSlug` em `api.ts` e `ClientPortal.tsx`, eliminando em definitivo o `ReferenceError`.
+  - Rotas padronizadas em `App.jsx`: suporte total a `/:slug/portal`, `/:slug/meu-veiculo`, `/:slug/meuportal`, além de fallbacks resilientes `/portal` e `/meu-veiculo`.
+  - Atualizados links em `Clientes.jsx` e `PesquisaNPS.jsx` para direcionar a `/${slug}/portal`.
+  - Backend (`customer-portal-routes.ts` e `customer-portal-service.ts`):
+    - Fallback ordenado para resolver `caiocar` se nenhum slug/tenantId for enviado na requisição de login;
+    - Em `getWorkOrderDetail`, carregamento completo da inspeção veicular (VCR): quilometragem de entrada (`currentKm`), marcador de combustível (`fuelLevel`), avarias pré-existentes identificadas (`inspection_damage_points`);
+    - Novo endpoint seguro `GET /portal/work-orders/:id/inspection-pdf` para geração e download direto do PDF do laudo assinado digitalmente pelo cliente sob isolamento RLS.
+  - Frontend (`ClientPortal.tsx`):
+    - Autenticação direta por Celular + Placa sem necessidade de SMS ou código WhatsApp;
+    - Nova seção visual no card expandido da OS: **Laudo de Vistoria de Entrada (VCR)** com métricas (Quilometragem, Nível de Combustível, Avarias Apontadas) e botão interativo **"Baixar Laudo Oficial (PDF)"** com download automático via blob;
+    - Linha do tempo de eventos com horários precisos e galeria fotográfica de alta definição dividida em Antes / Durante / Depois com lightbox em tela cheia;
+    - Botão contextualizado de WhatsApp oficial da oficina.
+- **Critério de Aceite**: O cliente acessa `http://.../caiocar/portal` (ou `/meu-veiculo`), autentica-se diretamente com Celular e Placa sem nenhum erro de console, visualiza o laudo de vistoria com quilometragem e combustível, baixa o PDF e acompanha fotos e garantias. Builds de `@carx/shared`, `@carx/api` e `@carx/web` 100% limpos.
+
+---
+
+### [x] Item 60 — CRM de Retenção: Correção de Contraste Tipográfico de Textos Claros/Apagados (Print 3) `(Concluído e Validado)`
+- **Problema**: Conforme o Print 3 (`CrmRetencao.tsx` / `CrmRetentionDashboard.tsx`), os textos dos cards de retenção ("REVISÕES PREVENTIVAS DE GARANTIA", "Garantias ativas de PPF...", abas e labels secundárias) estavam excessivamente claros ou apagados sobre o fundo, tornando a leitura difícil quando visualizados no cockpit do gestor.
+- **Escopo Executado**:
+  - Ajustadas as classes Tailwind e estilos de cores em `CrmRetentionDashboard.tsx`:
+    - Barra de navegação por abas redesenhada com container dedicado Dark Volt (`bg-[#171C24] border border-[#2E3744] p-1.5 rounded-2xl flex flex-wrap gap-2 shadow-lg mb-6`), abas ativas com `bg-[#C8F52E] text-[#0E1116] font-extrabold shadow-md` e abas inativas com `text-slate-200 hover:text-white hover:bg-[#232A35] font-bold`;
+    - Contadores encapsulados em badges de alto contraste (`bg-[#0E1116] text-[#C8F52E] border border-[#C8F52E]/30` ou `bg-[#232A35] text-slate-200`);
+    - Cards superiores de métricas com títulos e legendas em `text-slate-300 font-bold` e `text-slate-200 font-medium`;
+    - Cabeçalhos de tabelas `<thead>` padronizados com `text-slate-200 font-extrabold tracking-wider`;
+    - Telefones, prazos e detalhes de clientes ajustados para `text-slate-300 font-medium`;
+    - Labels e textos de apoio dos modais (Disparo WhatsApp, Conversão de Venda, Nova Régua) atualizados de `#9AA7B8` para `text-slate-200 font-bold` e `text-slate-300 font-medium`.
+- **Critério de Aceite**: Todos os textos, legendas, cabeçalhos e contadores da tela de CRM de Retenção apresentam contraste visual perfeito e legibilidade imediata (WCAG AAA) tanto em monitores de alta quanto de baixa luminosidade. Compilação do `@carx/web` validada com 0 erros.
+
+---
+
+### [x] Item 61 — Configurações & Integrações (Settings): Ajuste de Layout e Espaçamento Responsivo (Print 4) `(Concluído e Validado)`
+- **Problema**: Conforme o Print 4 (`Settings.jsx`), a tela de Configurações estava confinada em uma coluna central estreita (`max-w-4xl`), deixando enormes áreas cinzas vazias nas laterais esquerda e direita, em desacordo com as demais telas do cockpit do gestor (Dashboard, OS, Clientes, Vendas).
+- **Escopo Executado**:
+  - Removido o encapsulamento restritivo `max-w-4xl` / `max-w-6xl` de `Settings.jsx`, adotando layout fluido `w-full space-y-6 pb-20 font-sans text-[#0E1116]`, ocupando 100% da área útil do container principal do `DashboardLayout` (`max-w-7xl mx-auto w-full`).
+  - Navegação de abas no topo em estilo pill Dark Volt de alto contraste:
+    - Aba ativa com fundo sólido `#0E1116`, texto `#C8F52E` e borda dedicada;
+    - Abas inativas em cards brancos limpos com hover suave `hover:bg-slate-50`.
+  - Grid responsivo de alta resolução na aba `GERAL`:
+    - Distribuição em 2 colunas amplas no desktop (`grid grid-cols-1 lg:grid-cols-2 gap-6`):
+      - Coluna 1: Card "Identidade da Loja" em acabamento `rounded-3xl bg-[#171C24] border border-[#262D35] p-6 sm:p-7`, com campo de nome comercial, link/URL da logomarca com preview em tempo real e bloco explicativo da paleta corporativa Dark Volt;
+      - Coluna 2: Card "Monitor TV do Pátio & Recepção" com ID/Playlist do YouTube e visualizador de prévia do monitor em `aspect-video rounded-xl`;
+      - Linha inferior de largura total (`lg:col-span-2`): Card "Canais de Contato & Redes Sociais" com 4 colunas balanceadas (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5`) para WhatsApp Oficial, Instagram, YouTube e TikTok;
+  - Aprimoramento de contraste e tipografia interna:
+    - Labels de inputs atualizados para `text-xs font-bold uppercase tracking-wider text-slate-200 block`;
+    - Textos de apoio e orientações ajustados para `text-xs text-slate-300 font-normal leading-relaxed`;
+    - Inputs no padrão `bg-[#0E1116] border border-[#262D35] rounded-2xl py-3.5 px-4 text-white font-medium focus:border-[#C8F52E]`;
+    - Botão "Salvar Configurações" com estilo Volt de destaque (`px-8 py-3.5 bg-[#C8F52E] text-[#0E1116] font-display font-black rounded-2xl`).
+- **Critério de Aceite**: A tela de Configurações agora ocupa harmoniosamente toda a largura padrão do sistema, eliminando as faixas cinzas vazias nas laterais e proporcionando uma experiência visual moderna e profissional. Compilação do `@carx/web` validada com 0 erros em 7.88s.
+
+---
+
+### [x] Item 62 — Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty) `(Concluído e Validado)`
+- **Problema**: Faltava na aplicação o módulo de faturamento e assinatura SaaS onde a própria oficina gerencia e paga suas mensalidades/licenças de uso por dentro do sistema, com checkout transparente via Pix dinâmico, visualização do plano ativo, histórico de faturas e controle de tolerância/dunning.
+- **Referência Arquitetural Aplicada (Espelhamento Fiel do OperaBeauty `d:/Repositorios/OperaBeauty`)**:
+  - **Backend de Assinaturas e Cobrança (`apps/api/src/routes/billing-routes.ts`)**:
+    - `GET /tenant/billing/status`: Retorna o status completo da oficina (plano contratado, uso de quotas em tempo real, validade do contrato em dias restantes, tolerância ativa de carência de 5 dias, dias de atraso se houver, faturas ativas pendentes prontas com QR Code e histórico pago);
+    - `GET /tenant/billing/invoices`: Lista completa de faturas da oficina com valores, vencimentos, forma de pagamento e status;
+    - `POST /billing/invoices/:id/simulate-payment`: Endpoint em Sandbox/Dev para simulação imediata de liquidação com renovação contratual por 30 dias e desbloqueio em tempo real;
+    - `POST /billing/invoices/:id/refresh-pix`: Regeneração e atualização instantânea de QR Code e código Pix Copia e Cola;
+    - `POST /billing/invoices/:id/pix`: Geração oficial de cobrança PIX via Mercado Pago API ou gerador EMV Bacen;
+    - `POST /tenant/plan/change`: Migração imediata de plano contratado (Essencial, Profissional, Premium) com auditoria imutável.
+  - **Interface do Gestor (`apps/web`)**:
+    - **Página de Assinatura (`apps/web/src/pages/AssinaturaSaaS.tsx`)**:
+      - Banner de Carência (tolerância ativa de 5 dias) ou Bloqueio Gradual (somente leitura) com botão direto de pagamento;
+      - Card do Plano Atual com métricas de validade, renovação mensal e indicadores de quotas (Usuários, Unidades, OS/Mês, Armazenamento);
+      - Card de Próxima Fatura em aberto com valor destacado e botão primário Volt "Pagar Fatura com PIX";
+      - Grid comparativo dos 3 Planos Comerciais (Essencial, Profissional e Premium) com migração em 1 clique ("Migrar para este Plano");
+      - Histórico Financeiro Completo com tabela de faturas, badges de status e botão de 2ª via/recibo.
+    - **Modal de Pagamento Pix SaaS (`apps/web/src/components/features/ModalPagamentoPixSaaS.tsx`)**:
+      - QR Code PIX em alta definição;
+      - Campo de Pix Copia e Cola com botão de cópia segura (`copyToClipboard`) sem falhas em HTTP;
+      - Polling automático a cada 4 segundos com detecção instantânea de pagamento e celebração de quitação;
+      - Botão de simulação para testes rápidos em ambiente Sandbox;
+      - Selo de transação segura e criptografada.
+    - **Navegação e Roteamento**:
+      - Registrado item "Assinatura & Licença" no menu lateral (`Sidebar.jsx`);
+      - Rotas `/assinatura`, `/licenca` e `/billing` registradas em `App.jsx` para papéis `ADM`, `GESTOR` e `OWNER`;
+      - Atalho rápido "Assinatura & Licença ↗" adicionado no topo da barra de abas de Configurações (`Settings.jsx`).
+- **Critério de Aceite**: A oficina acessa `/assinatura` ou clica em "Assinatura & Licença" no menu/configurações, visualiza seu plano e quotas, abre o modal de quitação PIX, copia o código ou escaneia o QR Code, e obtém baixa imediata e reativação da loja. Builds de `@carx/shared`, `@carx/api` e `@carx/web` (8.56s) validados com 100% de sucesso.

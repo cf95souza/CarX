@@ -21,6 +21,7 @@ import {
 import { api } from '../services/api';
 import type { PublicVehiclePassportDto } from '@carx/shared';
 import { toast } from '../utils/toast';
+import { copyToClipboard } from '../utils/clipboard';
 
 export const PublicPassportPage: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -73,7 +74,7 @@ export const PublicPassportPage: React.FC = () => {
         // Ignora cancelamento pelo usuário
       }
     } else {
-      await navigator.clipboard.writeText(url);
+      await copyToClipboard(url);
       toast.success('Link do passaporte copiado para a área de transferência!');
     }
   };

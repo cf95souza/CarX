@@ -19,6 +19,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { copyToClipboard } from '../utils/clipboard';
 
 interface PublicQuoteData {
   trackingToken: string;
@@ -162,9 +163,9 @@ export const PublicQuotePage: React.FC = () => {
     }
   };
 
-  const handleCopyPix = () => {
+  const handleCopyPix = async () => {
     if (!quote?.depositPixCode) return;
-    navigator.clipboard.writeText(quote.depositPixCode);
+    await copyToClipboard(quote.depositPixCode);
     setCopiedPix(true);
     setTimeout(() => setCopiedPix(false), 3000);
   };

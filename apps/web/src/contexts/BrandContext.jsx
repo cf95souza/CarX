@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { api } from '../services/api';
+import { api, setStoredTenantSlug } from '../services/api';
 
 const BrandContext = createContext();
 
@@ -29,6 +29,9 @@ export const BrandProvider = ({ children }) => {
       try {
         const data = await api.branding.get();
         if (data) {
+          if (data.slug) {
+            setStoredTenantSlug(data.slug);
+          }
           setBrand((prev) => ({
             ...prev,
             name: data.trade_name || data.name || prev.name,

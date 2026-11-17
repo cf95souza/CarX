@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from '../utils/toast';
+import { copyToClipboard } from '../utils/clipboard';
 import { Button, Badge, Card, CardHeader, CardTitle, CardContent, EmptyState, Input } from '@carx/ui';
 import NovoOrcamentoModal from '../components/features/NovoOrcamentoModal';
 import CarVisualChecklist from '../components/features/CarVisualChecklist';
@@ -344,9 +345,9 @@ export const OrdensServico: React.FC = () => {
     }
   };
 
-  const handleCopyPixCode = () => {
+  const handleCopyPixCode = async () => {
     if (!pixCharge?.pixCode) return;
-    navigator.clipboard.writeText(pixCharge.pixCode);
+    await copyToClipboard(pixCharge.pixCode);
     setPixCopied(true);
     setTimeout(() => setPixCopied(false), 2500);
   };

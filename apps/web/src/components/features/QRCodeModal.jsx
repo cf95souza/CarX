@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, QrCode, Copy, Check, Printer, ShieldCheck, Share2, ExternalLink, Smartphone } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from '../../utils/toast';
+import { copyToClipboard } from '../../utils/clipboard';
 import { sendWhatsApp, getVehicleReceivedMsg } from '../../utils/whatsappUtils';
 
 const QRCodeModal = ({ os, onClose }) => {
@@ -9,8 +10,8 @@ const QRCodeModal = ({ os, onClose }) => {
   const trackingToken = os?.tracking_token || os?.id || '';
   const trackingUrl = `${window.location.origin}/status/${trackingToken}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(trackingUrl);
+  const handleCopy = async () => {
+    await copyToClipboard(trackingUrl);
     setCopied(true);
     toast.success('Link de rastreamento copiado!');
     setTimeout(() => setCopied(false), 2000);

@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { dispatchQuoteNotification, getBudgetMsg } from '../utils/whatsappUtils';
 import { toast } from '../utils/toast';
+import { copyToClipboard } from '../utils/clipboard';
 import { Copy, Check, ExternalLink, X, Tag } from 'lucide-react';
 
 interface ServiceItem {
@@ -334,10 +335,10 @@ export const NovaOrdemServico: React.FC = () => {
     }
   };
 
-  const handleCopyQuoteLink = () => {
+  const handleCopyQuoteLink = async () => {
     const tokenToUse = createdQuoteToken || 'demo-proposta';
     const link = `${window.location.origin}/proposta/${tokenToUse}`;
-    navigator.clipboard.writeText(link);
+    await copyToClipboard(link);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 3000);
   };

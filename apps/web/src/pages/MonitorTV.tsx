@@ -18,7 +18,7 @@ import {
   User,
 } from 'lucide-react';
 import { Card, Badge, Button } from '@carx/ui';
-import { api, getStoredTenantSlug } from '../services/api';
+import { api, getStoredTenantSlug, setStoredTenantSlug } from '../services/api';
 
 function formatTimeBR(date: Date): string {
   return date.toLocaleTimeString('pt-BR', {
@@ -63,17 +63,22 @@ export const MonitorTV: React.FC = () => {
   const [customVideoEnabled, setCustomVideoEnabled] = useState<boolean>(true);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Se a rota for acessada sem slug (/tv) mas o gestor já estiver logado, redireciona para a URL canônica com slug
-  useEffect(() => {
-    if (!routeSlug) {
-      const stored = getStoredTenantSlug();
-      if (stored) {
-        navigate(`/${stored}/tv`, { replace: true });
-      }
-    }
-  }, [routeSlug, navigate]);
+  // Resolução resiliente de slug: URL (/:slug/tv) > localStorage > fallback padrão 'caiocar'
+  const activeSlug = useMemo(() => {
+    return (
+      routeSlug ||
+      getStoredTenantSlug() ||
+      'caiocar'
+    );
+  }, [routeSlug]);
 
-  const activeSlug = routeSlug || getStoredTenantSlug() || '';
+  // Se a rota for acessada sem slug (/tv), redireciona imediatamente para a URL canônica com slug
+  useEffect(() => {
+    if (!routeSlug && activeSlug) {
+      setStoredTenantSlug(activeSlug);
+      navigate(`/${activeSlug}/tv`, { replace: true });
+    }
+  }, [routeSlug, activeSlug, navigate]);
 
   // Relógio ao vivo atualizado a cada segundo
   useEffect(() => {
@@ -81,19 +86,24 @@ export const MonitorTV: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Busca dados completos do Monitor TV da oficina (se houver slug, usa o endpoint isolado multitenant)
+  // Busca dados completos do Monitor TV da oficina isolado por tenant
   const {
     data: tvData,
     isLoading: loadingOrders,
   } = useQuery({
     queryKey: ['tv-data', activeSlug],
     queryFn: async () => {
-      if (activeSlug) {
-        return api.tv.getBySlug(activeSlug);
+      try {
+        const res = await api.tv.getBySlug(activeSlug);
+        if (res && (res.tenant || res.workOrders)) {
+          return res;
+        }
+      } catch (err) {
+        console.warn('[TV] Erro ao carregar TV por slug, tentando fallback:', err);
       }
-      // Fallback para quando aberto internamente no gestor sem slug na rota
+      // Fallback para quando aberto internamente no gestor
       const [brandData, ordersData] = await Promise.all([
-        api.branding.get().catch(() => null),
+        api.branding.get(activeSlug).catch(() => null),
         api.workOrders.list({ limit: 100 }).catch(() => []),
       ]);
       return {
@@ -101,7 +111,7 @@ export const MonitorTV: React.FC = () => {
         workOrders: Array.isArray(ordersData) ? ordersData : ordersData?.workOrders || [],
       };
     },
-    refetchInterval: 20000, // Polling de contingência a cada 20 segundos
+    refetchInterval: 10000, // Polling de contingência a cada 10 segundos
   });
 
   // Conexão Server-Sent Events (SSE) para atualização em tempo real sem reload
@@ -111,25 +121,25 @@ export const MonitorTV: React.FC = () => {
       const es = new EventSource(sseUrl);
       eventSourceRef.current = es;
 
+      const handleUpdate = () => {
+        queryClient.invalidateQueries({ queryKey: ['tv-data', activeSlug] });
+      };
+
       es.onopen = () => {
         setIsSseConnected(true);
       };
 
-      es.onmessage = (event) => {
-        try {
-          const parsed = JSON.parse(event.data);
-          if (
-            parsed.type === 'work_order.updated' ||
-            parsed.type === 'work_order.ready' ||
-            parsed.type === 'work_order.created'
-          ) {
-            // Invalidação imediata do cache para re-render suave dos cards
-            queryClient.invalidateQueries({ queryKey: ['tv-data', activeSlug] });
-          }
-        } catch {
-          queryClient.invalidateQueries({ queryKey: ['tv-data', activeSlug] });
-        }
-      };
+      es.onmessage = handleUpdate;
+      es.addEventListener('message', handleUpdate);
+      es.addEventListener('work_order.updated', handleUpdate);
+      es.addEventListener('work_order.ready', handleUpdate);
+      es.addEventListener('work_order.created', handleUpdate);
+      es.addEventListener('timer.started', handleUpdate);
+      es.addEventListener('timer.paused', handleUpdate);
+      es.addEventListener('timer.resumed', handleUpdate);
+      es.addEventListener('timer.stopped', handleUpdate);
+      es.addEventListener('payment.received', handleUpdate);
+      es.addEventListener('connected', () => setIsSseConnected(true));
 
       es.onerror = () => {
         setIsSseConnected(false);
@@ -173,7 +183,11 @@ export const MonitorTV: React.FC = () => {
       });
   }, [rawOrders]);
 
-  const shopName = branding?.trade_name || branding?.name || 'CarX Oficina Premium';
+  const shopName =
+    branding?.trade_name ||
+    branding?.tradeName ||
+    branding?.name ||
+    (activeSlug === 'caiocar' ? 'CaioCar' : 'Oficina Automotiva');
   const logoUrl = branding?.logo_url || branding?.logoUrl || null;
   const youtubeId = branding?.youtube_id || branding?.youtubeId || null;
   const showVideo = !!youtubeId && customVideoEnabled;

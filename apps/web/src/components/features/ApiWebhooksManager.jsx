@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from '../../utils/toast';
 import { confirmDialog } from '../../utils/confirm';
+import { copyToClipboard as safeCopy } from '../../utils/clipboard';
 import { api } from '../../services/api';
 
 const CANONICAL_WEBHOOK_EVENTS = [
@@ -154,8 +155,8 @@ const ApiWebhooksManager = () => {
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text) => {
+    await safeCopy(text);
     setCopiedToken(true);
     toast.success('Copiado para a área de transferência!');
     setTimeout(() => setCopiedToken(false), 3000);

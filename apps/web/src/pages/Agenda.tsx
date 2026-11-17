@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../services/api';
+import { api, getStoredTenantSlug } from '../services/api';
+import { copyToClipboard } from '../utils/clipboard';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,6 +13,9 @@ import {
   Phone,
   CheckCircle2,
   Calendar,
+  Edit3,
+  Move,
+  Zap,
 } from 'lucide-react';
 import type { SmartBayOverviewDto, SmartAppointmentDto } from '@carx/shared';
 
@@ -59,6 +63,44 @@ export const Agenda: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedDetailApp, setSelectedDetailApp] = useState<SmartAppointmentDto | null>(null);
+
+  // Estados para Modal de Remanejamento / Edição de Agendamento
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingApp, setEditingApp] = useState<SmartAppointmentDto | null>(null);
+  const [editBayId, setEditBayId] = useState<string>('');
+  const [editTechnicianId, setEditTechnicianId] = useState<string>('');
+  const [editDate, setEditDate] = useState<string>('');
+  const [editStartTime, setEditStartTime] = useState<string>('09:00');
+  const [editEstimatedMinutes, setEditEstimatedMinutes] = useState<number>(60);
+  const [editNotes, setEditNotes] = useState<string>('');
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Estados para Drag & Drop visual
+  const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
+  const [isDraggingOverSlot, setIsDraggingOverSlot] = useState<string | null>(null);
+
+  // Ouvir eventos SSE em tempo real para sincronização da agenda
+  useEffect(() => {
+    let es: EventSource | null = null;
+    try {
+      const url = api.realtime.getEventsUrl();
+      es = new EventSource(url);
+      const handleRefresh = () => {
+        queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
+        queryClient.invalidateQueries({ queryKey: ['appointments-list'] });
+      };
+      es.addEventListener('appointment.updated', handleRefresh);
+      es.addEventListener('work_order.updated', handleRefresh);
+      es.addEventListener('timer.started', handleRefresh);
+      es.addEventListener('timer.stopped', handleRefresh);
+    } catch (e) {
+      // Ignorar fallback
+    }
+    return () => {
+      es?.close();
+    };
+  }, [queryClient]);
 
   // Form State do Modal de Novo Agendamento
   const [selectedBayId, setSelectedBayId] = useState<string>('');
@@ -240,11 +282,122 @@ export const Agenda: React.FC = () => {
     setSelectedDate(new Date());
   };
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/agendar`;
-    navigator.clipboard.writeText(url);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 3000);
+  const handleCopyLink = async () => {
+    const slug = getStoredTenantSlug() || 'caiocar';
+    const url = `${window.location.origin}/${slug}/agendar`;
+    const success = await copyToClipboard(url);
+    if (success) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+    }
+  };
+
+  const handleOpenEdit = (app: SmartAppointmentDto) => {
+    setEditingApp(app);
+    setEditBayId(app.bayId || boxes[0]?.id || '');
+    setEditTechnicianId(app.technicianId || '');
+
+    const d = new Date(app.startTime);
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const mm = String(d.getUTCMinutes()).padStart(2, '0');
+    setEditStartTime(`${hh}:${mm}`);
+
+    const yyyy = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const da = String(d.getUTCDate()).padStart(2, '0');
+    setEditDate(`${yyyy}-${mo}-${da}`);
+
+    setEditEstimatedMinutes(app.estimatedMinutes || 60);
+    setEditNotes(app.notes || '');
+    setEditError(null);
+    setSelectedDetailApp(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSetTimeToNow = () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    setEditStartTime(`${hh}:${mm}`);
+
+    const yyyy = now.getFullYear();
+    const mo = String(now.getMonth() + 1).padStart(2, '0');
+    const da = String(now.getDate()).padStart(2, '0');
+    setEditDate(`${yyyy}-${mo}-${da}`);
+  };
+
+  const handleAdjustMinutes = (deltaMinutes: number) => {
+    const [h, m] = editStartTime.split(':').map(Number);
+    let totalM = (isNaN(h) ? 9 : h) * 60 + (isNaN(m) ? 0 : m) + deltaMinutes;
+    if (totalM < 0) totalM = 0;
+    if (totalM > 23 * 60 + 59) totalM = 23 * 60 + 59;
+    const newH = String(Math.floor(totalM / 60)).padStart(2, '0');
+    const newM = String(totalM % 60).padStart(2, '0');
+    setEditStartTime(`${newH}:${newM}`);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingApp) return;
+
+    setIsSubmittingEdit(true);
+    setEditError(null);
+
+    try {
+      const startDateTime = `${editDate}T${editStartTime}:00.000Z`;
+      const endDateTime = new Date(new Date(startDateTime).getTime() + editEstimatedMinutes * 60000).toISOString();
+
+      await api.appointments.update(editingApp.id, {
+        bayId: editBayId || undefined,
+        technicianId: editTechnicianId || null,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        estimatedMinutes: editEstimatedMinutes,
+        notes: editNotes.trim() || null,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments-list'] });
+      queryClient.invalidateQueries({ queryKey: ['tv-data'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      setIsEditModalOpen(false);
+      setEditingApp(null);
+    } catch (err: any) {
+      setEditError(err.message || 'Erro ao remanejar agendamento. Verifique choques de horário no Box ou do profissional.');
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const handleDropOnSlot = async (e: React.DragEvent, targetBayId: string, targetHour: number) => {
+    try {
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (!dataStr) return;
+      const data = JSON.parse(dataStr);
+      const appId = data.id;
+      const duration = data.duration || 60;
+
+      const hh = String(targetHour).padStart(2, '0');
+      const startDateTime = `${dateString}T${hh}:00:00.000Z`;
+      const endDateTime = new Date(new Date(startDateTime).getTime() + duration * 60000).toISOString();
+
+      await api.appointments.update(appId, {
+        bayId: targetBayId,
+        startTime: startDateTime,
+        endTime: endDateTime,
+        estimatedMinutes: duration,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments-list'] });
+      queryClient.invalidateQueries({ queryKey: ['tv-data'] });
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    } catch (err: any) {
+      alert(err.message || 'Erro ao remanejar agendamento. Verifique choques de horário no Box ou do profissional.');
+    } finally {
+      setDraggedAppId(null);
+      setIsDraggingOverSlot(null);
+    }
   };
 
   const handleOpenFreeSlot = (bayIndex: number, bayId?: string, defaultHour = '15:00') => {
@@ -583,6 +736,50 @@ export const Agenda: React.FC = () => {
                 background: 'repeating-linear-gradient(#fff 0 55px, #E1E6EC 55px 56px)',
               }}
             >
+              {/* Slots de hora para Drag & Drop nativo */}
+              {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => {
+                const slotKey = `${box.id || bIdx}-${hour}`;
+                const isOver = isDraggingOverSlot === slotKey;
+                return (
+                  <div
+                    key={hour}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (isDraggingOverSlot !== slotKey) setIsDraggingOverSlot(slotKey);
+                    }}
+                    onDragLeave={() => {
+                      if (isDraggingOverSlot === slotKey) setIsDraggingOverSlot(null);
+                    }}
+                    onDrop={async (e) => {
+                      e.preventDefault();
+                      setIsDraggingOverSlot(null);
+                      await handleDropOnSlot(e, box.id || boxes[bIdx]?.id, hour);
+                    }}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: `${(hour - 8) * 56}px`,
+                      height: '56px',
+                      background: isOver ? 'rgba(200, 245, 46, 0.2)' : 'transparent',
+                      border: isOver ? '2px dashed #C8F52E' : 'none',
+                      boxSizing: 'border-box',
+                      pointerEvents: draggedAppId ? 'auto' : 'none',
+                      zIndex: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: '#15803D',
+                    }}
+                  >
+                    {isOver && `Soltar às ${hour}h em ${box.name}`}
+                  </div>
+                );
+              })}
+
               {appointments
                 .filter((app) => app.bayIndex === bIdx)
                 .map((app) => {
@@ -609,6 +806,7 @@ export const Agenda: React.FC = () => {
                           background: '#fff',
                           boxSizing: 'border-box',
                           transition: 'background 0.2s',
+                          zIndex: 3,
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F7FEE7')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = '#fff')}
@@ -621,6 +819,18 @@ export const Agenda: React.FC = () => {
                   return (
                     <div
                       key={app.id}
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData(
+                          'application/json',
+                          JSON.stringify({ id: app.id, duration: app.raw?.estimatedMinutes || 60 })
+                        );
+                        setDraggedAppId(app.id);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedAppId(null);
+                        setIsDraggingOverSlot(null);
+                      }}
                       onClick={() => {
                         if (app.raw) {
                           setSelectedDetailApp(app.raw);
@@ -642,10 +852,12 @@ export const Agenda: React.FC = () => {
                         lineHeight: '1.3',
                         color: '#0E1116',
                         overflow: 'hidden',
-                        cursor: 'pointer',
+                        cursor: draggedAppId === app.id ? 'grabbing' : 'grab',
+                        opacity: draggedAppId === app.id ? 0.6 : 1,
                         boxSizing: 'border-box',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                         transition: 'transform 0.15s, box-shadow 0.15s',
+                        zIndex: 4,
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-1px)';
@@ -656,21 +868,47 @@ export const Agenda: React.FC = () => {
                         e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06)';
                       }}
                     >
-                      {app.isDelayed && (
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            color: '#DC2626',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            marginBottom: '2px',
-                          }}
-                        >
-                          <AlertTriangle size={12} /> Atraso (+{app.delayMinutes || 15}m)
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        {app.isDelayed ? (
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              color: '#DC2626',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              marginBottom: '2px',
+                            }}
+                          >
+                            <AlertTriangle size={12} /> Atraso (+{app.delayMinutes || 15}m)
+                          </div>
+                        ) : (
+                          <span />
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <button
+                            type="button"
+                            title="Remanejar Horário ou Box"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (app.raw) handleOpenEdit(app.raw);
+                            }}
+                            style={{
+                              border: 0,
+                              background: 'rgba(0,0,0,0.08)',
+                              borderRadius: '6px',
+                              padding: '2px 4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Edit3 size={12} color="#0E1116" />
+                          </button>
                         </div>
-                      )}
+                      </div>
                       <b style={{ display: 'block', fontSize: '14px', marginBottom: '2px' }}>
                         {app.title}
                       </b>
@@ -1165,7 +1403,28 @@ export const Agenda: React.FC = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <button
+                type="button"
+                onClick={() => handleOpenEdit(selectedDetailApp)}
+                style={{
+                  flex: 1.2,
+                  height: '44px',
+                  border: '1px solid #0E1116',
+                  borderRadius: '12px',
+                  background: '#0E1116',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Edit3 size={15} color="#C8F52E" /> Remanejar / Editar
+              </button>
               <button
                 type="button"
                 onClick={async () => {
@@ -1185,7 +1444,7 @@ export const Agenda: React.FC = () => {
                   background: '#C8F52E',
                   color: '#0E1116',
                   fontWeight: 700,
-                  fontSize: '14px',
+                  fontSize: '13px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1193,26 +1452,411 @@ export const Agenda: React.FC = () => {
                   gap: '6px',
                 }}
               >
-                <CheckCircle2 size={16} /> Concluir
+                <CheckCircle2 size={15} /> Concluir
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedDetailApp(null)}
                 style={{
-                  flex: 1,
+                  flex: 0.8,
                   height: '44px',
                   border: '1px solid #E1E6EC',
                   borderRadius: '12px',
                   background: '#fff',
                   color: '#0E1116',
                   fontWeight: 600,
-                  fontSize: '14px',
+                  fontSize: '13px',
                   cursor: 'pointer',
                 }}
               >
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REMANEJAR / EDITAR AGENDAMENTO (HORÁRIO, BOX, TÉCNICO, ADIANTAR P/ AGORA) */}
+      {isEditModalOpen && editingApp && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+            backdropFilter: 'blur(3px)',
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #E1E6EC',
+              borderRadius: '20px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '520px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontSize: '20px',
+                    fontWeight: 700,
+                    color: '#0E1116',
+                  }}
+                >
+                  Remanejar Agendamento
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: '#5B6674' }}>
+                  {editingApp.vehicleModel || 'Veículo'} ({editingApp.vehiclePlate || 'Sem placa'}) · {editingApp.customerName || 'Cliente'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingApp(null);
+                }}
+                style={{ border: 0, background: 'transparent', cursor: 'pointer', color: '#5B6674' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {editError && (
+              <div
+                style={{
+                  background: '#FEE2E2',
+                  border: '1px solid #FCA5A5',
+                  color: '#991B1B',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>{editError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Box de Atendimento */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#5B6674', marginBottom: '4px' }}>
+                  Box de Atendimento *
+                </label>
+                <select
+                  value={editBayId}
+                  onChange={(e) => setEditBayId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    border: '1px solid #E1E6EC',
+                    borderRadius: '10px',
+                    padding: '0 12px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    fontWeight: 500,
+                  }}
+                >
+                  {boxes.map((b, idx) => (
+                    <option key={b.id || idx} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Data e Horário */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#5B6674', marginBottom: '4px' }}>
+                    Data do Agendamento *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={editDate}
+                    onChange={(e) => setEditDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      border: '1px solid #E1E6EC',
+                      borderRadius: '10px',
+                      padding: '0 12px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#5B6674' }}>
+                      Horário de Início *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleSetTimeToNow}
+                      style={{
+                        border: 0,
+                        background: '#DCFCE7',
+                        color: '#15803D',
+                        borderRadius: '6px',
+                        padding: '2px 6px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                      title="Preencher com o horário exato de agora"
+                    >
+                      <Zap size={11} /> Adiantar p/ Agora
+                    </button>
+                  </div>
+                  <input
+                    type="time"
+                    required
+                    value={editStartTime}
+                    onChange={(e) => setEditStartTime(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      border: '1px solid #E1E6EC',
+                      borderRadius: '10px',
+                      padding: '0 12px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Botões de Atalho para ajuste rápido de horário */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#F8FAFC',
+                  padding: '8px 10px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748B' }}>Ajuste rápido:</span>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustMinutes(-30)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  -30m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustMinutes(-15)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  -15m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustMinutes(15)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  +15m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustMinutes(30)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  +30m
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAdjustMinutes(60)}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    background: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  +1h
+                </button>
+              </div>
+
+              {/* Técnico e Duração */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#5B6674', marginBottom: '4px' }}>
+                    Profissional / Técnico
+                  </label>
+                  <select
+                    value={editTechnicianId}
+                    onChange={(e) => setEditTechnicianId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      border: '1px solid #E1E6EC',
+                      borderRadius: '10px',
+                      padding: '0 12px',
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="">Não atribuído</option>
+                    {technicians.map((t: any) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({t.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#5B6674', marginBottom: '4px' }}>
+                    Duração Estimada (min)
+                  </label>
+                  <input
+                    type="number"
+                    step="15"
+                    min="15"
+                    value={editEstimatedMinutes}
+                    onChange={(e) => setEditEstimatedMinutes(Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      height: '42px',
+                      border: '1px solid #E1E6EC',
+                      borderRadius: '10px',
+                      padding: '0 12px',
+                      fontSize: '14px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Observações / Notas */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#5B6674', marginBottom: '4px' }}>
+                  Notas Operacionais
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Adiantado a pedido do cliente / oficina livre"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '42px',
+                    border: '1px solid #E1E6EC',
+                    borderRadius: '10px',
+                    padding: '0 12px',
+                    fontSize: '14px',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingApp(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    height: '46px',
+                    border: '1px solid #E1E6EC',
+                    borderRadius: '12px',
+                    background: '#fff',
+                    color: '#0E1116',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdit}
+                  style={{
+                    flex: 1.5,
+                    height: '46px',
+                    border: 0,
+                    borderRadius: '12px',
+                    background: '#C8F52E',
+                    color: '#0E1116',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {isSubmittingEdit ? 'Validando conflitos...' : 'Confirmar Remanejamento'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -20,6 +20,7 @@ import { api } from '../../services/api';
 import { useBrand } from '../../contexts/BrandContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStoredTenantSlug } from '../../services/api';
+import { copyToClipboard } from '../../utils/clipboard';
 import type {
   MiniSitePortfolioItemDto,
   MiniSiteLeadDto,
@@ -228,8 +229,8 @@ export const MiniSiteManager: React.FC = () => {
           </span>
           <button
             type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(publicMiniSiteUrl);
+            onClick={async () => {
+              await copyToClipboard(publicMiniSiteUrl);
               toast.success('Link do mini-site copiado para a área de transferência!');
             }}
             style={{

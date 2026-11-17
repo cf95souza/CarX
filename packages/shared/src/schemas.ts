@@ -2081,6 +2081,7 @@ export type RealtimeEventType =
   | 'work_order.updated'
   | 'work_order.ready'
   | 'appointment.created'
+  | 'appointment.updated'
   | 'stock.low'
   | 'payment.received'
   | 'heartbeat'
@@ -2215,6 +2216,25 @@ export interface PortalWorkOrderDetailDto extends PortalWorkOrderListItemDto {
     finalPriceCents: number;
     warrantyMonths: number;
   }>;
+  inspection?: {
+    id: string;
+    currentKm?: number | null;
+    fuelLevel?: string | null;
+    signatureUrl?: string | null;
+    pdfUrl?: string | null;
+    status?: string | null;
+    damages?: Array<{
+      id?: string;
+      part?: string;
+      type?: string;
+      severity?: string;
+      view?: string;
+      notes?: string;
+      x?: number;
+      y?: number;
+    }> | null;
+    checklistAnswers?: Record<string, any> | null;
+  } | null;
 }
 
 export interface PortalWorkOrderTimelineEventDto {

@@ -7,7 +7,8 @@ import Pagination from '../components/ui/Pagination';
 import DetalhesServicoModal from '../components/features/DetalhesServicoModal';
 import { toast } from '../utils/toast';
 import { confirmDialog } from '../utils/confirm';
-import { api } from '../services/api';
+import { api, getStoredTenantSlug } from '../services/api';
+import { copyToClipboard } from '../utils/clipboard';
 
 const ClientesView = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,9 +105,10 @@ const ClientesView = () => {
         </div>
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
-            onClick={() => {
-              const url = `${window.location.origin}/meu-veiculo`;
-              navigator.clipboard.writeText(url);
+            onClick={async () => {
+              const slug = getStoredTenantSlug() || 'caiocar';
+              const url = `${window.location.origin}/${slug}/portal`;
+              await copyToClipboard(url);
               toast.success('Link do portal copiado! Envie pelo WhatsApp para o cliente 📋');
             }}
             className="carx-pill !h-10 text-xs font-semibold"
@@ -114,7 +116,7 @@ const ClientesView = () => {
             📋 Copiar Link do Portal
           </button>
           <a
-            href="/meu-veiculo"
+            href={`/${getStoredTenantSlug() || 'caiocar'}/portal`}
             target="_blank"
             rel="noopener noreferrer"
             className="carx-btn-volt !h-10 !px-4 text-xs font-bold"

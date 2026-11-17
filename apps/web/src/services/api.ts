@@ -683,6 +683,11 @@ export const api = {
     },
     create: async (data: any) =>
       fetchClient<any>('/appointments', { method: 'POST', body: JSON.stringify(data) }),
+    update: async (id: string, data: any) =>
+      fetchClient<any>(`/appointments/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
     bookOnline: async (data: any, tenantSlug?: string) => {
       const slug = tenantSlug || getStoredTenantSlug() || 'demo';
       return fetchClient<any>(`/public/book/${slug}`, {
@@ -1051,11 +1056,11 @@ export const api = {
   realtime: {
     getEventsUrl: (slug?: string) => {
       const token = getStoredToken();
+      if (slug) {
+        return `${API_BASE_URL}/realtime/events?slug=${encodeURIComponent(slug)}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+      }
       if (token) {
         return `${API_BASE_URL}/realtime/events?token=${encodeURIComponent(token)}`;
-      }
-      if (slug) {
-        return `${API_BASE_URL}/realtime/events?slug=${encodeURIComponent(slug)}`;
       }
       return `${API_BASE_URL}/realtime/events`;
     },
@@ -1147,6 +1152,23 @@ export const api = {
       portalFetchClient<{ photos: PortalPhotoDto[] }>(`/portal/work-orders/${id}/photos`),
     getWarranties: async () =>
       portalFetchClient<{ warranties: PortalWarrantyDto[] }>('/portal/warranties'),
+    downloadWorkOrderInspectionPdf: async (workOrderId: string): Promise<Blob> => {
+      const token = getStoredPortalToken();
+      const tenantId = getStoredTenantId();
+      const tenantSlug = getStoredTenantSlug();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (tenantId) headers['x-tenant-id'] = tenantId;
+      if (tenantSlug) headers['x-tenant-slug'] = tenantSlug;
+
+      const res = await fetch(`${API_BASE_URL}/portal/work-orders/${workOrderId}/inspection-pdf`, {
+        headers,
+      });
+      if (!res.ok) {
+        throw new Error(`Falha ao baixar Laudo de Vistoria (Status ${res.status})`);
+      }
+      return res.blob();
+    },
     logout: () => {
       clearStoredPortalAuth();
     },
@@ -1431,6 +1453,20 @@ export const api = {
       }),
     listDeliveries: async (id: string): Promise<{ deliveries: WebhookDeliveryDto[] }> =>
       fetchClient<{ deliveries: WebhookDeliveryDto[] }>(`/integrations/webhooks/${id}/deliveries`),
+  },
+
+  // --- ASSINATURA SAAS & GATEWAY DE PAGAMENTO DE LICENÇAS (PADRÃO OPERABEAUTY) ---
+  billing: {
+    getStatus: async () => fetchClient<any>('/tenant/billing/status'),
+    getInvoices: async () => fetchClient<any[]>('/tenant/billing/invoices'),
+    generatePix: async (invoiceId: string) => fetchClient<any>(`/billing/invoices/${invoiceId}/pix`, { method: 'POST' }),
+    refreshPix: async (invoiceId: string) => fetchClient<any>(`/billing/invoices/${invoiceId}/refresh-pix`, { method: 'POST' }),
+    simulatePayment: async (invoiceId: string) => fetchClient<any>(`/billing/invoices/${invoiceId}/simulate-payment`, { method: 'POST' }),
+    changePlan: async (planSlug: string) => fetchClient<any>('/tenant/plan/change', {
+      method: 'POST',
+      body: JSON.stringify({ planSlug }),
+    }),
+    listPlans: async () => fetchClient<any[]>('/plans'),
   },
 };
 

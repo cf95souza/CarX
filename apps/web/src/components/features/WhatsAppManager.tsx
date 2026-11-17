@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, ApiError } from '../../services/api';
+import { copyToClipboard } from '../../utils/clipboard';
 import {
   TenantWhatsAppInstanceDto,
   ConnectWhatsAppResponseDto,
@@ -120,8 +121,8 @@ export default function WhatsAppManager() {
     }
   };
 
-  const handleCopyCode = (code: string) => {
-    navigator.clipboard.writeText(code);
+  const handleCopyCode = async (code: string) => {
+    await copyToClipboard(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };

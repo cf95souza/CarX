@@ -1,6 +1,7 @@
 import { tenantQuery } from '../database/tenant-query.js';
 import { inspectionService } from '../inspections/inspection-service.js';
 import { workOrderService } from '../work-orders/work-order-service.js';
+import { realtimeHub } from '../realtime/realtime-hub.js';
 import { WorkOrderStatus } from '@carx/shared';
 import type {
   TechnicianQueueFilterDto,
@@ -305,6 +306,12 @@ export class TechnicianService {
     );
 
     const timer = res.rows[0];
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      type: 'timer.started',
+      workOrderId,
+      technicianId,
+      status: 'IN_PROGRESS',
+    });
     return this.mapTimerDto(timer);
   }
 
@@ -365,6 +372,12 @@ export class TechnicianService {
       [tenantId, t.id, input?.reason || 'Pausa manual']
     );
 
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      type: 'timer.paused',
+      workOrderId,
+      technicianId,
+    });
+
     return this.mapTimerDto(res.rows[0]);
   }
 
@@ -417,6 +430,13 @@ export class TechnicianService {
        RETURNING *;`,
       [tenantId, paused.rows[0].id]
     );
+
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      type: 'timer.resumed',
+      workOrderId,
+      technicianId,
+      status: 'IN_PROGRESS',
+    });
 
     return this.mapTimerDto(res.rows[0]);
   }
@@ -517,6 +537,12 @@ export class TechnicianService {
        RETURNING *;`,
       [tenantId, t.id]
     );
+
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      type: 'timer.stopped',
+      workOrderId,
+      technicianId,
+    });
 
     return this.mapTimerDto(res.rows[0]);
   }

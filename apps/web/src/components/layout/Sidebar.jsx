@@ -15,7 +15,8 @@ import {
   X,
   ChevronRight,
   Building2,
-  HeartHandshake
+  HeartHandshake,
+  CreditCard
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBrand } from '../../contexts/BrandContext';
@@ -27,8 +28,8 @@ const Sidebar = ({ activePage, setActivePage, isOpen, setIsOpen }) => {
   const { name: lojaName, logoUrl, slug: brandSlug } = useBrand();
   const navigate = useNavigate();
 
-  const tenantSlug = brandSlug || getStoredTenantSlug() || '';
-  const tvUrl = tenantSlug ? `/${tenantSlug}/tv` : '/tv';
+  const tenantSlug = brandSlug || getStoredTenantSlug() || 'caiocar';
+  const tvUrl = `/${tenantSlug}/tv`;
 
   const menuItems = [
     { id: 'dashboard', label: 'Painel', icon: LayoutDashboard, roles: ['ADM', 'GESTOR'] },
@@ -43,6 +44,7 @@ const Sidebar = ({ activePage, setActivePage, isOpen, setIsOpen }) => {
     { id: 'servicos', label: 'Serviços', icon: Sparkles, roles: ['ADM', 'GESTOR'] },
     { id: 'colaboradores', label: 'Colaboradores', icon: UserCheck, roles: ['ADM', 'GESTOR'] },
     { id: 'settings', label: 'Configurações', icon: Settings, roles: ['ADM', 'GESTOR'] },
+    { id: 'assinatura', label: 'Assinatura & Licença', icon: CreditCard, roles: ['ADM', 'GESTOR', 'OWNER'] },
   ];
 
   const userRole = String(profile?.cargo || '').toUpperCase();

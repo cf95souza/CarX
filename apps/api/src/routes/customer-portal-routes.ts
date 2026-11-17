@@ -13,6 +13,7 @@ import {
 } from '../customer-portal/customer-portal-service.js';
 import { authenticateCustomerPortal } from '../customer-portal/customer-portal-guard.js';
 import { tenantQuery } from '../database/tenant-query.js';
+import { inspectionService } from '../inspections/inspection-service.js';
 
 export const customerPortalRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // ============================================================================
@@ -122,6 +123,17 @@ export const customerPortalRoutes: FastifyPluginAsync = async (fastify: FastifyI
         );
         if (tRes.rows.length > 0) {
           tenantId = tRes.rows[0].id;
+        }
+      }
+
+      // Fallback ordenado para a oficina principal (caiocar ou primeira cadastrada)
+      if (!tenantId) {
+        const defTenant = await tenantQuery<any>(
+          null,
+          "SELECT id FROM tenants WHERE slug IN ('caiocar', 'demo') ORDER BY (slug = 'caiocar') DESC, created_at ASC LIMIT 1"
+        );
+        if (defTenant.rows.length > 0) {
+          tenantId = defTenant.rows[0].id;
         }
       }
 
@@ -331,6 +343,50 @@ export const customerPortalRoutes: FastifyPluginAsync = async (fastify: FastifyI
             .send({ statusCode: err.statusCode, code: err.code, message: err.message });
         }
         throw err;
+      }
+    }
+  );
+
+  /**
+   * GET /portal/work-orders/:id/inspection-pdf — Download do Laudo de Vistoria Oficial em PDF
+   */
+  fastify.get<{ Params: { id: string } }>(
+    '/portal/work-orders/:id/inspection-pdf',
+    { preHandler: [authenticateCustomerPortal] },
+    async (request, reply) => {
+      const { tenantId, customerId } = request.portalCustomer!;
+      const workOrderId = request.params.id;
+
+      // Valida propriedade da OS pelo cliente sob RLS
+      const woRes = await tenantQuery<{ id: string; vehicle_id: string }>(
+        tenantId!,
+        `SELECT id, vehicle_id FROM work_orders WHERE id = $1 AND tenant_id = $2 AND customer_id = $3`,
+        [workOrderId, tenantId!, customerId]
+      );
+      if (woRes.rows.length === 0) {
+        return reply.code(404).send({ statusCode: 404, message: 'Ordem de serviço não encontrada.' });
+      }
+
+      // Localiza inspeção da OS
+      const inspRes = await tenantQuery<{ id: string }>(
+        tenantId!,
+        `SELECT id FROM inspections WHERE work_order_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 1`,
+        [workOrderId, tenantId!]
+      );
+      if (inspRes.rows.length === 0) {
+        return reply.code(404).send({ statusCode: 404, message: 'Nenhuma vistoria encontrada para esta OS.' });
+      }
+
+      try {
+        const result = await inspectionService.generateInspectionPdf(tenantId!, inspRes.rows[0].id);
+        const filename = `laudo_vcr_${result.inspection.vehicle?.plate || 'vistoria'}.pdf`;
+
+        return reply
+          .header('Content-Type', 'application/pdf')
+          .header('Content-Disposition', `inline; filename="${filename}"`)
+          .send(result.pdfBuffer);
+      } catch (err: any) {
+        return reply.code(500).send({ statusCode: 500, message: err.message || 'Erro ao gerar PDF do laudo.' });
       }
     }
   );

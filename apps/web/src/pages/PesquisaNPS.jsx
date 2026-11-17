@@ -10,7 +10,7 @@ import {
   ExternalLink,
   ShieldCheck
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getStoredTenantSlug } from '../services/api';
 import { useBrand } from '../contexts/BrandContext';
 import { toast } from '../utils/toast';
 
@@ -220,7 +220,7 @@ const PesquisaNPS = () => {
           </div>
         </div>
         <a 
-          href="/meu-veiculo" 
+          href={`/${getStoredTenantSlug() || 'caiocar'}/portal`} 
           className="text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 bg-[#151A21] px-3.5 py-2 rounded-xl border border-[#2B3544] transition-all"
         >
           <Car className="w-3.5 h-3.5 text-[#C8F52E]" />
@@ -329,7 +329,7 @@ const PesquisaNPS = () => {
                 Compartilhar no WhatsApp
               </button>
               <a
-                href="/meu-veiculo"
+                href={`/${getStoredTenantSlug() || 'caiocar'}/portal`}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0E1116] hover:bg-[#1B2129] text-slate-200 font-black text-xs uppercase tracking-wider px-6 py-3.5 rounded-xl transition-all border border-[#2B3544]"
               >
                 Voltar ao Portal Meu Veículo
