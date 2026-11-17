@@ -596,6 +596,7 @@ export interface UpdateWorkOrderDto {
   customerNotes?: string | null;
   publicNotes?: string | null;
   bayId?: string | null;
+  progress?: number;
 }
 
 export interface ChangeWorkOrderStatusDto {
@@ -804,7 +805,7 @@ export interface CreateCatalogServiceDto {
   isActive?: boolean;
 }
 
-export interface UpdateCatalogServiceDto extends Partial<CreateCatalogServiceDto> {}
+export interface UpdateCatalogServiceDto extends Partial<CreateCatalogServiceDto> { }
 
 export const ServicePriceByClassSchema = z.object({
   id: z.string().uuid().optional(),
@@ -1457,7 +1458,7 @@ export type InspectionChecklistItemDto = z.infer<typeof InspectionChecklistItemS
 
 export const CreateInspectionInputSchema = z.object({
   workOrderId: z.string().uuid('ID da Ordem de Serviço inválido'),
-  vehicleId: z.string().uuid('ID do Veículo inválido'),
+  vehicleId: z.string().uuid('ID do Veículo inválido').optional().nullable(),
   inspectorId: z.string().uuid().optional().nullable(),
   inspectionType: InspectionTypeEnum.optional().default('check_in'),
   vehicleType: InspectionVehicleTypeEnum.optional().default('car'),
@@ -2154,6 +2155,13 @@ export const VerifyPortalOtpSchema = z.object({
     .regex(/^\d{6}$/, 'O código de confirmação deve conter exatamente 6 dígitos numéricos'),
 });
 export type VerifyPortalOtpInputDto = z.infer<typeof VerifyPortalOtpSchema>;
+
+export const PortalDirectLoginSchema = z.object({
+  phone: z.string().min(8, 'Número de telefone/celular é obrigatório'),
+  plate: z.string().min(4, 'Placa do veículo é obrigatória'),
+  slug: z.string().optional(),
+});
+export type PortalDirectLoginDto = z.infer<typeof PortalDirectLoginSchema>;
 
 export interface PortalCustomerDto {
   id: string;

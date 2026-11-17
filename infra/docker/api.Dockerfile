@@ -47,6 +47,7 @@ COPY --chown=node:node --from=builder /app/packages/shared ./packages/shared
 COPY --chown=node:node --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --chown=node:node --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --chown=node:node --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --chown=node:node --from=builder /app/apps/api/assets ./apps/api/assets
 
 WORKDIR /app/apps/api
 

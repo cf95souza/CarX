@@ -2,14 +2,17 @@ import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import {
   RequestPortalOtpSchema,
   VerifyPortalOtpSchema,
+  PortalDirectLoginSchema,
   RequestPortalOtpInputDto,
   VerifyPortalOtpInputDto,
+  PortalDirectLoginDto,
 } from '@carx/shared';
 import {
   customerPortalService,
   CustomerPortalError,
 } from '../customer-portal/customer-portal-service.js';
 import { authenticateCustomerPortal } from '../customer-portal/customer-portal-guard.js';
+import { tenantQuery } from '../database/tenant-query.js';
 
 export const customerPortalRoutes: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   // ============================================================================
@@ -87,6 +90,63 @@ export const customerPortalRoutes: FastifyPluginAsync = async (fastify: FastifyI
           tenantId,
           parseResult.data.identifier,
           parseResult.data.code
+        );
+        return reply.code(200).send(result);
+      } catch (err: any) {
+        if (err instanceof CustomerPortalError) {
+          return reply
+            .code(err.statusCode)
+            .send({ statusCode: err.statusCode, code: err.code, message: err.message });
+        }
+        throw err;
+      }
+    }
+  );
+
+  /**
+   * POST /portal/auth/direct-login — Acesso direto do cliente por Telefone e Placa
+   * Sem exigência de código SMS/WhatsApp, com isolamento rigoroso por oficina (tenant).
+   */
+  fastify.post<{ Body: PortalDirectLoginDto }>(
+    '/portal/auth/direct-login',
+    async (request, reply) => {
+      let tenantId = request.tenantId;
+
+      // Resolução resiliente do tenant por slug caso o header direto não tenha sido enviado
+      const requestedSlug = (request.body as any)?.slug || (request.headers['x-tenant-slug'] as string);
+      if (!tenantId && requestedSlug) {
+        const tRes = await tenantQuery<any>(
+          null,
+          'SELECT id FROM tenants WHERE LOWER(slug) = LOWER($1) LIMIT 1',
+          [requestedSlug.trim()]
+        );
+        if (tRes.rows.length > 0) {
+          tenantId = tRes.rows[0].id;
+        }
+      }
+
+      if (!tenantId) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Identificação da oficina/loja não fornecida (slug ou subdomínio). Acesse através do link oficial da oficina.',
+        });
+      }
+
+      const parseResult = PortalDirectLoginSchema.safeParse(request.body);
+      if (!parseResult.success) {
+        return reply.code(400).send({
+          statusCode: 400,
+          error: 'Bad Request',
+          message: parseResult.error.errors[0]?.message || 'Telefone e placa são obrigatórios.',
+        });
+      }
+
+      try {
+        const result = await customerPortalService.directLogin(
+          tenantId,
+          parseResult.data.phone,
+          parseResult.data.plate
         );
         return reply.code(200).send(result);
       } catch (err: any) {

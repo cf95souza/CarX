@@ -301,7 +301,7 @@ export const MiniSiteOficina: React.FC = () => {
               <Calendar className="w-3 h-3" /> Auto-Agendamento
             </a>
             <span className="text-slate-600">|</span>
-            <a href={`/${tenant.slug}/meuportal`} className="text-slate-300 hover:text-white flex items-center gap-1">
+            <a href={`/${tenant.slug}/portal`} className="text-slate-300 hover:text-white flex items-center gap-1">
               <Car className="w-3 h-3 text-[#C8F52E]" /> Portal Meu Veículo
             </a>
             <span className="text-slate-600">|</span>

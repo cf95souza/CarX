@@ -828,6 +828,7 @@ export class WorkOrderService {
     const publicNotes = data.publicNotes !== undefined ? data.publicNotes : (existing as any).publicNotes;
     const depositRequiredCents = data.depositRequiredCents !== undefined ? Math.max(0, data.depositRequiredCents) : ((existing as any).depositRequiredCents || 0);
     const scheduledAt = data.scheduledAt !== undefined ? data.scheduledAt : existing.scheduledAt;
+    const progress = data.progress !== undefined ? Math.max(0, Math.min(100, Math.round(Number(data.progress)))) : existing.progress;
 
     let totalCents = existing.totalCents;
     let discountCents = existing.discountCents;
@@ -912,10 +913,11 @@ export class WorkOrderService {
         customer_notes = $9,
         public_notes = $10,
         deposit_required_cents = $11,
+        progress = $12,
         updated_at = NOW()
       WHERE tenant_id = $1 AND id = $2;
       `,
-      [tenantId, id, technicianId, totalCents, discountCents, finalCents, scheduledAt, notes, customerNotes, publicNotes, depositRequiredCents]
+      [tenantId, id, technicianId, totalCents, discountCents, finalCents, scheduledAt, notes, customerNotes, publicNotes, depositRequiredCents, progress]
     );
 
     // Sincronização automática com a tabela de Agendamentos (appointments) para a Agenda Inteligente (Item 19)
@@ -930,6 +932,13 @@ export class WorkOrderService {
     }
 
     const updated = await this.getById(tenantId, id);
+
+    realtimeHub.publish(tenantId, 'work_order.updated', {
+      workOrderId: id,
+      osNumber: updated.osNumber,
+      progress: updated.progress,
+      status: updated.status,
+    });
 
     if (actorUserId) {
       await auditService.record({
@@ -1539,7 +1548,7 @@ export class WorkOrderService {
 
     const tenant = tenantRes.rows[0];
 
-    // 2. Buscar ordens de serviço em produção do tenant (CHECKED_IN, IN_PROGRESS, QA, READY)
+    // 2. Buscar ordens de serviço em produção do tenant (CHECKED_IN, IN_PROGRESS, QA, READY, SCHEDULED, APPROVED)
     const ordersRes = await tenantQuery<any>(
       null,
       `
@@ -1559,21 +1568,25 @@ export class WorkOrderService {
         v.color AS "vehicleColor",
         v.size_class AS "vehicleSizeClass",
         c.name AS "customerName",
-        u.name AS "technicianName"
+        u.name AS "technicianName",
+        b.name AS "bayName"
       FROM work_orders wo
       JOIN vehicles v ON v.id = wo.vehicle_id
       LEFT JOIN customers c ON c.id = wo.customer_id
       LEFT JOIN users u ON u.id = wo.technician_id
+      LEFT JOIN bays b ON b.id = wo.bay_id
       WHERE wo.tenant_id = $1
-        AND wo.status IN ('CHECKED_IN', 'IN_PROGRESS', 'QA', 'READY')
+        AND wo.status IN ('CHECKED_IN', 'IN_PROGRESS', 'QA', 'READY', 'SCHEDULED', 'APPROVED')
       ORDER BY 
         CASE WHEN wo.is_rework = true THEN 0 ELSE 1 END,
         CASE wo.status 
           WHEN 'IN_PROGRESS' THEN 1
           WHEN 'QA' THEN 2
           WHEN 'CHECKED_IN' THEN 3
-          WHEN 'READY' THEN 4
-          ELSE 5
+          WHEN 'SCHEDULED' THEN 4
+          WHEN 'APPROVED' THEN 5
+          WHEN 'READY' THEN 6
+          ELSE 7
         END,
         wo.updated_at DESC
       LIMIT 50;
@@ -1610,12 +1623,23 @@ export class WorkOrderService {
     const workOrders = ordersRes.rows.map((row: any) => ({
       id: row.id,
       os_number: row.osNumber,
+      osNumber: row.osNumber,
       status: row.status,
       progress: row.progress || 0,
+      progress_percent: row.progress || 0,
       is_rework: Boolean(row.isRework),
+      isRework: Boolean(row.isRework),
       started_at: row.startedAt,
       scheduled_at: row.scheduledAt,
       estimated_minutes: row.estimatedMinutes,
+      plate: row.vehiclePlate,
+      placa: row.vehiclePlate,
+      brand: row.vehicleBrand,
+      model: row.vehicleModel,
+      color: row.vehicleColor,
+      bay_name: row.bayName || 'Box 1 · Principal',
+      customer_name: row.customerName || 'Cliente',
+      technician_name: row.technicianName || 'Operador',
       vehicle: {
         plate: row.vehiclePlate,
         brand: row.vehicleBrand,

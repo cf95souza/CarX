@@ -56,6 +56,14 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
 
   const workOrderId = os.workOrderId || os.id;
 
+  const initialSavedProgress = Number(
+    os.progress !== undefined && os.progress !== null
+      ? os.progress
+      : os.progresso !== undefined && os.progresso !== null
+      ? os.progresso
+      : 0
+  );
+
   // Estado dos serviços
   const [servicosDetalhados, setServicosDetalhados] = useState<ServiceItemState[]>(() => {
     if (os.servicos_detalhados && Array.isArray(os.servicos_detalhados) && os.servicos_detalhados.length > 0) {
@@ -63,26 +71,38 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
         id: s.id || String(idx),
         nome: s.nome || s.serviceName || `Serviço ${idx + 1}`,
         tempo: s.tempo || s.estimatedMinutes || 60,
-        progresso: Number(s.progresso) || 0,
+        progresso: Number(s.progresso !== undefined ? s.progresso : s.progress) || initialSavedProgress,
       }));
     }
-    const servicoStr = os.servico || '';
-    return servicoStr
+    const servicoStr = os.servico || (os.items && Array.isArray(os.items) ? os.items.map((i: any) => i.name).join(', ') : '');
+    const splitted = servicoStr
       .split(',')
       .map((s: string, idx: number) => ({
         id: String(idx),
         nome: s.trim(),
         tempo: 60,
-        progresso: 0,
+        progresso: initialSavedProgress,
       }))
       .filter((s: ServiceItemState) => Boolean(s.nome));
+
+    return splitted.length > 0
+      ? splitted
+      : [
+          {
+            id: '0',
+            nome: os.serviceName || 'Execução dos Serviços Automotivos',
+            tempo: 60,
+            progresso: initialSavedProgress,
+          },
+        ];
   });
 
   // Progresso geral calculado
   const [progress, setProgress] = useState<number>(() => {
-    if (servicosDetalhados.length === 0) return Number(os.progresso) || 0;
+    if (servicosDetalhados.length === 0) return initialSavedProgress;
     const sum = servicosDetalhados.reduce((acc, curr) => acc + curr.progresso, 0);
-    return Math.round(sum / servicosDetalhados.length);
+    const avg = Math.round(sum / servicosDetalhados.length);
+    return Math.max(avg, initialSavedProgress);
   });
 
   const [notes, setNotes] = useState<string>(os.obs_tecnico || '');
@@ -360,8 +380,8 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
     },
   });
 
-  // Atualização individual de cada sub-serviço
-  const handleSubServiceProgress = (idx: number, val: number) => {
+  // Atualização individual de cada sub-serviço com persistência na API e suporte offline
+  const handleSubServiceProgress = async (idx: number, val: number) => {
     const newItems = servicosDetalhados.map((item, i) =>
       i === idx ? { ...item, progresso: val } : item
     );
@@ -373,6 +393,19 @@ export const ExecutorView: React.FC<ExecutorViewProps> = ({ os, onBack, onComple
 
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator && val === 100) {
       navigator.vibrate?.([20]);
+    }
+
+    try {
+      if (workOrderId) {
+        await api.workOrders.update(workOrderId, { progress: newTotal });
+        queryClient.invalidateQueries({ queryKey: ['technician-dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
+      }
+    } catch (err) {
+      console.warn('Falha ao persistir progresso na API, salvando offline:', err);
+      if (workOrderId) {
+        await enqueueOfflineAction(workOrderId, 'UPDATE_PROGRESS', { progress: newTotal }).catch(() => {});
+      }
     }
   };
 

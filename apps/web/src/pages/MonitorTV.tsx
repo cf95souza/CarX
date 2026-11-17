@@ -148,11 +148,13 @@ export const MonitorTV: React.FC = () => {
     ? tvData.workOrders
     : tvData?.workOrders?.workOrders || [];
 
-  // Filtra as ordens em produção: CHECKED_IN, IN_PROGRESS, QA, READY
-  // Ordena com prioridade: Retrabalhos primeiro, depois Em Execução, depois QA, depois Prontos
+  // Filtra as ordens em produção e agendadas: IN_PROGRESS, QA, CHECKED_IN, SCHEDULED, APPROVED, READY
+  // Ordena com prioridade: Retrabalhos primeiro, depois Em Execução, QA, Check-in, Agendados, Aprovados, Prontos
   const producao = useMemo(() => {
     return rawOrders
-      .filter((os) => ['CHECKED_IN', 'IN_PROGRESS', 'QA', 'READY'].includes(os.status))
+      .filter((os) =>
+        ['IN_PROGRESS', 'QA', 'CHECKED_IN', 'SCHEDULED', 'APPROVED', 'READY'].includes(os.status)
+      )
       .sort((a, b) => {
         if (a.is_rework && !b.is_rework) return -1;
         if (!a.is_rework && b.is_rework) return 1;
@@ -161,7 +163,9 @@ export const MonitorTV: React.FC = () => {
           IN_PROGRESS: 1,
           QA: 2,
           CHECKED_IN: 3,
-          READY: 4,
+          SCHEDULED: 4,
+          APPROVED: 5,
+          READY: 6,
         };
         const pA = priorityMap[a.status] || 99;
         const pB = priorityMap[b.status] || 99;
@@ -219,6 +223,20 @@ export const MonitorTV: React.FC = () => {
           <Badge variant="volt" className="gap-1 font-black uppercase shadow-lg shadow-volt/20">
             <Sparkles size={12} className="animate-pulse text-asfalto fill-asfalto" />
             Pronto p/ Retirada
+          </Badge>
+        );
+      case 'SCHEDULED':
+        return (
+          <Badge variant="outline" className="gap-1 font-black text-[#38BDF8] border-[#38BDF8]/40 uppercase">
+            <Clock size={12} />
+            Agendado
+          </Badge>
+        );
+      case 'APPROVED':
+        return (
+          <Badge variant="outline" className="gap-1 font-black text-[#C8F52E] border-[#C8F52E]/40 uppercase">
+            <CheckCircle2 size={12} />
+            Aprovado
           </Badge>
         );
       default:
@@ -336,14 +354,16 @@ export const MonitorTV: React.FC = () => {
         >
           {displayOrders.length > 0 ? (
             displayOrders.map((item) => {
-              const progress = item.progress_percent ?? item.progresso ?? 0;
-              const plate = item.plate || item.placa || 'PLACA-OFF';
+              const progress = item.progress_percent ?? item.progress ?? item.progresso ?? 0;
+              const plate = item.plate || item.placa || item.vehicle?.plate || 'PLACA';
               const vehicleDesc = item.model
-                ? `${item.brand || ''} ${item.model}`
+                ? `${item.brand || item.vehicle?.brand || ''} ${item.model || item.vehicle?.model || ''}`.trim()
+                : item.vehicle?.model
+                ? `${item.vehicle?.brand || ''} ${item.vehicle?.model}`.trim()
                 : item.veiculo_desc || item.veiculo || 'Veículo em Atendimento';
-              const customerName = item.customer_name || item.cliente_nome || 'Cliente da Loja';
-              const techName = item.technician_name || item.tecnico_nome || 'Equipe Geral';
-              const bayName = item.bay_name || item.box_nome || 'Box Pátio';
+              const customerName = item.customer_name || item.customer?.name || item.cliente_nome || 'Cliente da Loja';
+              const techName = item.technician_name || item.technician?.name || item.tecnico_nome || 'Equipe Geral';
+              const bayName = item.bay_name || item.bayName || item.box_nome || 'Box 1 · Principal';
 
               return (
                 <div

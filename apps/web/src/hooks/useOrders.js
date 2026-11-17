@@ -129,6 +129,9 @@ export const useOrders = () => {
       if (data.technicianId || data.tecnico_id) {
         updatePayload.technicianId = data.technicianId || data.tecnico_id;
       }
+      if (data.progress !== undefined || data.progresso !== undefined) {
+        updatePayload.progress = Number(data.progress !== undefined ? data.progress : data.progresso);
+      }
       if (Object.keys(updatePayload).length > 0) {
         await api.workOrders.update(id, updatePayload);
       }
@@ -198,30 +201,90 @@ export const useOrders = () => {
 
   const saveOrderChecklist = async (osId, data, signatureBase64) => {
     try {
-      const created = await api.inspections.create({
-        workOrderId: osId,
-        type: 'CHECKIN',
-        currentKm: data.km ? Number(data.km) : undefined,
-        notes: data.generalNotes || '',
-        damagePoints: (data.points || []).map((p) => ({
-          xPercent: p.x || p.xPercent || 50,
-          yPercent: p.y || p.yPercent || 50,
-          view: p.view || 'exterior',
-          damageType: p.type || p.damageType || 'scratch',
-          severity: p.severity || 'medium',
-          description: p.notes || p.description || '',
-        })),
-      });
+      // 1. Verifica se já existe inspeção aberta para esta OS
+      let inspectionId = null;
+      try {
+        const existing = await api.inspections.getByWorkOrder(osId);
+        const list = Array.isArray(existing) ? existing : existing?.inspections || [];
+        if (list.length > 0) {
+          inspectionId = list[0].id;
+        }
+      } catch {
+        // sem inspeção prévia
+      }
 
-      if (signatureBase64 && created?.id) {
-        await api.inspections.sign(created.id, {
-          customerSignatureName: 'Cliente',
+      // 2. Se não existir, cria a inspeção com dados canônicos
+      if (!inspectionId) {
+        const created = await api.inspections.create({
+          workOrderId: osId,
+          vehicleId: data.vehicleId || undefined,
+          inspectionType: 'check_in',
+          vehicleType: data.vehicleCategory || 'car',
+          currentKm: data.km ? parseInt(String(data.km).replace(/\D/g, ''), 10) : undefined,
+          fuelLevel: data.fuelLevel || '1/2',
+          notes: data.generalNotes || 'Laudo de inspeção digital.',
+        });
+        inspectionId = created?.id;
+      } else {
+        // Atualiza campos gerais da inspeção existente
+        await api.inspections.update(inspectionId, {
+          currentKm: data.km ? parseInt(String(data.km).replace(/\D/g, ''), 10) : undefined,
+          fuelLevel: data.fuelLevel || '1/2',
+          notes: data.generalNotes || '',
+        });
+      }
+
+      if (!inspectionId) {
+        throw new Error('Não foi possível inicializar ou localizar a inspeção da Ordem de Serviço.');
+      }
+
+      // 3. Salva os pontos de avaria individualmente
+      if (data.points && Array.isArray(data.points) && data.points.length > 0) {
+        for (const p of data.points) {
+          try {
+            // Mapeia view para os enums aceitos pelo backend
+            let apiView = 'top';
+            if (p.view === 'frontal') apiView = 'front';
+            else if (p.view === 'traseira') apiView = 'rear';
+            else if (p.view === 'lateral_esquerda' || p.view === 'perfil_esq') apiView = 'left';
+            else if (p.view === 'lateral_direita' || p.view === 'perfil_dir') apiView = 'right';
+            else if (p.view === 'superior' || p.view === 'principal') apiView = 'top';
+
+            // Mapeia tipo de avaria
+            let damageType = 'scratch';
+            const rawType = String(p.tipo || p.damageType || '').toLowerCase();
+            if (rawType.includes('amassado') || rawType.includes('mossa') || rawType.includes('dent')) damageType = 'dent';
+            else if (rawType.includes('lasca') || rawType.includes('pedrisco') || rawType.includes('paint_chip')) damageType = 'paint_chip';
+            else if (rawType.includes('mancha') || rawType.includes('resina') || rawType.includes('stain')) damageType = 'stain';
+            else if (rawType.includes('trinca') || rawType.includes('vidro') || rawType.includes('crack')) damageType = 'crack';
+            else if (rawType.includes('repint') || rawType.includes('queimada')) damageType = 'repainted';
+
+            await api.inspections.addDamagePoint(inspectionId, {
+              part: p.part || 'lataria',
+              damageType,
+              severity: p.severity || 'medium',
+              xPercent: Math.max(0, Math.min(100, Math.round(p.x ?? p.xPercent ?? 50))),
+              yPercent: Math.max(0, Math.min(100, Math.round(p.y ?? p.yPercent ?? 50))),
+              view: apiView,
+              photoFileId: p.photoFileId || undefined,
+              notes: p.descricao || p.description || p.notes || `${p.tipo || 'Avaria'} (${apiView})`,
+            });
+          } catch (ptErr) {
+            console.warn('Erro ao salvar ponto de avaria específico:', ptErr);
+          }
+        }
+      }
+
+      // 4. Se houver assinatura digital, assina a inspeção
+      if (signatureBase64) {
+        await api.inspections.sign(inspectionId, {
+          customerSignatureName: data.customerName || 'Cliente',
           signatureBase64,
         });
       }
 
       await fetchOrders();
-      return { success: true };
+      return { success: true, inspectionId };
     } catch (error) {
       console.error('Erro ao salvar checklist de inspeção:', error);
       return { success: false, error };

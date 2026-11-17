@@ -4551,3 +4551,45 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
   - **Banner Dinâmico do Combo**: Quando o combo sugerido (10% OFF) é ativado, o banner altera seu estado visual para ativo (`✓ Combo promocional ativo: 10% de desconto aplicado`) e exibe o botão 'Remover desconto' em vermelho suave, permitindo desativar o combo a qualquer momento.
   - **Desconto Customizado (R$ ou %)**: Implementado painel expansível com opção de desconto fixo (Reais) ou percentual (%), com campos de entrada, botão 'Aplicar' e validação contra o subtotal.
   - **Persistência Relacional**: A chamada de criação da OS (`api.workOrders.create`) agora repassa `discountCents: Math.round(discountAmount * 100)`, gravando o desconto oficial no PostgreSQL.
+
+- **Item 48 — Correção do Erro HTTP 400 ao Salvar Laudo em Ordens de Serviço**:
+  - **Causa Raiz Resolvida**: O schema `CreateInspectionInputSchema` exigia obrigatoriamente `vehicleId` UUID. O método `saveOrderChecklist` de `useOrders.js` não passava o `vehicleId` e tentava enviar `damagePoints` dentro do body de criação do laudo (formato rejeitado pelo Zod com HTTP 400 'Dados de inspeção inválidos').
+  - **Resiliência de Schema (`@carx/shared`)**: Campo `vehicleId` em `CreateInspectionInputSchema` flexibilizado para opcional, pois o backend Fastify já resolve automaticamente `vehicleId` a partir do `wo.vehicle_id` da Ordem de Serviço vinculada.
+  - **Fluxo Canônico de Vistoria em `useOrders.js` e `CarVisualChecklist.jsx`**:
+    1. Verifica se já existe inspeção cadastrada para a OS (`api.inspections.getByWorkOrder`);
+    2. Se não existir, cria a inspeção com `workOrderId`, `vehicleId`, `inspectionType: 'check_in'`, `currentKm`, `fuelLevel` e `notes`;
+    3. Se já existir, atualiza dados gerais via `api.inspections.update`;
+    4. Itera sobre cada avaria e cadastra individualmente via `api.inspections.addDamagePoint` com enums estritos (`view`: 'top'/'front'/'rear'/'left'/'right', `damageType`: 'scratch'/'dent'/'paint_chip'/'stain'/'crack'/'repainted');
+    5. Finaliza assinando a vistoria via `api.inspections.sign`.
+
+- **Item 49 — Sincronização de Apontamentos do Laudo (Operador ➔ Gestor) e Marcador de Combustível**:
+  - **Sincronização Bidirecional de Vistas (Views)**: Resolvida discrepância de nomenclatura entre as views salvas pelo Operador e pela API (`isometric`, `front`, `rear`, `left`, `right`) e as abas locais de visualização do Gestor (`superior`, `frontal`, `traseira`, `lateral_esquerda`, `lateral_direita`). Implementada a função de normalização `normalizeApiViewToLocal(view, category)` e mapeamento amigável `getFriendlyDamageLabel(damageType)` no `CarVisualChecklist.jsx`. Agora, os danos marcados pelo operador são exibidos fielmente nas abas do gestor com seus respectivos contadores e pinos pulsantes interativos.
+  - **Marcador Visual de Combustível**: Adicionado seletor de combustível no painel lateral do Gestor (`CarVisualChecklist.jsx`) com os 5 níveis oficiais (`Reserva`, `1/4`, `1/2`, `3/4`, `Cheio`), barra gráfica com acento em verde Volt e âmbar para Reserva.
+  - **Persistência e VcrReport**: `fuelLevel` agora é carregado de `insp.fuelLevel`, persistido no backend através de `handleFinalSave` e propagado para o modal de laudo técnico `VcrReportModal.tsx` e mensagem de WhatsApp.
+
+- **Item 50 — Modernização do Diagrama no PDF do Laudo VCR e Modal de Relatório**:
+  - **Render 3D de Alta Fidelidade no PDF Backend (`inspection-service.ts`)**: Substituído o diagrama retangular esquemático em preto e branco gerado pelo PDFKit pela silhueta 3D oficial de estúdio automotivo correspondente à categoria real do veículo (Hatch, Sedan, SUV, Picape ou Moto).
+  - **Localizador e Empacotamento de Assets**: Criada a pasta de assets canônica `apps/api/assets/inspection/` e atualizado o `infra/docker/api.Dockerfile` para garantir empacotamento das silhuetas na imagem de produção do container `carx-api`.
+  - **VcrReportModal no Frontend**: Adicionado o componente de mapa visual da silhueta 3D acima da tabela de avarias com plotagem vetorial dos pinos numerados no modal e na impressão direta A4 do navegador.
+
+- **Item 51 — TV Operacional: Exibição em Tempo Real de Veículos em Execução no Pátio**:
+  - **Transição Automática ao Iniciar Timer (`technician-service.ts`)**: Corrigido o método `startTimer` para transicionar automaticamente para `IN_PROGRESS` ordens com status `SCHEDULED`, `APPROVED` e `CHECKED_IN`, preenchendo `started_at` e vinculando o operador responsável, garantindo que o acionamento do cronômetro reflita no banco imediatamente.
+  - **Query de Pátio com Boxes (`work-order-service.ts`)**: Endpoint `GET /public/tv/:slug` atualizado para incluir ordens `SCHEDULED` e `APPROVED` junto a `IN_PROGRESS`, `QA`, `CHECKED_IN` e `READY`, realizando `LEFT JOIN bays b ON b.id = wo.bay_id` e retornando tanto propriedades planas (`plate`, `bay_name`, `customer_name`, `technician_name`) quanto objetos aninhados para total retrocompatibilidade.
+  - **Reatividade no MonitorTV (`MonitorTV.tsx`)**: Atualizados os filtros e ordenação prioritária de produção com badges específicos de alto contraste para `Agendado` e `Aprovado`, e leitura resiliente das informações da OS.
+
+- **Item 52 — Persistência Real do Percentual de Conclusão (Progresso) da OS**:
+  - **Extensão do DTO e Permissões (`@carx/shared` & `apps/api`)**: Adicionado `progress?: number` em `UpdateWorkOrderDto`. Rota `PATCH /work-orders/:id` atualizada para permitir o papel `'tecnico'`, autorizando o operador a atualizar o percentual de conclusão do serviço.
+  - **Persistência Atômica no PostgreSQL (`work-order-service.ts`)**: Query SQL de atualização enriquecida com a coluna `progress = $12` e sanitização dos valores entre 0 e 100. Disparo automático do evento `work_order.updated` via `realtimeHub` SSE para sincronização instantânea das telas conectadas.
+  - **Sincronização no Frontend (`useOrders.js` & `ExecutorView.tsx`)**: O hook `updateOrderProgress` agora propaga `progress` para a API. Em `ExecutorView.tsx`, a inicialização do estado preserva o progresso gravado previamente na OS (`initialSavedProgress`), e a função `handleSubServiceProgress` dispara a gravação no servidor imediatamente e sincroniza o IndexedDB para resiliência offline.
+  - **Visualização em Ordens de Serviço (`OrdensServico.tsx`)**: Coluna e barra de progresso da tabela de OSs atualizadas para renderizar dinamicamente o valor percentual com animação CSS suave.
+
+- **Item 53 — Correção do Duplo '+' no Botão Nova OS (`OrdensServico.tsx`)**:
+  - **Eliminação de Redundância Gráfica**: Removido o sinal '+' em texto hardcoded no botão verde de ação primária da tela de Ordens de Serviço, que renderizava simultaneamente o ícone Lucide `<Plus />` e `+ Nova OS`. O botão agora renderiza perfeitamente `<Plus size={18} /><span>Nova OS</span>`.
+
+- **Item 54 — Portal do Cliente com Login Direto por Celular + Placa e URL Isolada por Slug**:
+  - **Eliminação de Bloqueio por OTP**: Removida a exigência de código de 6 dígitos via WhatsApp/SMS no portal do cliente, eliminando mensagens de indisponibilidade de gateway e viabilizando o acesso universal independentemente do plano da oficina.
+  - **Autenticação Direta e Segura (`customer-portal-service.ts`)**: Criado endpoint `POST /portal/auth/direct-login` recebendo celular e placa do carro, validando sob o tenant através de cruzamento de `customers`, `vehicles` e `work_orders`, emitindo token JWT legítimo com escopo `customer_portal` e validade de 7 dias.
+  - **URL Canônica Vinculada à Loja (`ClientPortal.tsx`)**: Interface do portal associada ao slug da oficina (`/:slug/portal`, `/portal/:slug` e `/meuportal`), carregando logotipo, nome e WhatsApp oficial da loja. Formulário com máscaras automáticas para celular e placa.
+
+
+

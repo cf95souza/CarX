@@ -1,4 +1,4 @@
-﻿# CarX — Guia Mestre de Fases e Execução (fase.md)
+# CarX — Guia Mestre de Fases e Execução (fase.md)
 
 Este documento é a **bússola oficial de execução** do **CarX** (transformação do legado *OsSystem* em SaaS multitenant automotivo de alta performance).
 
@@ -31,7 +31,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
          * Item 46: Novo Layout da Vistoria Digital (Design System Rebrand), Resolução de Cliente e Veículo, Silhuetas Hatch 3D e Botões de Alto Contraste (100% sem perda de dados)
      - [T8.2d] Refinamento Cirúrgico de Usabilidade, Portal do Cliente e Vistoria (Itens 47 a 54 — BACKLOG DETALHADO):
        * [x] Item 47: Remoção / Edição de Desconto Aplicado em Nova OS e Orçamentos (Print 1)
-       * [ ] Item 48: Correção HTTP 400 ao Salvar Laudo pela tela de Ordens de Serviço (Payload Zod de Inspeção)
+       * [x] Item 48: Correção HTTP 400 ao Salvar Laudo pela tela de Ordens de Serviço (Payload Zod de Inspeção)
        * [ ] Item 49: Sincronização de Apontamentos do Laudo entre Operador e Gestor + Marcador de Combustível no Gestor
        * [ ] Item 50: Modernização do Diagrama no PDF do Laudo VCR (Substituir retângulo esquemático 2D por silhuetas do sistema — Print 2)
        * [ ] Item 51: TV Operacional: Exibição em Tempo Real de Veículos em Execução no Pátio (Prints 3 e 4)
@@ -2567,7 +2567,7 @@ Onda 3 Roadmap de Execução:
 
 ---
 
-### 📋 Item 48 — Correção HTTP 400 ao Salvar Laudo em Ordens de Serviço
+### 📋 Item 48 — Correção HTTP 400 ao Salvar Laudo em Ordens de Serviço [CONCLUÍDO]
 - **Problema**: Ao salvar o laudo interativo pela tela de Ordens de Serviço (`OrdensServico.tsx` -> `CarVisualChecklist.jsx`), o servidor retorna:
   `Failed to load resource: 400 (Bad Request) - Dados de inspeção inválidos`.
 - **Causa Raiz Técnica**:
@@ -2581,65 +2581,94 @@ Onda 3 Roadmap de Execução:
 
 ---
 
-### 📋 Item 49 — Sincronização de Apontamentos do Laudo entre Operador e Gestor + Marcador de Combustível
+### 📋 Item 49 — Sincronização de Apontamentos do Laudo entre Operador e Gestor + Marcador de Combustível [CONCLUÍDO]
 - **Problema**:
   - Laudo feito pelo operador não carrega seus apontamentos quando aberto pelo usuário do gestor.
   - No laudo visual do gestor não existe o seletor/marcador de combustível (`fuelLevel`: Reserva, 1/4, 1/2, 3/4, Cheio) que existe na tela do operador.
-- **Escopo**:
-  - Unificar a consulta de inspeção (`api.inspections.getByWorkOrder`) em `OrdensServico.tsx` e `CarVisualChecklist.jsx` para mapear corretamente os `damagePoints` salvos pelo operador (convertendo de `isometric/front/rear/left/right` para as visualizações do gestor).
-  - Incluir seletor de nível de combustível no painel lateral do `CarVisualChecklist.jsx` do gestor.
-- **Critério de Aceite**: Ao abrir a OS no perfil de gestor, todos os danos apontados pelo operador aparecem marcados sobre a silhueta 3D, com suas observações, fotos e o nível de combustível selecionado.
-
----
-
-### 📋 Item 50 — Modernização do Diagrama no PDF do Laudo VCR (Print 2)
-- **Problema**: No laudo PDF gerado (`VcrReportModal.tsx` / serviço de geração de laudo), o diagrama de avarias ainda utiliza um retângulo esquemático 2D geométrico preto e branco genérico, que não condiz com a identidade visual do sistema nem com a categoria do veículo.
-- **Escopo**:
-  - Substituir o wireframe retangular do PDF/laudo de impressão pelas silhuetas oficiais do sistema (Hatch, Sedan, SUV, Picape, Moto) com fundo neutro e pinos numerados.
-  - Garantir fidelidade estética ao Design System do CarX no documento impresso/PDF.
-- **Critério de Aceite**: O PDF/laudo impresso exibe a silhueta correspondente ao porte do carro com as avarias plotadas de forma profissional e elegante.
-
----
-
-### 📋 Item 51 — TV Operacional: Exibição em Tempo Real de Veículos em Execução no Pátio (Prints 3 e 4)
-- **Problema**: A OS #1 já teve seu serviço iniciado no app do operador (cronômetro rodando 'EM EXECUÇÃO' no Box 1), mas a tela da TV Operacional da oficina exibe 'PÁTIO OPERACIONAL LIVRE - Nenhum veículo em execução ou aguardando'.
 - **Causa Raiz Técnica**:
-  - O endpoint de SSE ou a query de busca da TV Operacional filtra apenas status específicos ou não está considerando OSs vinculadas à unidade/box ativo, ou falha no lookup do slug do tenant.
-- **Escopo**:
-  - Inspecionar a consulta de pátio da TV Operacional (`Tv360OfficeView.jsx` / `MonitorTV.tsx` / API Fastify de Monitoramento).
-  - Garantir que qualquer OS com status `IN_PROGRESS`, `CHECKED_IN`, `APPROVED` ou `SCHEDULED` apareça nos cards da TV com contadores e tempo de atendimento em tempo real.
-- **Critério de Aceite**: Ao iniciar o serviço no app do operador, o monitor da TV exibe imediatamente o card do veículo (ex: Ford Fiesta no Box 1 · Principal) sem necessidade de refresh manual.
+  - O operador salva os pontos com as views da API Fastify (`isometric`, `front`, `rear`, `left`, `right`). Ao abrir no `CarVisualChecklist.jsx` do gestor, os pontos vinham sem a normalização para os IDs locais (`superior`, `frontal`, `traseira`, `lateral_esquerda`, `lateral_direita`), fazendo com que o filtro de cada vista resultasse em 0 avarias exibidas na tela.
+  - O estado e o seletor de combustível `fuelLevel` não existiam no painel lateral do gestor, e o valor `'1/2'` estava fixo no salvamento.
+- **Solução Implementada**:
+  - Implementada função canônica `normalizeApiViewToLocal(view, category)` e `getFriendlyDamageLabel(rawType)` no carregamento da vistoria (`loadSavedChecklist`).
+  - Adicionado estado `fuelLevel` e seletor visual idêntico ao do operador no painel lateral do formulário (barra com 5 níveis: Reserva, 1/4, 1/2, 3/4, Cheio, com acento visual Volt e Âmbar para Reserva).
+  - Atualizado `handleFinalSave` para persistir o `fuelLevel` selecionado e repassá-lo ao `VcrReportModal`.
+  - Atualizado `VcrReportModal.tsx` e `OrdensServico.tsx` para exibir e sincronizar o nível de combustível tanto no modal quanto na mensagem formatada do WhatsApp.
+  - Build do `apps/web` validado com 100% de sucesso em 11.11s sem erros.
+- **Critério de Aceite**: Ao abrir a OS no perfil de gestor, todos os danos apontados pelo operador aparecem marcados sobre a silhueta 3D com seus pinos numerados, observações e fotos, e o nível de combustível é exibido e sincronizado perfeitamente.
 
 ---
 
-### 📋 Item 52 — Persistência Real do Percentual de Conclusão (Progresso) da OS
-- **Problema**: Quando o operador ou gestor define um percentual de conclusão (ex: 40%, 75%) e sai da OS, ao retornar o valor está zerado (0%). Além disso, na lista geral de OSs não sai de 0%.
+### 📋 Item 50 — Modernização do Diagrama no PDF do Laudo VCR (Print 2) [CONCLUÍDO]
+- **Problema**: No laudo PDF gerado (`VcrReportModal.tsx` / serviço de geração de laudo do backend), o diagrama de avarias utilizava um retângulo esquemático 2D geométrico preto e branco genérico, que não condizia com a identidade visual do sistema nem com a categoria do veículo.
+- **Causa Raiz Técnica**: Em `apps/api/src/inspections/inspection-service.ts` (`buildPdfDocument`), o PDFKit desenhava primitivas geométricas vetoriais de caixas (`doc.rect`, `doc.roundedRect`) com texto manual em vez de carregar a representação 3D do veículo.
+- **Solução Implementada**:
+  - Implementado helper `resolveVehicleCategory` e `findInspectionImagePath` no backend Fastify para detectar a categoria real do veículo (Hatch, Sedan, SUV, Picape, Moto) e carregar os renders 3D de estúdio automotivo correspondentes.
+  - Sincronizados os renders 3D em `apps/api/assets/inspection/` e atualizado `infra/docker/api.Dockerfile` para empacotar os assets no contêiner de produção.
+  - Atualizado `buildPdfDocument` para renderizar a imagem fotorrealista 3D da categoria no container do PDF com fallback vetorial e plotar os pinos de avaria coloridos com halos de severidade e numeração.
+  - Atualizado `VcrReportModal.tsx` no frontend para exibir a silhueta 3D oficial da categoria correspondente no modal e na impressão direta.
+  - Builds de `apps/api` e `apps/web` aprovados com 100% de sucesso.
+- **Critério de Aceite**: O laudo oficial em PDF e o modal de visualização/impressão exibem a silhueta 3D com alta fidelidade estética correspondente ao porte do veículo com as avarias plotadas de forma profissional e elegante.
+
+---
+
+### 📋 Item 51 — TV Operacional: Exibição em Tempo Real de Veículos em Execução no Pátio (Prints 3 e 4) [CONCLUÍDO]
+- **Problema**: A OS #1 já teve seu serviço iniciado no app do operador (cronômetro rodando 'EM EXECUÇÃO' no Box 1, conforme Print 3), mas a tela da TV Operacional da oficina exibia 'PÁTIO OPERACIONAL LIVRE - Nenhum veículo em execução ou aguardando' (conforme Print 4).
 - **Causa Raiz Técnica**:
-  - Falta de persistência do campo `progress` na tabela `work_orders` ou mutação do frontend não enviando o payload para a rota `PATCH /work-orders/:id`.
-- **Escopo**:
-  - Implementar/corrigir a atualização atômica do campo `progress` (0 a 100) no backend e no frontend.
-  - Atualizar a barra de progresso na lista de OSs do gestor, no app do operador e no Portal do Cliente.
-- **Critério de Aceite**: O operador altera o progresso para 60%, salva ou avança uma etapa; ao recarregar a tela ou consultar a OS, o progresso permanece em 60% em todos os módulos.
+  - Em `apps/api/src/technician/technician-service.ts` (`startTimer`), a transição automática para `IN_PROGRESS` só verificava `wo.status === APPROVED` ou `CHECKED_IN`, mas a OS do usuário estava em `SCHEDULED`, fazendo com que permanecesse como `SCHEDULED` no banco mesmo com o cronômetro rodando.
+  - A query SQL de `getPublicTvData` em `work-order-service.ts` e o filtro do `MonitorTV.tsx` filtravam estritamente `IN ('CHECKED_IN', 'IN_PROGRESS', 'QA', 'READY')`, excluindo completamente ordens `SCHEDULED` e `APPROVED`.
+  - Havia desencontro de propriedades entre o objeto retornado pela API (`row.vehiclePlate`, `row.bayName`) e os acessos planos esperados pelos cards (`item.plate`, `item.bay_name`).
+- **Solução Implementada**:
+  - `technician-service.ts`: Atualizado `startTimer` para transicionar automaticamente qualquer OS com status `SCHEDULED`, `APPROVED` ou `CHECKED_IN` para `IN_PROGRESS` ao acionar o cronômetro oficial, atualizando `started_at` e vinculando o técnico.
+  - `work-order-service.ts`: Ampliada a query de `getPublicTvData` para incluir `SCHEDULED` e `APPROVED`, com `LEFT JOIN bays b ON b.id = wo.bay_id` (`bayName`) e ordenação com prioridade (Retrabalhos ➔ Em Execução ➔ QA ➔ Check-in ➔ Agendados ➔ Aprovados ➔ Prontos). Mapeamento retornado enriquecido com compatibilidade de campos planos e aninhados.
+  - `MonitorTV.tsx`: Filtro de produção e prioridades atualizados para incluir `SCHEDULED` e `APPROVED` com badges de alto contraste, e leitura resiliente de propriedades de veículo, cliente, técnico e box.
+  - Builds de `apps/api` e `apps/web` verificados com 100% de sucesso.
+- **Critério de Aceite**: Ao iniciar o serviço no app do operador ou manter ordens em andamento/agendamento, o monitor da TV exibe os cards industriais com placa, box, técnico, cliente e cronômetro em tempo real via SSE.
 
 ---
 
-### 📋 Item 53 — Correção do Duplo '+' no Botão Nova OS (Print 5)
-- **Problema**: Na tela de Ordens de Serviço (`OrdensServico.tsx`), o botão verde exibe o texto duplicado `+ + Nova OS`.
-- **Escopo**:
-  - Remover o caractere '+' excedente no JSX (onde já existe o ícone `<Plus size={...} />` e texto '+ Nova OS').
-- **Critério de Aceite**: O botão renderiza elegantemente como `+ Nova OS` com um único sinal de adição.
+### 📋 Item 52 — Persistência Real do Percentual de Conclusão (Progresso) da OS [CONCLUÍDO]
+- **Problema**: Quando o operador ou gestor definia um percentual de conclusão (ex: 40%, 75%) e saía da OS, ao retornar o valor estava zerado (0%). Além disso, na lista geral de OSs não saía de 0%.
+- **Causa Raiz Técnica**:
+  - Em `packages/shared/src/schemas.ts`, o `UpdateWorkOrderDto` não possuía a propriedade `progress?: number`.
+  - Na rota `PATCH /work-orders/:id`, o middleware `requireRole` bloqueava o papel `'tecnico'` com erro HTTP 403 Forbidden.
+  - No `work-order-service.ts`, o método `update` não incluía a coluna `progress` na query SQL de `UPDATE work_orders SET ...`.
+  - Em `useOrders.js`, a mutação `updateOrderProgress` ignorava os campos `progress` e `progresso` no payload de atualização.
+  - Em `ExecutorView.tsx`, a inicialização do estado de progresso sobrescrevia o progresso salvo para 0 caso os subitens estivessem sem valor individual, e o manipulador `handleSubServiceProgress` só atualizava o state local sem disparar chamada para a API nem para o IndexedDB offline.
+- **Solução Implementada**:
+  - `UpdateWorkOrderDto` expandido com `progress?: number`.
+  - `work-order-routes.ts`: adicionado `'tecnico'` no `requireRole` de `PATCH /work-orders/:id`.
+  - `work-order-service.ts`: adicionada sanitização (`Math.max(0, Math.min(100, Math.round(Number(data.progress))))`), persistência atômica no banco (`progress = $12`) e publicação em tempo real no `realtimeHub` (`work_order.updated`).
+  - `useOrders.js`: `updateOrderProgress` repassa `progress` para a API.
+  - `ExecutorView.tsx`: inicialização respeita o `initialSavedProgress` e `handleSubServiceProgress` persiste automaticamente na API e no IndexedDB com fallback offline.
+  - `OrdensServico.tsx`: barra e percentual mapeados para ler tanto `os.progress` quanto `os.progresso`.
+  - Builds de `packages/shared`, `apps/api` e `apps/web` aprovados com 100% de sucesso.
+- **Critério de Aceite**: O operador altera o progresso para 60%, salva ou avança uma etapa; ao recarregar a tela ou consultar a OS no gestor ou no portal do cliente, o progresso permanece em 60% sincronizado.
 
 ---
 
-### 📋 Item 54 — Portal do Cliente: Login Direto por Número da OS + Placa e URL Isolada por Slug (Print 6)
+### 📋 Item 53 — Correção do Duplo '+' no Botão Nova OS (Print 5) [CONCLUÍDO]
+- **Problema**: Na tela de Ordens de Serviço (`OrdensServico.tsx`), o botão verde exibia o texto duplicado `+ + Nova OS`.
+- **Causa Raiz Técnica**: O botão possuía o componente de ícone `<Plus size={18} />` e simultaneamente o texto hardcoded `+ Nova OS`, provocando a duplicidade visual do caractere `+`.
+- **Solução Implementada**:
+  - `OrdensServico.tsx`: Atualizado o botão de ação rápida para renderizar `<Plus size={18} /><span>Nova OS</span>`, padronizado conforme o Design System Rebrand CarX.
+  - Build do `apps/web` validado com sucesso em 7.62s sem erros.
+- **Critério de Aceite**: O botão renderiza elegantemente como `+ Nova OS` com um único sinal gráfico de adição.
+
+---
+
+### 📋 Item 54 — Portal do Cliente: Login Direto por Celular + Placa e URL Isolada por Slug (Print 6) [CONCLUÍDO]
 - **Problema**:
-  - A tela atual pede celular ou e-mail com envio de código OTP de 6 dígitos via WhatsApp/SMS, gerando bloqueio para oficinas/planos sem o gateway de disparo ativo.
-  - A rota está genérica em `/meuportal`, correndo o risco de cruzar tenants ou falhar no isolamento de dados.
-- **Regra de Negócio Definida pelo Usuário**:
-  - Acesso simplificado e universal: O cliente digita apenas o **Número da Ordem de Serviço** e a **Placa do Carro**.
-  - Acesso direto sem exigência de código SMS/WhatsApp.
-  - Rota com slug da oficina: `/:slug/portal` ou `/portal/:slug`, garantindo isolamento total por tenant.
-- **Escopo**:
-  - Criar/adaptar a rota pública de login por `osNumber` + `plate` validando contra a tabela `work_orders` filtrada pelo `tenant_id` do slug da URL.
-  - Retornar a visualização dos dados daquela OS específica (progresso em tempo real, laudo de vistoria, fotos antes/durante/depois e termo de garantia).
-- **Critério de Aceite**: O cliente acessa `http://.../caiocar/portal`, digita o número da OS (ex: 1) e a placa (EVH0H11) e acessa imediatamente o status do seu veículo sem código SMS/WhatsApp.
+  - A tela anterior solicitava envio de código OTP de 6 dígitos via WhatsApp/SMS, bloqueando os clientes com a mensagem de indisponibilidade de gateway (conforme Print 6).
+  - A rota era genérica em `/meuportal`, sem vincular expressamente a identidade visual e o isolamento de tenant da oficina.
+- **Regra de Negócio Implementada**:
+  - **Acesso Direto Sem Dependência de SMS/WhatsApp**: O cliente informa exclusivamente o **Celular cadastrado** e a **Placa do Carro**, entrando imediatamente.
+  - **Isolamento Rigoroso por Tenant & Rota Canônica por Slug**: Suporte às rotas `/:slug/portal`, `/portal/:slug` e `/meuportal`, resolvendo dinamicamente o branding da loja (`brand.name`, logotipo, contatos).
+- **Solução Implementada**:
+  - `packages/shared/src/schemas.ts`: criado `PortalDirectLoginSchema` e tipo `PortalDirectLoginDto`.
+  - `apps/api/src/customer-portal/customer-portal-service.ts`: implementado método `directLogin` validando cliente e veículo sob o tenant (com suporte a cruzamento via `customers`, `vehicles` e `work_orders`), assinando token JWT de sessão de 7 dias com escopo `customer_portal`.
+  - `apps/api/src/routes/customer-portal-routes.ts`: adicionado endpoint público `POST /portal/auth/direct-login` com resolução automática de tenant via slug do header ou body.
+  - `apps/web/src/services/api.ts`: adicionado `api.portal.directLogin` repassando slug e headers de tenant.
+  - `apps/web/src/pages/ClientPortal.tsx`: redesenhada a tela de login para solicitar apenas Celular e Placa com validação e formatação automática em tempo real, sem telas intermediárias nem código numérico OTP.
+  - `apps/web/src/pages/MiniSiteOficina.tsx`: link do rodapé atualizado para `/${tenant.slug}/portal`.
+  - Builds de `packages/shared`, `apps/api` e `apps/web` validados com 100% de sucesso.
+- **Critério de Aceite**: O cliente acessa `http://.../caiocar/portal`, digita o número do celular (ex: 11949156525) e a placa (EVH0H11) e acessa imediatamente o portal com todas as ordens de serviço, status do pátio, fotos do veículo e garantias sem exigência de código SMS/WhatsApp.

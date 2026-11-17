@@ -25,7 +25,46 @@ import { toast } from '../../utils/toast';
 import QRCodeModal from './QRCodeModal';
 import VcrReportModal from './VcrReportModal';
 import { AiInspectionAssistantModal } from './AiInspectionAssistantModal';
-import { resolveVehicleCategory, VEHICLE_CATEGORIES } from './inspection/inspectionCatalog';
+import {
+  resolveVehicleCategory,
+  VEHICLE_CATEGORIES,
+  FUEL_LEVELS,
+  getDamageTypeLabel,
+} from './inspection/inspectionCatalog';
+
+const normalizeApiViewToLocal = (view, category) => {
+  if (!view) return 'superior';
+  const v = String(view).toLowerCase().trim();
+  if (v === 'isometric' || v === 'top' || v === 'principal' || v === 'superior') {
+    return 'superior';
+  }
+  if (v === 'front' || v === 'frontal') {
+    return 'frontal';
+  }
+  if (v === 'rear' || v === 'traseira') {
+    return 'traseira';
+  }
+  if (v === 'left' || v === 'lateral_esquerda' || v === 'perfil_esq') {
+    return category === 'moto' ? 'perfil_esq' : 'lateral_esquerda';
+  }
+  if (v === 'right' || v === 'lateral_direita' || v === 'perfil_dir') {
+    return category === 'moto' ? 'perfil_dir' : 'lateral_direita';
+  }
+  return v;
+};
+
+const getFriendlyDamageLabel = (rawType) => {
+  if (!rawType) return '⚡ Risco / Arranhão';
+  const lower = String(rawType).toLowerCase();
+  if (lower === 'scratch' || lower.includes('risco')) return '⚡ Risco / Arranhão';
+  if (lower === 'dent' || lower.includes('amassado')) return '🔨 Amassado (PDR)';
+  if (lower === 'paint_chip' || lower.includes('lasca') || lower.includes('pedrisco')) return '⚡ Lasca de Pintura / Pedrisco';
+  if (lower === 'stain' || lower.includes('mancha') || lower.includes('oxida')) return '🌧️ Mancha / Oxidação';
+  if (lower === 'crack' || lower.includes('trinca')) return '⚡ Trinca / Vidro';
+  if (lower === 'repainted' || lower.includes('repint')) return '🎨 Repintura Prévia';
+  const label = getDamageTypeLabel(rawType);
+  return label || rawType;
+};
 
 // Pad de Assinatura Digital do Cliente
 const SignaturePad = ({ onSave, onCancel }) => {
@@ -170,6 +209,7 @@ const CarVisualChecklist = ({ onClose, osData }) => {
   const [activeView, setActiveView] = useState('superior');
   const [generalNotes, setGeneralNotes] = useState('');
   const [km, setKm] = useState('');
+  const [fuelLevel, setFuelLevel] = useState('1/2');
   const [showSignature, setShowSignature] = useState(false);
   const [showWhatsAppPrompt, setShowWhatsAppPrompt] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -271,18 +311,24 @@ const CarVisualChecklist = ({ onClose, osData }) => {
           const insp = list[0];
           if (insp.damagePoints && Array.isArray(insp.damagePoints)) {
             setPoints(
-              insp.damagePoints.map((p) => ({
-                id: p.id || Date.now() + Math.random(),
-                view: p.view || 'superior',
-                x: p.xPercent ?? p.x ?? 50,
-                y: p.yPercent ?? p.y ?? 50,
-                tipo: p.damageType || '⚡ Risco / Arranhão',
-                descricao: p.description || '',
-                fotoUrl: p.photoUrl || '',
-              }))
+              insp.damagePoints.map((p) => {
+                const localView = normalizeApiViewToLocal(p.view, detectedCategory);
+                return {
+                  id: p.id || Date.now() + Math.random(),
+                  view: localView,
+                  x: Number(p.xPercent ?? p.x ?? p.x_percent ?? 50),
+                  y: Number(p.yPercent ?? p.y ?? p.y_percent ?? 50),
+                  tipo: getFriendlyDamageLabel(p.damageType || p.damage_type),
+                  descricao: p.notes || p.description || p.descricao || '',
+                  fotoUrl: p.photoUrl || p.photo_url || '',
+                  part: p.part || 'lataria',
+                  severity: p.severity || 'low',
+                };
+              })
             );
           }
           if (insp.currentKm) setKm(String(insp.currentKm));
+          if (insp.fuelLevel) setFuelLevel(String(insp.fuelLevel));
           if (insp.notes) setGeneralNotes(insp.notes);
           if (insp.signatureUrl || insp.customerSignatureUrl) {
             setSignature(insp.signatureUrl || insp.customerSignatureUrl);
@@ -296,7 +342,7 @@ const CarVisualChecklist = ({ onClose, osData }) => {
     };
 
     loadSavedChecklist();
-  }, [osData]);
+  }, [osData, detectedCategory]);
 
   const handleContainerClick = (e, view) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -356,6 +402,7 @@ const CarVisualChecklist = ({ onClose, osData }) => {
 
   const handleFinalSave = async (signatureData) => {
     const orderId = osData?.id || osData?.workOrderId;
+    const vehicleId = osData?.vehicle?.id || osData?.vehicleId || osData?.veiculo_id;
     if (!orderId) {
       toast.error('Erro: ID da Ordem de Serviço não encontrado.');
       return;
@@ -364,7 +411,15 @@ const CarVisualChecklist = ({ onClose, osData }) => {
     setIsSaving(true);
     const result = await saveOrderChecklist(
       orderId,
-      { points, generalNotes, km },
+      {
+        vehicleId,
+        vehicleCategory,
+        customerName,
+        points,
+        generalNotes,
+        km,
+        fuelLevel: fuelLevel || '1/2',
+      },
       signatureData
     );
 
@@ -696,6 +751,50 @@ const CarVisualChecklist = ({ onClose, osData }) => {
                       </div>
                     </div>
 
+                    {/* Seletor Visual de Nível de Combustível */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-[10px] font-bold uppercase text-[#9AA7B8] tracking-wider block">
+                          Nível de Combustível
+                        </label>
+                        <span className="text-[10px] font-extrabold text-[#C8F52E] tracking-wider uppercase">
+                          {fuelLevel}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1.5 p-2 bg-[#0E1116] rounded-xl border border-[#2E3744]">
+                        {FUEL_LEVELS.map((lvl, idx) => {
+                          const activeIdx = FUEL_LEVELS.indexOf(fuelLevel);
+                          const filled = idx <= activeIdx;
+                          return (
+                            <button
+                              key={lvl}
+                              type="button"
+                              onClick={() => setFuelLevel(lvl)}
+                              className="flex flex-col items-center gap-1.5 p-1 rounded-lg hover:bg-[#171C24] transition-all group"
+                              title={`Nível de Combustível: ${lvl}`}
+                            >
+                              <span
+                                className={`h-2.5 w-full rounded-sm transition-colors duration-150 ${
+                                  filled
+                                    ? activeIdx === 0
+                                      ? 'bg-[#FF9500]'
+                                      : 'bg-[#C8F52E]'
+                                    : 'bg-[#2E3744]'
+                                }`}
+                              />
+                              <span
+                                className={`text-[10px] font-extrabold transition-colors ${
+                                  fuelLevel === lvl ? 'text-[#F2F5F8]' : 'text-[#9AA7B8]'
+                                }`}
+                              >
+                                {lvl}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {signature && (
                       <div className="p-3 bg-[#0E1116] rounded-xl border border-[#2E3744]">
                         <div className="flex items-center justify-between mb-1.5">
@@ -875,6 +974,7 @@ const CarVisualChecklist = ({ onClose, osData }) => {
           points={points}
           generalNotes={generalNotes}
           km={km}
+          fuelLevel={fuelLevel}
           signature={signature}
         />
       )}

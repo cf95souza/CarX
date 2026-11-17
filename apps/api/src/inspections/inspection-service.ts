@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import PDFDocument from 'pdfkit';
 import { tenantQuery } from '../database/tenant-query.js';
 import { storageService } from '../storage/storage-service.js';
@@ -731,6 +733,46 @@ export class InspectionService {
   }
 
   /**
+   * Identifica a categoria do veículo para uso no PDF
+   */
+  private resolveVehicleCategory(insp: InspectionDto): string {
+    const raw = String(
+      insp.vehicleType ||
+      (insp.vehicle as any)?.sizeClass ||
+      (insp.vehicle as any)?.size_class ||
+      insp.vehicle?.model ||
+      ''
+    ).toLowerCase();
+
+    if (raw.includes('moto') || raw.includes('motorcycle')) return 'moto';
+    if (raw.includes('picape') || raw.includes('pickup') || raw.includes('hilux') || raw.includes('ranger') || raw.includes('s10') || raw.includes('strada') || raw.includes('toro')) return 'picape';
+    if (raw.includes('suv') || raw.includes('renegade') || raw.includes('compass') || raw.includes('creta') || raw.includes('tracker') || raw.includes('kicks') || raw.includes('t-cross')) return 'suv';
+    if (raw.includes('hatch') || raw.includes('fiesta') || raw.includes('gol') || raw.includes('onix') || raw.includes('hb20') || raw.includes('polo') || raw.includes('ka')) return 'hatch';
+    return 'sedan';
+  }
+
+  /**
+   * Localiza a imagem de render 3D no disco
+   */
+  private findInspectionImagePath(category: string, view: string = 'principal'): string | null {
+    const candidatePaths = [
+      path.resolve(process.cwd(), 'assets/inspection', category, `${view}.png`),
+      path.resolve(process.cwd(), 'apps/api/assets/inspection', category, `${view}.png`),
+      path.resolve(__dirname, '../../assets/inspection', category, `${view}.png`),
+      path.resolve(__dirname, '../../../apps/api/assets/inspection', category, `${view}.png`),
+      path.resolve(process.cwd(), '../web/public/assets/inspection', category, `${view}.png`),
+      path.resolve(process.cwd(), 'apps/web/public/assets/inspection', category, `${view}.png`),
+    ];
+
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Compila o PDF vetorial em memória
    */
   private async buildPdfDocument(
@@ -829,39 +871,52 @@ export class InspectionService {
         const boxW = 523;
         const boxH = 175;
 
-        // Fundo do box do carro
-        doc.rect(boxX, boxY, boxW, boxH).fill('#f1f5f9').strokeColor('#cbd5e1').stroke();
+        // Fundo do box do carro com cantos arredondados modernos
+        doc.roundedRect(boxX, boxY, boxW, boxH, 8).fill('#f8fafc').strokeColor('#cbd5e1').lineWidth(1).stroke();
 
-        // Desenho vetorial da silhueta esquemática do automóvel
-        const carCenterX = boxX + boxW / 2;
-        const carCenterY = boxY + boxH / 2;
-        const carW = 280;
-        const carH = 120;
-        const carX = carCenterX - carW / 2;
-        const carY = carCenterY - carH / 2;
+        const category = this.resolveVehicleCategory(insp);
+        const imagePath = this.findInspectionImagePath(category, 'principal');
 
-        // Corpo do Carro (Visão Superior Esquemática)
-        doc.roundedRect(carX, carY, carW, carH, 25).fillAndStroke('#ffffff', '#64748b');
+        if (imagePath) {
+          try {
+            // Render 3D de alta fidelidade
+            doc.image(imagePath, boxX + 16, boxY + 12, {
+              fit: [boxW - 32, boxH - 24],
+              align: 'center',
+              valign: 'center',
+            });
+          } catch (imgErr) {
+            console.warn('[VCR-PDF] Falha ao renderizar imagem 3D no PDF, usando fallback vetorial:', imgErr);
+          }
+        }
 
-        // Para-brisa dianteiro (lado esquerdo)
-        doc.roundedRect(carX + 45, carY + 12, 45, carH - 24, 6).fillAndStroke('#e2e8f0', '#94a3b8');
-        // Teto central
-        doc.rect(carX + 95, carY + 10, 90, carH - 20).fillAndStroke('#f8fafc', '#94a3b8');
-        // Vidro traseiro (lado direito)
-        doc.roundedRect(carX + 190, carY + 12, 45, carH - 24, 6).fillAndStroke('#e2e8f0', '#94a3b8');
+        // Se não houver imagem física ou falhar, fallback vetorial
+        if (!imagePath) {
+          const carCenterX = boxX + boxW / 2;
+          const carCenterY = boxY + boxH / 2;
+          const carW = 280;
+          const carH = 120;
+          const carX = carCenterX - carW / 2;
+          const carY = carCenterY - carH / 2;
 
-        // Divisões de portas e capô
-        doc.moveTo(carX + 45, carY).lineTo(carX + 45, carY + carH).strokeColor('#94a3b8').stroke();
-        doc.moveTo(carX + 140, carY).lineTo(carX + 140, carY + 10).strokeColor('#94a3b8').stroke();
-        doc.moveTo(carX + 140, carY + carH - 10).lineTo(carX + 140, carY + carH).strokeColor('#94a3b8').stroke();
-        doc.moveTo(carX + 235, carY).lineTo(carX + 235, carY + carH).strokeColor('#94a3b8').stroke();
+          doc.roundedRect(carX, carY, carW, carH, 25).fillAndStroke('#ffffff', '#94a3b8');
+          doc.roundedRect(carX + 45, carY + 12, 45, carH - 24, 6).fillAndStroke('#e2e8f0', '#94a3b8');
+          doc.rect(carX + 95, carY + 10, 90, carH - 20).fillAndStroke('#f8fafc', '#94a3b8');
+          doc.roundedRect(carX + 190, carY + 12, 45, carH - 24, 6).fillAndStroke('#e2e8f0', '#94a3b8');
 
-        // Rótulos de orientação
-        doc.fillColor('#64748b').fontSize(7).font('Helvetica-Bold');
-        doc.text('FRENTE / CAPÔ', carX + 5, carCenterY - 3);
-        doc.text('TRASEIRA / PORTA-MALAS', carX + 238, carCenterY - 3);
-        doc.text('LATERAL ESQUERDA', carCenterX - 35, carY + 2);
-        doc.text('LATERAL DIREITA', carCenterX - 32, carY + carH - 8);
+          doc.fillColor('#64748b').fontSize(7).font('Helvetica-Bold');
+          doc.text('FRENTE / CAPÔ', carX + 5, carCenterY - 3);
+          doc.text('TRASEIRA / PORTA-MALAS', carX + 238, carCenterY - 3);
+          doc.text('LATERAL ESQUERDA', carCenterX - 35, carY + 2);
+          doc.text('LATERAL DIREITA', carCenterX - 32, carY + carH - 8);
+        }
+
+        // Rótulo de categoria da silhueta no canto superior direito
+        doc.fillColor('#0284c7').fontSize(7).font('Helvetica-Bold');
+        doc.text(`SILHUETA: ${category.toUpperCase()} · VISTORIA 360°`, boxX + boxW - 180, boxY + 6, {
+          width: 170,
+          align: 'right',
+        });
 
         // Plotagem dos Pontos de Avaria registrados na Silhueta
         const damagePoints = insp.damagePoints || [];

@@ -577,7 +577,7 @@ export const OrdensServico: React.FC = () => {
             className="carx-btn-volt"
           >
             <Plus size={18} />
-            + Nova OS
+            <span>Nova OS</span>
           </button>
         </div>
       </div>
@@ -754,12 +754,12 @@ export const OrdensServico: React.FC = () => {
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col items-center gap-1 w-24 mx-auto">
                           <span className="text-[10px] font-mono text-[#5B6674] font-bold">
-                            {os.progress || 0}%
+                            {os.progress !== undefined && os.progress !== null ? os.progress : (os.progresso || 0)}%
                           </span>
                           <div className="w-full h-1.5 bg-[#F3F5F7] rounded-full overflow-hidden">
                             <div
-                              className="h-full bg-[#C8F52E]"
-                              style={{ width: `${os.progress || 0}%` }}
+                              className="h-full bg-[#C8F52E] transition-all duration-300"
+                              style={{ width: `${os.progress !== undefined && os.progress !== null ? os.progress : (os.progresso || 0)}%` }}
                             />
                           </div>
                         </div>
@@ -1692,6 +1692,7 @@ export const OrdensServico: React.FC = () => {
           points={activeInspectionForReport.damagePoints || []}
           generalNotes={activeInspectionForReport.notes || ''}
           km={activeInspectionForReport.currentKm}
+          fuelLevel={activeInspectionForReport.fuelLevel}
           signature={activeInspectionForReport.customerSignatureUrl}
         />
       )}

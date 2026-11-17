@@ -282,6 +282,133 @@ export class CustomerPortalService {
   }
 
   /**
+   * Autenticação direta do cliente sem dependência de SMS/WhatsApp OTP.
+   * Valida o número de telefone/celular e a placa do veículo cadastrados no tenant.
+   */
+  async directLogin(
+    tenantId: string,
+    rawPhone: string,
+    rawPlate: string
+  ): Promise<PortalAuthResponseDto> {
+    const cleanPlate = (rawPlate || '').toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    if (!cleanPlate) {
+      throw new CustomerPortalError(400, 'INVALID_PLATE', 'Informe a placa do veículo.');
+    }
+
+    const phoneDigits = (rawPhone || '').replace(/\D/g, '');
+    if (phoneDigits.length < 8) {
+      throw new CustomerPortalError(400, 'INVALID_PHONE', 'Informe um número de telefone/celular válido.');
+    }
+    const phoneSuffix = phoneDigits.slice(-8);
+
+    // 1. Busca cliente e veículo relacionados sob o tenant
+    const custRes = await tenantQuery<any>(
+      tenantId,
+      `
+      SELECT 
+        c.id, 
+        c.name, 
+        c.phone, 
+        c.email, 
+        c.document, 
+        c.document_type, 
+        c.address_city, 
+        c.address_state,
+        v.id AS vehicle_id,
+        v.plate,
+        v.model,
+        v.brand
+      FROM customers c
+      JOIN vehicles v ON (v.customer_id = c.id OR EXISTS (
+        SELECT 1 FROM work_orders wo 
+        WHERE wo.customer_id = c.id AND wo.vehicle_id = v.id AND wo.tenant_id = c.tenant_id
+      ))
+      WHERE c.tenant_id = $1
+        AND (
+          REGEXP_REPLACE(c.phone, '\\D', '', 'g') LIKE '%' || $2
+          OR REGEXP_REPLACE(c.phone, '\\D', '', 'g') = $3
+        )
+        AND UPPER(REPLACE(v.plate, '-', '')) = $4
+      ORDER BY v.updated_at DESC
+      LIMIT 1;
+      `,
+      [tenantId, phoneSuffix, phoneDigits, cleanPlate]
+    );
+
+    let customerRow = custRes.rows[0];
+
+    // Fallback: se não encontrou pelo JOIN direto com veículo, tenta buscar através das Ordens de Serviço
+    if (!customerRow) {
+      const woRes = await tenantQuery<any>(
+        tenantId,
+        `
+        SELECT 
+          c.id, 
+          c.name, 
+          c.phone, 
+          c.email, 
+          c.document, 
+          c.document_type, 
+          c.address_city, 
+          c.address_state
+        FROM work_orders wo
+        JOIN customers c ON c.id = wo.customer_id
+        JOIN vehicles v ON v.id = wo.vehicle_id
+        WHERE wo.tenant_id = $1
+          AND (
+            REGEXP_REPLACE(c.phone, '\\D', '', 'g') LIKE '%' || $2
+            OR REGEXP_REPLACE(c.phone, '\\D', '', 'g') = $3
+          )
+          AND UPPER(REPLACE(v.plate, '-', '')) = $4
+        ORDER BY wo.created_at DESC
+        LIMIT 1;
+        `,
+        [tenantId, phoneSuffix, phoneDigits, cleanPlate]
+      );
+      customerRow = woRes.rows[0];
+    }
+
+    if (!customerRow) {
+      throw new CustomerPortalError(
+        404,
+        'ACCESS_NOT_FOUND',
+        'Nenhum veículo encontrado com essa placa e telefone nesta oficina. Verifique os dados digitados ou consulte a recepção.'
+      );
+    }
+
+    const customerDto: PortalCustomerDto = {
+      id: customerRow.id,
+      name: customerRow.name,
+      phone: customerRow.phone,
+      email: customerRow.email || null,
+      document: customerRow.document || null,
+      documentType: customerRow.document_type || null,
+      city: customerRow.address_city || null,
+      state: customerRow.address_state || null,
+    };
+
+    const token = signJwt(
+      {
+        sub: customerRow.id,
+        customerId: customerRow.id,
+        tenant_id: tenantId,
+        tenantId,
+        role: 'customer',
+        scope: 'customer_portal',
+        name: customerRow.name,
+        email: customerRow.email || undefined,
+        phone: customerRow.phone,
+      },
+      7 * 24 * 3600
+    );
+
+    return {
+      token,
+      customer: customerDto,
+    };
+  }
+
+  /**
    * Retorna os dados do perfil do cliente autenticado.
    */
   async getProfile(tenantId: string, customerId: string): Promise<PortalCustomerDto> {

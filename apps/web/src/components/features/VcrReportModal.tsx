@@ -18,6 +18,7 @@ import { formatDateBR, formatTimeBR } from '../../utils/dateUtils';
 import { Button } from '@carx/ui';
 import { Modal } from '@carx/ui';
 import { Badge } from '@carx/ui';
+import { resolveVehicleCategory } from './inspection/inspectionCatalog';
 
 export interface VcrReportModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export interface VcrReportModalProps {
   points?: any[];
   generalNotes?: string;
   km?: number | string;
+  fuelLevel?: string;
   signature?: string | null;
 }
 
@@ -36,10 +38,16 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
   points = [],
   generalNotes = '',
   km = '',
+  fuelLevel = '',
   signature = null,
 }) => {
   const { name, logoUrl, whatsapp } = useBrand();
   const printRef = useRef<HTMLDivElement>(null);
+
+  const vehicleCategory = resolveVehicleCategory(
+    osData?.vehicle?.sizeClass || osData?.vehicleSizeClass || osData?.porte,
+    osData?.vehicle?.model || osData?.veiculo_desc || osData?.vehicleModel
+  );
 
   if (!isOpen || !osData) return null;
 
@@ -99,6 +107,7 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
     msg += `📊 *Resumo da Vistoria:*\n`;
     msg += `• *OS:* #${osData.osNumber || osData.id}\n`;
     if (km) msg += `• *KM na Entrada:* ${km} km\n`;
+    if (fuelLevel) msg += `• *Nível de Combustível:* ${fuelLevel}\n`;
     msg += `• *Pontos Mapeados:* ${totalDanos === 0 ? 'Nenhuma avaria inicial constatada' : `${totalDanos} ponto(s) de atenção registrado(s)`}\n`;
     msg += `• *Status da Assinatura:* ${signature ? '✔️ Assinado Digitalmente' : '⏳ Registrado na Recepção'}\n\n`;
     if (generalNotes) {
@@ -239,9 +248,9 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
             </div>
 
             <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase block">Hodômetro</span>
-              <span className="font-extrabold text-slate-900 block">
-                {km ? `${km} km` : 'Não registrado'}
+              <span className="text-[9px] font-bold text-slate-400 uppercase block">Hodômetro / Combustível</span>
+              <span className="font-extrabold text-slate-900 block truncate">
+                {km ? `${km} km` : 'KM N/A'} {fuelLevel ? `· ${fuelLevel}` : ''}
               </span>
               <span className="text-[9px] text-slate-400 uppercase block">Check-in</span>
             </div>
@@ -257,11 +266,55 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
             </div>
           )}
 
-          {/* Tabela de Avarias */}
+          {/* 1. Mapa Visual da Silhueta 3D (VCR Touch) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+              <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">
+                1. Mapa de Avarias e Condição da Carroceria (VCR Touch)
+              </span>
+              <span className="text-[9px] font-bold text-slate-500 uppercase">
+                Silhueta: {vehicleCategory.toUpperCase()} · Vistoria 360°
+              </span>
+            </div>
+
+            <div className="relative w-full h-[200px] sm:h-[230px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-3">
+              <img
+                src={`/assets/inspection/${vehicleCategory}/principal.png`}
+                alt={`Silhueta ${vehicleCategory}`}
+                className="max-h-full max-w-full object-contain mix-blend-multiply select-none"
+                onError={(e) => {
+                  (e.currentTarget as any).src = '/assets/inspection/sedan/principal.png';
+                }}
+              />
+              <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                {points.map((pt, idx) => (
+                  <g key={idx}>
+                    <circle
+                      cx={`${pt.xPercent ?? pt.x ?? 50}%`}
+                      cy={`${pt.yPercent ?? pt.y ?? 50}%`}
+                      r="10"
+                      className="fill-rose-600 stroke-white stroke-2"
+                    />
+                    <text
+                      x={`${pt.xPercent ?? pt.x ?? 50}%`}
+                      y={`${pt.yPercent ?? pt.y ?? 50}%`}
+                      textAnchor="middle"
+                      dy=".35em"
+                      className="fill-white text-[8px] font-black"
+                    >
+                      {idx + 1}
+                    </text>
+                  </g>
+                ))}
+              </svg>
+            </div>
+          </div>
+
+          {/* 2. Tabela de Avarias */}
           <div className="space-y-3">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Avarias & Danos Constatados ({points.length})
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> 2. Detalhamento de Avarias Identificadas ({points.length})
               </h3>
               <span className="text-[10px] font-bold text-slate-500">
                 {points.length === 0 ? '✔️ Veículo íntegro na entrada' : '⚠️ Avarias pontuais mapeadas'}

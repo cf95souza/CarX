@@ -1113,6 +1113,28 @@ export const api = {
       return auth;
     },
 
+    directLogin: async (data: { phone: string; plate: string; slug?: string; tenantId?: string }) => {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const tenantId = data.tenantId || getStoredTenantId();
+      const tenantSlug = data.slug || getStoredTenantSlug();
+      if (tenantId) headers['x-tenant-id'] = tenantId;
+      if (tenantSlug) headers['x-tenant-slug'] = tenantSlug;
+
+      const res = await fetch(`${API_BASE_URL}/portal/auth/direct-login`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          phone: data.phone,
+          plate: data.plate,
+          slug: tenantSlug,
+        }),
+      });
+      const auth = await handleResponse<PortalAuthResponseDto>(res);
+      setStoredPortalToken(auth.token);
+      setStoredPortalCustomer(auth.customer);
+      return auth;
+    },
+
     getProfile: async () => portalFetchClient<PortalCustomerDto>('/portal/me'),
     getVehicles: async () => portalFetchClient<{ vehicles: PortalVehicleDto[] }>('/portal/vehicles'),
     getWorkOrders: async () =>

@@ -78,12 +78,9 @@ export const ClientPortal: React.FC = () => {
   const [token, setToken] = useState<string | null>(() => getStoredPortalToken());
   const [customer, setCustomer] = useState<PortalCustomerDto | null>(() => getStoredPortalCustomer());
 
-  // Form states do Login OTP
-  const [step, setStep] = useState<'identifier' | 'code'>('identifier');
-  const [identifierInput, setIdentifierInput] = useState('');
-  const [codeInput, setCodeInput] = useState('');
-  const [devOtpSuggestion, setDevOtpSuggestion] = useState<string | null>(null);
-  const [resendSeconds, setResendSeconds] = useState(0);
+  // Form states do Acesso Direto (Celular + Placa)
+  const [phoneInput, setPhoneInput] = useState('');
+  const [plateInput, setPlateInput] = useState('');
 
   // Filtros e Seleções
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('ALL');
@@ -100,61 +97,36 @@ export const ClientPortal: React.FC = () => {
     const handleExpired = () => {
       setToken(null);
       setCustomer(null);
-      setStep('identifier');
-      toast.warning('Sua sessão no portal expirou. Solicite um novo código de acesso.');
+      toast.warning('Sua sessão no portal expirou. Identifique-se novamente.');
     };
     window.addEventListener('carx:portal-auth-expired', handleExpired);
     return () => window.removeEventListener('carx:portal-auth-expired', handleExpired);
   }, []);
 
-  // Temporizador de reenvio do OTP
-  useEffect(() => {
-    if (resendSeconds <= 0) return;
-    const interval = setInterval(() => {
-      setResendSeconds((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [resendSeconds]);
-
   // Formatação de máscara do telefone
-  const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    if (raw.includes('@')) {
-      setIdentifierInput(raw);
-      return;
-    }
-    let digits = raw.replace(/\D/g, '');
-    if (digits.length > 11) digits = digits.slice(0, 11);
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let digits = e.target.value.replace(/\D/g, '').slice(0, 11);
     if (digits.length > 6) {
-      setIdentifierInput(`(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`);
+      setPhoneInput(`(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`);
     } else if (digits.length > 2) {
-      setIdentifierInput(`(${digits.slice(0, 2)}) ${digits.slice(2)}`);
+      setPhoneInput(`(${digits.slice(0, 2)}) ${digits.slice(2)}`);
     } else {
-      setIdentifierInput(digits);
+      setPhoneInput(digits);
     }
   };
 
-  // ============================================================================
-  // MUTAÇÕES DE LOGIN OTP
-  // ============================================================================
-  const requestOtpMutation = useMutation({
-    mutationFn: (identifier: string) => api.portal.requestOtp({ identifier }),
-    onSuccess: (data) => {
-      toast.success('Código de 6 dígitos gerado com sucesso!');
-      setStep('code');
-      setResendSeconds(60);
-      if (data.devOtpCode) {
-        setDevOtpSuggestion(data.devOtpCode);
-      }
-    },
-    onError: (err: any) => {
-      toast.error(err.message || 'Falha ao solicitar código de acesso.');
-    },
-  });
+  // Formatação da placa com caixa alta automática
+  const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+    setPlateInput(raw);
+  };
 
-  const verifyOtpMutation = useMutation({
-    mutationFn: (variables: { identifier: string; code: string }) =>
-      api.portal.verifyOtp(variables),
+  // ============================================================================
+  // MUTAÇÃO DE ACESSO DIRETO POR CELULAR + PLACA
+  // ============================================================================
+  const directLoginMutation = useMutation({
+    mutationFn: (variables: { phone: string; plate: string; slug?: string }) =>
+      api.portal.directLogin(variables),
     onSuccess: (auth) => {
       setToken(auth.token);
       setCustomer(auth.customer);
@@ -162,38 +134,37 @@ export const ClientPortal: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['portal'] });
     },
     onError: (err: any) => {
-      toast.error(err.message || 'Código de confirmação incorreto ou expirado.');
+      toast.error(err.message || 'Veículo não localizado. Verifique o celular e a placa informados.');
     },
   });
 
-  const handleSendOtp = (e: React.FormEvent) => {
+  const handleDirectLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const clean = identifierInput.trim();
-    if (!clean) {
-      toast.warning('Informe seu WhatsApp ou e-mail cadastrado na oficina.');
-      return;
-    }
-    requestOtpMutation.mutate(clean);
-  };
+    const cleanPhone = phoneInput.replace(/\D/g, '');
+    const cleanPlate = plateInput.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanCode = codeInput.replace(/\D/g, '');
-    if (cleanCode.length !== 6) {
-      toast.warning('O código de confirmação deve ter exatamente 6 dígitos numéricos.');
+    if (cleanPhone.length < 8) {
+      toast.warning('Informe seu número de celular com DDD.');
       return;
     }
-    verifyOtpMutation.mutate({ identifier: identifierInput.trim(), code: cleanCode });
+    if (cleanPlate.length < 4) {
+      toast.warning('Informe a placa completa do veículo.');
+      return;
+    }
+
+    directLoginMutation.mutate({
+      phone: cleanPhone,
+      plate: cleanPlate,
+      slug: slug || getStoredTenantSlug() || undefined,
+    });
   };
 
   const handleLogout = () => {
     api.portal.logout();
     setToken(null);
     setCustomer(null);
-    setStep('identifier');
-    setIdentifierInput('');
-    setCodeInput('');
-    setDevOtpSuggestion(null);
+    setPhoneInput('');
+    setPlateInput('');
     queryClient.removeQueries({ queryKey: ['portal'] });
     toast.info('Sessão encerrada com segurança.');
   };
@@ -289,7 +260,7 @@ export const ClientPortal: React.FC = () => {
   };
 
   // ============================================================================
-  // TELA DE ENTRADA: LOGIN OTP (SEM SENHA E ANTI-ENUMERAÇÃO)
+  // TELA DE ENTRADA: LOGIN DIRETO POR CELULAR + PLACA (SEM CÓDIGO SMS/WHATSAPP)
   // ============================================================================
   if (!token) {
     return (
@@ -314,135 +285,75 @@ export const ClientPortal: React.FC = () => {
               Meu Veículo
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Acesse o laudo fotográfico, linha do tempo em tempo real e seus certificados digitais de garantia.
+              {brand.name ? `Oficina ${brand.name} · ` : ''}Acesse o laudo fotográfico, acompanhamento da OS e garantias digitais.
             </p>
           </div>
 
-          {step === 'identifier' ? (
-            <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Seu Celular (WhatsApp) ou E-mail Cadastrado
-                </label>
-                <div className="relative">
-                  <Smartphone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="(11) 99999-9999 ou seu@email.com"
-                    value={identifierInput}
-                    onChange={handleIdentifierChange}
-                    className="w-full bg-[#0E1116] border border-[#232A35] rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] font-medium transition-all"
-                  />
-                </div>
-                <span className="text-[10px] text-slate-500 mt-1.5 block leading-relaxed">
-                  Enviaremos um código numérico de 6 dígitos para autenticação sem necessidade de senha.
+          <form onSubmit={handleDirectLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                Seu Celular (WhatsApp) Cadastrado
+              </label>
+              <div className="relative">
+                <Smartphone className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <input
+                  type="tel"
+                  required
+                  placeholder="(11) 99999-9999"
+                  value={phoneInput}
+                  onChange={handlePhoneChange}
+                  className="w-full bg-[#0E1116] border border-[#232A35] rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] font-medium transition-all"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                Placa do Carro
+              </label>
+              <div className="relative">
+                <Car className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <input
+                  type="text"
+                  required
+                  maxLength={8}
+                  placeholder="Ex: ABC1D23 ou ABC1234"
+                  value={plateInput}
+                  onChange={handlePlateChange}
+                  className="w-full bg-[#0E1116] border border-[#232A35] rounded-xl pl-10 pr-4 py-3 text-sm uppercase tracking-widest font-mono font-bold text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all"
+                />
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1.5 block leading-relaxed">
+                Digite o número do seu celular e a placa do veículo cadastrados no momento da abertura do serviço.
+              </span>
+            </div>
+
+            {directLoginMutation.error && (
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  {(directLoginMutation.error as any)?.message ||
+                    'Nenhum veículo encontrado com este celular e placa. Verifique os dados com a oficina.'}
                 </span>
               </div>
+            )}
 
-              {requestOtpMutation.error && (
-                <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>
-                    {(requestOtpMutation.error as any)?.message ||
-                      'Não foi possível solicitar o código de acesso no momento.'}
-                  </span>
-                </div>
+            <button
+              type="submit"
+              disabled={directLoginMutation.isPending || !phoneInput || !plateInput}
+              className="w-full py-4 rounded-xl bg-[#C8F52E] hover:bg-[#b5e022] text-[#0E1116] font-black text-xs uppercase tracking-widest shadow-lg shadow-[#C8F52E]/20 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none cursor-pointer mt-2"
+            >
+              {directLoginMutation.isPending ? (
+                <div className="w-4 h-4 border-2 border-[#0E1116] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Acessar Meu Veículo</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
               )}
-
-              <button
-                type="submit"
-                disabled={requestOtpMutation.isPending}
-                className="w-full py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#b5e022] text-[#0E1116] font-black text-xs uppercase tracking-widest shadow-lg shadow-[#C8F52E]/20 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
-              >
-                {requestOtpMutation.isPending ? (
-                  <div className="w-4 h-4 border-2 border-[#0E1116] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Receber Código de Acesso 📲</span>
-                  </>
-                )}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp} className="space-y-4 animate-in fade-in duration-300">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-300">
-                    Código de Confirmação (6 dígitos)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep('identifier');
-                      setCodeInput('');
-                      setDevOtpSuggestion(null);
-                    }}
-                    className="text-[10px] text-slate-400 hover:text-white underline"
-                  >
-                    Trocar número
-                  </button>
-                </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    placeholder="000000"
-                    value={codeInput}
-                    onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full bg-[#0E1116] border border-[#232A35] rounded-xl pl-10 pr-4 py-3 text-lg text-center tracking-[0.3em] font-mono font-bold text-white focus:outline-none focus:border-[#C8F52E] focus:ring-1 focus:ring-[#C8F52E] transition-all"
-                    autoFocus
-                  />
-                </div>
-
-                {devOtpSuggestion && (
-                  <div className="mt-2.5 p-2.5 rounded-xl bg-[#232A35]/60 border border-[#C8F52E]/30 flex items-center justify-between text-xs">
-                    <span className="text-slate-300 text-[11px]">
-                      Ambiente de Testes: <strong className="text-[#C8F52E] font-mono font-bold">{devOtpSuggestion}</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setCodeInput(devOtpSuggestion)}
-                      className="px-2 py-1 rounded bg-[#C8F52E] text-[#0E1116] font-black text-[10px] hover:bg-[#b5e022]"
-                    >
-                      Preencher
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={verifyOtpMutation.isPending || codeInput.length !== 6}
-                className="w-full py-3.5 rounded-xl bg-[#C8F52E] hover:bg-[#b5e022] text-[#0E1116] font-black text-xs uppercase tracking-widest shadow-lg shadow-[#C8F52E]/20 flex items-center justify-center gap-2 transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:transform-none"
-              >
-                {verifyOtpMutation.isPending ? (
-                  <div className="w-4 h-4 border-2 border-[#0E1116] border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>Validar e Entrar 🚀</span>
-                  </>
-                )}
-              </button>
-
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  disabled={resendSeconds > 0 || requestOtpMutation.isPending}
-                  onClick={() => requestOtpMutation.mutate(identifierInput.trim())}
-                  className="text-xs text-slate-400 hover:text-white disabled:opacity-50 transition-colors"
-                >
-                  {resendSeconds > 0 ? (
-                    <span>Reenviar código em <strong>{resendSeconds}s</strong></span>
-                  ) : (
-                    <span>Não recebeu? Clique para reenviar</span>
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
+            </button>
+          </form>
 
           <div className="mt-8 pt-4 border-t border-[#232A35] text-center text-[11px] text-slate-500">
             <span className="flex items-center justify-center gap-1 mb-1 font-semibold text-slate-400">

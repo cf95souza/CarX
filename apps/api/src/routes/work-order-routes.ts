@@ -318,7 +318,7 @@ export async function workOrderRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticateBearer,
         requireTenantContext,
-        requireRole(['owner', 'gestor', 'atendente', 'superadmin']),
+        requireRole(['owner', 'gestor', 'atendente', 'superadmin', 'tecnico']),
       ],
     },
     handleUpdateWorkOrder

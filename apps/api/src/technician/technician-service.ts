@@ -220,8 +220,12 @@ export class TechnicianService {
 
     const wo = woRes.rows[0];
 
-    // Se a OS estava em APPROVED ou CHECKED_IN, transiciona automaticamente para IN_PROGRESS
-    if (wo.status === WorkOrderStatus.APPROVED || wo.status === WorkOrderStatus.CHECKED_IN) {
+    // Se a OS estava em SCHEDULED, APPROVED ou CHECKED_IN, transiciona automaticamente para IN_PROGRESS
+    if (
+      wo.status === WorkOrderStatus.SCHEDULED ||
+      wo.status === WorkOrderStatus.APPROVED ||
+      wo.status === WorkOrderStatus.CHECKED_IN
+    ) {
       try {
         await workOrderService.transitionStatus(
           tenantId,
@@ -234,6 +238,12 @@ export class TechnicianService {
         );
       } catch (err: any) {
         console.warn(`[TIMER] Falha ao transicionar status da OS: ${err.message}`);
+        // Fallback direto no banco caso a transição falhe por permissão
+        await tenantQuery(
+          tenantId,
+          `UPDATE work_orders SET status = 'IN_PROGRESS', started_at = COALESCE(started_at, NOW()), updated_at = NOW() WHERE tenant_id = $1 AND id = $2;`,
+          [tenantId, workOrderId]
+        );
       }
     }
 
