@@ -65,7 +65,7 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 76: Análise e Auditoria Detalhada de Qualidade de Ponta a Ponta Baseada na Skill system-quality-gate (100% Concluído e Aprovado — 0 Erros de Tipagem, 0 Erros de Linting, Builds 100% Aprovados)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
-   • Subida e Deploy na VPS Oracle de Homologação (Commit, Push origin main, Pull na VPS e Reload de Serviços PM2)
+   • Homologação e Testes Operacionais pelo Usuário na VPS Oracle (http://137.131.151.125:8080)
 
 📊 MAPA DE TODAS AS TAREFAS DA FASE 6 (DIFERENCIAIS COMPETITIVOS):
 --------------------------------------------------------------------------------
