@@ -208,12 +208,49 @@ const ColaboradoresView = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-[#2E3744]/60">
-                  <span className="text-[#9AA7B8] flex items-center gap-1.5">
-                    <Star size={13} className="text-amber-400 fill-amber-400" /> Desempenho QA:
-                  </span>
-                  <span className="font-bold text-white">
-                    5.0 <span className="text-[#9AA7B8] font-normal text-[11px]">(100% aprovado)</span>
-                  </span>
+                  {colab.cargo === 'ADM' || colab.cargo === 'GESTOR' ? (
+                    <>
+                      <span className="text-[#9AA7B8] flex items-center gap-1.5">
+                        <ShieldCheck size={13} className="text-purple-400" /> Atribuição:
+                      </span>
+                      <span className="font-semibold text-purple-300 text-[11px]">
+                        Gestão & Administração
+                      </span>
+                    </>
+                  ) : colab.qa_audits_count > 0 && colab.average_qa_score != null ? (
+                    <>
+                      <span className="text-[#9AA7B8] flex items-center gap-1.5">
+                        <Star size={13} className="text-amber-400 fill-amber-400" /> Desempenho QA:
+                      </span>
+                      <span className="font-bold text-white">
+                        {Number(colab.average_qa_score).toFixed(1)}{' '}
+                        <span className="text-[#9AA7B8] font-normal text-[11px]">
+                          ({colab.qa_approved_rate ?? 100}% aprovado)
+                        </span>
+                      </span>
+                    </>
+                  ) : colab.work_orders_count > 0 ? (
+                    <>
+                      <span className="text-[#9AA7B8] flex items-center gap-1.5">
+                        <Award size={13} className="text-[#C8F52E]" /> Serviços Concluídos:
+                      </span>
+                      <span className="font-bold text-[#C8F52E]">
+                        {colab.work_orders_count} {colab.work_orders_count === 1 ? 'OS' : 'OSs'}{' '}
+                        <span className="text-[#9AA7B8] font-normal text-[11px]">
+                          (Aguardando QA)
+                        </span>
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[#9AA7B8] flex items-center gap-1.5">
+                        <Star size={13} className="text-[#5B6674]" /> Desempenho QA:
+                      </span>
+                      <span className="text-[#9AA7B8] font-medium text-[11px]">
+                        Sem auditorias de QA ainda
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

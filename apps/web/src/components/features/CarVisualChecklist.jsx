@@ -23,7 +23,7 @@ import { api } from '../../services/api';
 import { sendWhatsApp, getVehicleReceivedMsg } from '../../utils/whatsappUtils';
 import { toast } from '../../utils/toast';
 import QRCodeModal from './QRCodeModal';
-import VcrReportModal from './VcrReportModal';
+import VcrReportModal, { getViewLabelPT } from './VcrReportModal';
 import { AiInspectionAssistantModal } from './AiInspectionAssistantModal';
 import {
   resolveVehicleCategory,
@@ -989,7 +989,7 @@ const CarVisualChecklist = ({ onClose, osData }) => {
                   {points.findIndex((p) => p.id === selectedPoint.id) + 1 || '#'}
                 </span>
                 <h4 className="text-xs font-black uppercase tracking-wider text-[#F2F5F8]">
-                  Registrar Avaria · {(selectedPoint.view || '').toUpperCase()}
+                  Registrar Avaria · {getViewLabelPT(selectedPoint.view)}
                 </h4>
               </div>
               <button

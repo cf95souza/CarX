@@ -72,6 +72,33 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
 
   const currentUserId = user?.id;
 
+  // 3. Consulta de ordens para contagem de serviços concluídos hoje pelo operador
+  const { data: closedOrdersData } = useQuery({
+    queryKey: ['operator-today-completed', currentUserId],
+    queryFn: () => api.workOrders.list({ limit: 100 }),
+    staleTime: 15000,
+    refetchInterval: isOnline ? 15000 : false,
+  });
+
+  const completedTodayCount = useMemo(() => {
+    const rawList = Array.isArray(closedOrdersData)
+      ? closedOrdersData
+      : (closedOrdersData as any)?.workOrders || (closedOrdersData as any)?.orders || [];
+
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    return rawList.filter((wo: any) => {
+      const isTech = !wo.technicianId || wo.technicianId === currentUserId;
+      const isDone = ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(
+        String(wo.status).toUpperCase()
+      );
+      const woDate = String(
+        wo.deliveredAt || wo.delivered_at || wo.completedAt || wo.completed_at || wo.updatedAt || wo.updated_at || wo.createdAt || ''
+      ).split('T')[0];
+      return isTech && isDone && woDate === todayStr;
+    }).length;
+  }, [closedOrdersData, currentUserId]);
+
   // Minhas OS atribuídas (não concluídas/canceladas e não orçamentos)
   const minhasAtribuidas = useMemo(() => {
     return allQueue.filter((item) => {
@@ -87,20 +114,19 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
   // Performance auditada do técnico
   const techPerformance = useMemo(() => {
     const fromRanking = rankingData.find((t) => t.technicianId === currentUserId);
-    if (fromRanking) {
-      return {
-        completedCount: fromRanking.workOrdersCount,
-        qaScore: Number(fromRanking.averageQaScore).toFixed(1),
-        streakDays: fromRanking.streakDaysWithoutRework || 12,
-      };
-    }
     const hasReworkInQueue = minhasAtribuidas.some((os) => os.isRework);
+
+    let streakDays = fromRanking?.streakDaysWithoutRework ?? 0;
+    if (hasReworkInQueue) {
+      streakDays = 0;
+    }
+
     return {
-      completedCount: allQueue.filter(i => ['DELIVERED', 'READY', 'CONCLUIDO'].includes(i.status)).length,
-      qaScore: '10.0',
-      streakDays: hasReworkInQueue ? 0 : 12,
+      completedCount: fromRanking?.workOrdersCount ?? 0,
+      qaScore: fromRanking ? Number(fromRanking.averageQaScore).toFixed(1) : '10.0',
+      streakDays,
     };
-  }, [rankingData, currentUserId, allQueue, minhasAtribuidas]);
+  }, [rankingData, currentUserId, minhasAtribuidas]);
 
   // Identifica a OS que está atualmente em execução pelo operador
   const runningOS = useMemo(() => {
@@ -226,7 +252,7 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
       )}
 
       {/* 1. Header do Operador (Fiel ao Rebraind) */}
-      <div className="pt-2 px-1 flex justify-between items-center">
+      <div className="pt-2 px-1 flex justify-between items-center gap-2">
         <div>
           <div className="text-[13px] text-[#9AA7B8] font-medium">
             {workshopName || 'Operador'} · Box {runningOS?.bay?.name || 'Geral'}
@@ -235,8 +261,18 @@ export const OperadorHome: React.FC<OperadorHomeProps> = ({ onSelectOS }) => {
             Olá, {firstName}
           </div>
         </div>
-        <div className="border border-[#C8F52E] text-[#C8F52E] rounded-full px-3 py-1.5 text-xs font-semibold tracking-tight shadow-sm shadow-[#C8F52E]/10">
-          {techPerformance.streakDays} dias sem retrabalho
+        <div className="flex flex-col items-end gap-1">
+          <div className="border border-[#C8F52E] text-[#C8F52E] rounded-full px-3 py-1 text-xs font-semibold tracking-tight shadow-sm shadow-[#C8F52E]/10 flex items-center gap-1.5 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C8F52E] animate-pulse" />
+            {techPerformance.streakDays > 0
+              ? `${techPerformance.streakDays} ${techPerformance.streakDays === 1 ? 'dia' : 'dias'} sem retrabalho`
+              : '100% sem retrabalho'}
+          </div>
+          {completedTodayCount > 0 && (
+            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-md whitespace-nowrap">
+              ✓ {completedTodayCount} {completedTodayCount === 1 ? 'veículo finalizado' : 'veículos finalizados'} hoje
+            </span>
+          )}
         </div>
       </div>
 

@@ -323,7 +323,7 @@ describe('T3.3 — Orçamentos e Ordens de Serviço (Máquina de Estados)', () =
     });
     assert.equal(res1.statusCode, 200);
     assert.equal(JSON.parse(res1.body).status, 'APPROVED');
-    assert.equal(JSON.parse(res1.body).progress, 10);
+    assert.equal(JSON.parse(res1.body).progress, 0);
 
     // 2. APPROVED -> SCHEDULED
     const res2 = await app.inject({

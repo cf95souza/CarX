@@ -28,9 +28,45 @@ export class CorporateService {
   // ============================================================================
 
   /**
+   * Garante que o tenant possua ao menos a Unidade Matriz registrada
+   */
+  async ensureHeadquartersUnit(tenantId: string): Promise<void> {
+    try {
+      const check = await tenantQuery<{ count: string }>(
+        tenantId,
+        `SELECT COUNT(*) as count FROM units WHERE tenant_id = $1;`,
+        [tenantId]
+      );
+
+      if (parseInt(check.rows[0]?.count || '0', 10) === 0) {
+        const tenantInfo = await tenantQuery<{ trade_name: string | null; legal_name: string | null }>(
+          tenantId,
+          `SELECT trade_name, legal_name FROM tenants WHERE id = $1;`,
+          [tenantId]
+        );
+        const name =
+          tenantInfo.rows[0]?.trade_name || tenantInfo.rows[0]?.legal_name || 'Loja Matriz / Sede Principal';
+
+        await tenantQuery(
+          tenantId,
+          `INSERT INTO units (
+            tenant_id, name, slug, is_active, created_at, updated_at
+          ) VALUES ($1, $2, 'matriz', true, NOW(), NOW())
+          ON CONFLICT DO NOTHING;`,
+          [tenantId, name]
+        );
+      }
+    } catch {
+      // Criação tolerante de sede
+    }
+  }
+
+  /**
    * Lista todas as filiais do tenant com métricas operacionais vinculadas
    */
   async listUnits(tenantId: string): Promise<UnitDto[]> {
+    await this.ensureHeadquartersUnit(tenantId);
+
     const query = `
       SELECT 
         u.id,
@@ -50,9 +86,9 @@ export class CorporateService {
         u.is_active as "isActive",
         u.created_at as "createdAt",
         u.updated_at as "updatedAt",
-        (SELECT COUNT(*)::int FROM work_orders wo WHERE wo.unit_id = u.id AND wo.tenant_id = $1) as "workOrdersCount",
-        (SELECT COUNT(*)::int FROM bays b WHERE b.unit_id = u.id AND b.tenant_id = $1 AND b.is_active = true) as "activeBaysCount",
-        (SELECT COUNT(*)::int FROM material_rolls mr WHERE mr.unit_id = u.id AND mr.tenant_id = $1 AND mr.status = 'in_use') as "totalRollsCount"
+        (SELECT COUNT(*)::int FROM work_orders wo WHERE (wo.unit_id = u.id OR (wo.unit_id IS NULL AND u.slug = 'matriz')) AND wo.tenant_id = $1) as "workOrdersCount",
+        (SELECT COUNT(*)::int FROM bays b WHERE (b.unit_id = u.id OR (b.unit_id IS NULL AND u.slug = 'matriz')) AND b.tenant_id = $1 AND b.is_active = true) as "activeBaysCount",
+        (SELECT COUNT(*)::int FROM material_rolls mr WHERE (mr.unit_id = u.id OR (mr.unit_id IS NULL AND u.slug = 'matriz')) AND mr.tenant_id = $1 AND mr.status = 'in_use') as "totalRollsCount"
       FROM units u
       WHERE u.tenant_id = $1
       ORDER BY u.created_at ASC;
@@ -347,6 +383,8 @@ export class CorporateService {
     tenantId: string,
     filters?: { startDate?: string; endDate?: string }
   ): Promise<CorporateDashboardOverviewDto> {
+    await this.ensureHeadquartersUnit(tenantId);
+
     // 1. Busca todas as unidades do tenant
     const unitsRes = await tenantQuery<any>(
       tenantId,
@@ -358,7 +396,7 @@ export class CorporateService {
         u.is_active as "isActive"
       FROM units u
       WHERE u.tenant_id = $1
-      ORDER BY u.name ASC;
+      ORDER BY u.created_at ASC;
       `,
       [tenantId]
     );
@@ -382,14 +420,14 @@ export class CorporateService {
 
     const woStatsQuery = `
       SELECT 
-        COALESCE(wo.unit_id, '00000000-0000-0000-0000-000000000000'::uuid) as unit_id,
+        COALESCE(wo.unit_id, (SELECT id FROM units WHERE tenant_id = $1 AND slug = 'matriz' LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid) as unit_id,
         COUNT(*)::int as work_orders_count,
         COALESCE(SUM(wo.total_cents), 0)::bigint as revenue_cents
       FROM work_orders wo
       WHERE wo.tenant_id = $1
-        AND UPPER(wo.status) IN ('COMPLETED', 'DELIVERED', 'IN_PROGRESS', 'APPROVED')
+        AND UPPER(wo.status) IN ('COMPLETED', 'DELIVERED', 'IN_PROGRESS', 'READY', 'QA', 'APPROVED')
         ${dateFilterSql}
-      GROUP BY wo.unit_id;
+      GROUP BY 1;
     `;
 
     const woStatsRes = await tenantQuery<{
@@ -410,7 +448,7 @@ export class CorporateService {
     const baysQuery = `
       SELECT 
         b.id,
-        b.unit_id,
+        COALESCE(b.unit_id, (SELECT id FROM units WHERE tenant_id = $1 AND slug = 'matriz' LIMIT 1)) as unit_id,
         b.is_active,
         EXISTS (
           SELECT 1 FROM appointments a 
@@ -449,13 +487,13 @@ export class CorporateService {
     // 4. Bobinas ativas por Unidade
     const rollsQuery = `
       SELECT 
-        COALESCE(mr.unit_id, '00000000-0000-0000-0000-000000000000'::uuid) as unit_id,
+        COALESCE(mr.unit_id, (SELECT id FROM units WHERE tenant_id = $1 AND slug = 'matriz' LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid) as unit_id,
         COUNT(*)::int as rolls_count,
         COALESCE(SUM(mr.current_meters), 0)::numeric as total_meters,
         COALESCE(SUM(mr.cost_cents), 0)::bigint as total_cost_cents
       FROM material_rolls mr
       WHERE mr.tenant_id = $1 AND mr.status = 'in_use'
-      GROUP BY mr.unit_id;
+      GROUP BY 1;
     `;
     const rollsRes = await tenantQuery<{
       unit_id: string;
@@ -479,12 +517,12 @@ export class CorporateService {
     // 5. Insumos por Unidade
     const materialsQuery = `
       SELECT 
-        COALESCE(m.unit_id, '00000000-0000-0000-0000-000000000000'::uuid) as unit_id,
+        COALESCE(m.unit_id, (SELECT id FROM units WHERE tenant_id = $1 AND slug = 'matriz' LIMIT 1), '00000000-0000-0000-0000-000000000000'::uuid) as unit_id,
         COUNT(*)::int as materials_count,
         COALESCE(SUM(m.current_stock * m.cost_cents), 0)::bigint as valuation_cents
       FROM materials m
       WHERE m.tenant_id = $1
-      GROUP BY m.unit_id;
+      GROUP BY 1;
     `;
     const materialsRes = await tenantQuery<{
       unit_id: string;

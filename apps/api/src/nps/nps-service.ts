@@ -627,6 +627,25 @@ export class NpsService {
     tenantId: string,
     filters?: { classification?: string; status?: string }
   ): Promise<NpsSurveyDto[]> {
+    // Auto-sync de conveniência: garante que qualquer OS entregue possua sua pesquisa NPS criada
+    try {
+      const deliveredWithoutSurvey = await tenantQuery<{ id: string }>(
+        tenantId,
+        `SELECT wo.id 
+         FROM work_orders wo
+         LEFT JOIN nps_surveys s ON s.work_order_id = wo.id AND s.tenant_id = wo.tenant_id
+         WHERE wo.tenant_id = $1 
+           AND wo.status IN ('delivered', 'completed', 'DELIVERED', 'COMPLETED')
+           AND s.id IS NULL;`,
+        [tenantId]
+      );
+      for (const row of deliveredWithoutSurvey.rows) {
+        await this.createSurvey(tenantId, row.id).catch(() => {});
+      }
+    } catch {
+      // Auto-sync tolerante
+    }
+
     let whereClause = `s.tenant_id = $1`;
     const params: any[] = [tenantId];
 

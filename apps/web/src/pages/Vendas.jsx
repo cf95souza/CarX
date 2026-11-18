@@ -573,12 +573,20 @@ const Vendas = () => {
                     </p>
                   </div>
                 )}
-                {currentSelectedQuote.observacoes && (
-                  <div className="md:col-span-2 bg-[#232A35]/30 p-3.5 rounded-xl border border-[#2E3744]">
-                    <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block mb-1">Observações Internas</label>
-                    <p className="text-xs text-[#9AA7B8] italic">{currentSelectedQuote.observacoes}</p>
-                  </div>
-                )}
+                {(() => {
+                  let obs = currentSelectedQuote.observacoes;
+                  const isDepositPaid = Boolean(currentSelectedQuote.deposit_paid_at || currentSelectedQuote.depositPaidAt);
+                  if (!isDepositPaid && obs) {
+                    obs = obs.replace(/\.?\s*Sinal(?:\s*Pix)?(?:\s*exigido)?:\s*R\$\s*\d+([.,]\d+)?\.?/gi, '').trim();
+                  }
+                  if (!obs) return null;
+                  return (
+                    <div className="md:col-span-2 bg-[#232A35]/30 p-3.5 rounded-xl border border-[#2E3744]">
+                      <label className="text-[10px] font-black text-[#9AA7B8] uppercase tracking-widest block mb-1">Observações Internas</label>
+                      <p className="text-xs text-[#9AA7B8] italic">{obs}</p>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Lista Detalhada de Serviços */}

@@ -39,15 +39,22 @@ const ServicosView = () => {
 
   const handleOpenEdit = (service) => {
     setEditingService(service);
+    const rawWarranty = service.warranty_months !== undefined ? Number(service.warranty_months) : (Number(service.garantia) || 12);
+    let initialGarantia = '12 meses';
+    if (rawWarranty === 0) initialGarantia = 'Sem garantia';
+    else if (rawWarranty === 24) initialGarantia = '2 anos';
+    else if (rawWarranty === 60) initialGarantia = '5 anos';
+    else initialGarantia = `${rawWarranty} meses`;
+
     setFormService({
       nome: service.nome || service.name || '',
       descricao: service.descricao || service.description || '',
       preco_base: service.preco_base !== undefined ? service.preco_base : (service.price_cents ? service.price_cents / 100 : ''),
       categoria: service.categoria || service.category || 'Geral',
-      tipo_veiculo: service.tipo_veiculo || 'AMBOS',
-      garantia: service.garantia || (service.warranty_months ? `${service.warranty_months} meses` : '12 meses'),
+      tipo_veiculo: service.tipo_veiculo || service.segment || 'AMBOS',
+      garantia: initialGarantia,
       tempo_estimado: service.tempo_estimado || service.estimated_minutes || 60,
-      comissao_percent: service.material_consumption_estimate?.comissao_percent ?? 10,
+      comissao_percent: service.comissao_percent !== undefined ? service.comissao_percent : (service.material_consumption_estimate?.comissao_percent ?? 10),
       controle_estoque: service.controle_estoque || false,
       materiais: service.materiais || [],
       precos_por_classe: service.precos_por_classe || {},
@@ -71,15 +78,26 @@ const ServicosView = () => {
       });
     }
 
+    const garStr = String(formService.garantia || '').toLowerCase().trim();
+    let computedWarrantyMonths = 0;
+    if (!garStr.includes('sem') && garStr !== '0') {
+      const num = parseInt(garStr.replace(/\D/g, ''), 10) || 0;
+      computedWarrantyMonths = garStr.includes('ano') ? num * 12 : num;
+    }
+
     const serviceData = {
       ...formService,
       name: formService.nome,
       description: formService.descricao,
+      category: formService.categoria,
+      segment: formService.tipo_veiculo,
       preco_base: parseFloat(formService.preco_base) || 0,
       price_cents: Math.round((parseFloat(formService.preco_base) || 0) * 100),
       estimated_minutes: parseInt(formService.tempo_estimado, 10) || 60,
-      warranty_months: parseInt(String(formService.garantia).replace(/\D/g, ''), 10) || 12,
+      warranty_months: computedWarrantyMonths,
+      garantia: formService.garantia,
       precos_por_classe: cleanedPrecos,
+      comissao_percent: parseFloat(formService.comissao_percent) || 0,
       material_consumption_estimate: {
         comissao_percent: parseFloat(formService.comissao_percent) || 0,
         materiais: formService.materiais || []
@@ -437,20 +455,31 @@ const ServicosView = () => {
                     <ShieldCheck size={14} className="text-emerald-400" /> Garantia Certificada
                   </label>
                   <div className="flex flex-wrap gap-1.5">
-                    {['Sem garantia', '3 meses', '6 meses', '12 meses', '2 anos', '5 anos'].map(g => (
-                      <button
-                        key={g}
-                        type="button"
-                        onClick={() => setFormService({...formService, garantia: g})}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
-                          formService.garantia === g
-                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                            : 'bg-[#0E1116] border-[#2E3744] text-[#9AA7B8] hover:text-white'
-                        }`}
-                      >
-                        {g}
-                      </button>
-                    ))}
+                    {['Sem garantia', '3 meses', '6 meses', '12 meses', '2 anos', '5 anos'].map(g => {
+                      const cur = String(formService.garantia || '').toLowerCase().trim();
+                      const isSelected = g === 'Sem garantia'
+                        ? (cur.includes('sem') || cur === '0' || cur === '')
+                        : (
+                            g.includes('ano')
+                              ? (parseInt(g, 10) * 12 === (cur.includes('ano') ? parseInt(cur, 10) * 12 : parseInt(cur.replace(/\D/g, ''), 10)))
+                              : (parseInt(g, 10) === (cur.includes('ano') ? parseInt(cur, 10) * 12 : parseInt(cur.replace(/\D/g, ''), 10)))
+                          );
+
+                      return (
+                        <button
+                          key={g}
+                          type="button"
+                          onClick={() => setFormService({...formService, garantia: g})}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all ${
+                            isSelected
+                              ? 'bg-[#C8F52E]/10 border-[#C8F52E] text-[#C8F52E]'
+                              : 'bg-[#0E1116] border-[#2E3744] text-[#9AA7B8] hover:text-white'
+                          }`}
+                        >
+                          {g}
+                        </button>
+                      );
+                    })}
                   </div>
                   <input 
                     className="w-full px-3.5 py-2.5 bg-[#0E1116] border border-[#2E3744] rounded-xl text-white text-xs font-medium focus:border-[#C8F52E] focus:outline-none transition-colors" 

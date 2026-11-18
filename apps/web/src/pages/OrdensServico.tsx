@@ -239,6 +239,11 @@ export const OrdensServico: React.FC = () => {
 
   const normalizedForCertificate = useMemo(() => {
     if (!certificadoTargetOrder) return null;
+    const servicos = certificadoTargetOrder.items || certificadoTargetOrder.servicos_detalhados || [];
+    const servicoTexto = Array.isArray(servicos) && servicos.length > 0
+      ? servicos.map((s: any) => s.name || s.nome || s.description || s.service_name || s).join(', ')
+      : certificadoTargetOrder.servico || 'Proteção e Tratamento Automotivo';
+
     return {
       ...certificadoTargetOrder,
       id: certificadoTargetOrder.osNumber || certificadoTargetOrder.os_number || certificadoTargetOrder.id,
@@ -255,8 +260,30 @@ export const OrdensServico: React.FC = () => {
           }`.trim()
         : certificadoTargetOrder.veiculo_desc || certificadoTargetOrder.veiculo || 'Veículo',
       placa: certificadoTargetOrder.vehicle?.plate || certificadoTargetOrder.placa || '',
-      servicos_detalhados:
-        certificadoTargetOrder.items || certificadoTargetOrder.servicos_detalhados || [],
+      ano:
+        certificadoTargetOrder.vehicle?.year ||
+        certificadoTargetOrder.ano ||
+        certificadoTargetOrder.veiculos?.ano ||
+        'Modelo Vigente',
+      data:
+        certificadoTargetOrder.deliveredAt ||
+        certificadoTargetOrder.delivered_at ||
+        certificadoTargetOrder.completedAt ||
+        certificadoTargetOrder.completed_at ||
+        certificadoTargetOrder.createdAt ||
+        certificadoTargetOrder.created_at ||
+        new Date().toISOString(),
+      created_at:
+        certificadoTargetOrder.createdAt ||
+        certificadoTargetOrder.created_at ||
+        new Date().toISOString(),
+      tecnico_nome:
+        certificadoTargetOrder.technician?.name ||
+        certificadoTargetOrder.tecnico_nome ||
+        certificadoTargetOrder.tecnico ||
+        'Caio Operador',
+      servico: servicoTexto,
+      servicos_detalhados: servicos,
       garantia: `${certificadoTargetOrder.warrantyMonths || 12} Meses`,
     };
   }, [certificadoTargetOrder]);
@@ -559,6 +586,22 @@ export const OrdensServico: React.FC = () => {
     setIsVcrModalOpen(true);
   };
 
+  const handleOpenVcrFromAction = async (os: any) => {
+    setSelectedOrder(os);
+    try {
+      const res: any = await api.inspections.getByWorkOrder(os.id);
+      const list = Array.isArray(res) ? res : res?.inspections || [];
+      if (list.length > 0) {
+        setActiveInspectionForReport(list[0]);
+        setIsVcrModalOpen(true);
+      } else {
+        setIsChecklistModalOpen(true);
+      }
+    } catch {
+      setIsChecklistModalOpen(true);
+    }
+  };
+
   // Transição de Status
   const handleTransition = async (orderId: string, nextStatus: WorkOrderStatusType) => {
     try {
@@ -838,15 +881,15 @@ export const OrdensServico: React.FC = () => {
                           <button
                             onClick={() => setSelectedOrder(os)}
                             className="p-1.5 text-[#5B6674] hover:text-[#0E1116] hover:bg-[#F3F5F7] rounded-lg transition-colors"
-                            title="Ver Detalhes e Laudo"
+                            title="Ver Detalhes da Ordem de Serviço"
                           >
                             <Eye size={16} />
                           </button>
 
                           <button
-                            onClick={() => setSelectedOrder(os)}
+                            onClick={() => handleOpenVcrFromAction(os)}
                             className="p-1.5 text-[#5B6674] hover:text-[#0E1116] hover:bg-[#F3F5F7] rounded-lg transition-colors"
-                            title="Laudo Técnico & Checklist (VCR)"
+                            title="Abrir Laudo Técnico VCR / Checklist de Inspeção"
                           >
                             <ClipboardCheck size={16} />
                           </button>

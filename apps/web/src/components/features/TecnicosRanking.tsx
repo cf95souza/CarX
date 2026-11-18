@@ -165,7 +165,7 @@ export const TecnicosRanking: React.FC<TecnicosRankingProps> = ({
                   {top3[1].streakDaysWithoutRework}d Invicto
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-[#C8F52E]/10 text-[#C8F52E] border border-[#C8F52E]/30">
-                  QA {top3[1].averageQaScore.toFixed(1)}★
+                  {top3[1].averageQaScore > 0 ? `QA ${top3[1].averageQaScore.toFixed(1)}★` : 'Sem QA'}
                 </span>
               </div>
               <div className="mt-4 pt-3.5 border-t border-[#2E3744] flex justify-between text-xs text-[#9AA7B8]">
@@ -196,7 +196,7 @@ export const TecnicosRanking: React.FC<TecnicosRankingProps> = ({
                 </span>
               </div>
               <div className="mt-2.5 text-xs text-[#9AA7B8] flex items-center justify-center gap-3">
-                <span>Nota QA: <strong className="text-[#C8F52E]">{top3[0].averageQaScore.toFixed(1)} ★</strong></span>
+                <span>Nota QA: <strong className="text-[#C8F52E]">{top3[0].averageQaScore > 0 ? `${top3[0].averageQaScore.toFixed(1)} ★` : 'Sem QA'}</strong></span>
                 <span>Volume: <strong className="text-emerald-400">{top3[0].workOrdersCount} OS</strong></span>
               </div>
               <div className="mt-5 pt-3.5 border-t border-[#2E3744] flex justify-between text-xs text-[#9AA7B8]">
@@ -221,7 +221,7 @@ export const TecnicosRanking: React.FC<TecnicosRankingProps> = ({
                   {top3[2].streakDaysWithoutRework}d Invicto
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-[#C8F52E]/10 text-[#C8F52E] border border-[#C8F52E]/30">
-                  QA {top3[2].averageQaScore.toFixed(1)}★
+                  {top3[2].averageQaScore > 0 ? `QA ${top3[2].averageQaScore.toFixed(1)}★` : 'Sem QA'}
                 </span>
               </div>
               <div className="mt-4 pt-3.5 border-t border-[#2E3744] flex justify-between text-xs text-[#9AA7B8]">
@@ -305,8 +305,14 @@ export const TecnicosRanking: React.FC<TecnicosRankingProps> = ({
                     </span>
                   </td>
                   <td className="py-3.5 px-3 text-center font-mono">
-                    <span className="text-white font-bold">{tech.averageQaScore.toFixed(1)}</span>
-                    <span className="text-amber-400 ml-1">★</span>
+                    {tech.averageQaScore > 0 ? (
+                      <>
+                        <span className="text-white font-bold">{tech.averageQaScore.toFixed(1)}</span>
+                        <span className="text-amber-400 ml-1">★</span>
+                      </>
+                    ) : (
+                      <span className="text-[#9AA7B8]">-</span>
+                    )}
                   </td>
                   <td className="py-3.5 px-3 text-center font-mono font-bold text-white">
                     {tech.workOrdersCount} OS

@@ -178,7 +178,10 @@ export const NovaOrdemServico: React.FC = () => {
   };
 
   const total = Math.max(0, subtotal - discountAmount);
-  const depositPix = total > 0 ? 50 : 0;
+  // Exigência opcional de sinal Pix (por padrão NÃO exige sinal e NÃO injeta falso adiantamento)
+  const [requireDeposit, setRequireDeposit] = useState<boolean>(false);
+  const [customDepositValue, setCustomDepositValue] = useState<number>(0);
+  const depositPix = requireDeposit ? (customDepositValue > 0 ? customDepositValue : (total > 0 ? 50 : 0)) : 0;
 
   // Garante que o cliente e veículo existam no banco do tenant antes de criar a OS
   const resolveCustomerAndVehicle = async (): Promise<{ customerId: string; vehicleId: string }> => {
@@ -261,7 +264,7 @@ export const NovaOrdemServico: React.FC = () => {
           unitPriceCents: Math.round(s.price * 100),
           quantity: 1,
         })),
-        notes: `Cliente: ${customer.name} (${customer.phone || 'Sem fone'}). Veículo: ${vehicle.model || 'Veículo'} - ${vehicle.plate}. Porte: ${vehicle.sizeClass}. Sinal Pix: R$ ${depositPix.toFixed(2)}`,
+        notes: `Cliente: ${customer.name} (${customer.phone || 'Sem fone'}). Veículo: ${vehicle.model || 'Veículo'} - ${vehicle.plate}. Porte: ${vehicle.sizeClass}.${requireDeposit && depositPix > 0 ? ` Sinal Pix exigido: R$ ${depositPix.toFixed(2)}.` : ''}`,
         scheduledAt: isQuote ? undefined : new Date().toISOString(),
       } as any);
 
@@ -307,7 +310,7 @@ export const NovaOrdemServico: React.FC = () => {
             unitPriceCents: Math.round(s.price * 100),
             quantity: 1,
           })),
-          notes: `Proposta gerada para ${customer.name}. Veículo: ${vehicle.model} (${vehicle.plate}). Sinal: R$ ${depositPix.toFixed(2)}`,
+          notes: `Proposta gerada para ${customer.name}. Veículo: ${vehicle.model} (${vehicle.plate}).${requireDeposit && depositPix > 0 ? ` Sinal Pix exigido: R$ ${depositPix.toFixed(2)}.` : ''}`,
         } as any);
 
         targetQuoteId = created?.id;
@@ -1087,19 +1090,21 @@ export const NovaOrdemServico: React.FC = () => {
             </b>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: '15px',
-              color: '#5B6674',
-            }}
-          >
-            <span>Sinal por Pix</span>
-            <b style={{ color: '#0E1116', fontWeight: 600 }}>
-              {depositPix.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </b>
-          </div>
+          {requireDeposit && depositPix > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '15px',
+                color: '#5B6674',
+              }}
+            >
+              <span>Sinal por Pix</span>
+              <b style={{ color: '#0E1116', fontWeight: 600 }}>
+                {depositPix.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </b>
+            </div>
+          )}
 
           {/* Botão Primário: Gerar OS e agendar */}
           <button

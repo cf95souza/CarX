@@ -21,6 +21,7 @@ import { toast } from '../../utils/toast';
 import { Button } from '@carx/ui';
 import { Badge } from '@carx/ui';
 import { Modal } from '@carx/ui';
+import { getDamageTypeLabelPT } from './VcrReportModal';
 import type {
   AiDetectedDamageItemDto,
   AiSuggestedServiceItemDto,
@@ -228,11 +229,11 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
         damages: visionResult?.detectedDamages || [],
         checklist: voiceResult
           ? {
-              currentKm: voiceResult.currentKm,
-              fuelLevel: voiceResult.fuelLevel,
-              generalNotes: voiceResult.generalNotes,
-              checklistItems: voiceResult.checklistItems,
-            }
+            currentKm: voiceResult.currentKm,
+            fuelLevel: voiceResult.fuelLevel,
+            generalNotes: voiceResult.generalNotes,
+            checklistItems: voiceResult.checklistItems,
+          }
           : undefined,
       });
 
@@ -288,11 +289,10 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
           <button
             type="button"
             onClick={() => setActiveTab('vision')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
-              activeTab === 'vision'
-                ? 'border-volt text-volt bg-asfalto/50'
-                : 'border-transparent text-muted hover:text-texto'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${activeTab === 'vision'
+              ? 'border-volt text-volt bg-asfalto/50'
+              : 'border-transparent text-muted hover:text-texto'
+              }`}
           >
             <Camera className="w-4 h-4" />
             Visão Computacional (Fotos)
@@ -300,11 +300,10 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
           <button
             type="button"
             onClick={() => setActiveTab('voice')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
-              activeTab === 'voice'
-                ? 'border-volt text-volt bg-asfalto/50'
-                : 'border-transparent text-muted hover:text-texto'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${activeTab === 'voice'
+              ? 'border-volt text-volt bg-asfalto/50'
+              : 'border-transparent text-muted hover:text-texto'
+              }`}
           >
             <Mic className="w-4 h-4" />
             Checklist por Voz
@@ -312,11 +311,10 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
           <button
             type="button"
             onClick={() => setActiveTab('services')}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
-              activeTab === 'services'
-                ? 'border-volt text-volt bg-asfalto/50'
-                : 'border-transparent text-muted hover:text-texto'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${activeTab === 'services'
+              ? 'border-volt text-volt bg-asfalto/50'
+              : 'border-transparent text-muted hover:text-texto'
+              }`}
           >
             <DollarSign className="w-4 h-4" />
             Serviços para Orçamento ({suggestedServices.length})
@@ -341,11 +339,10 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
                     key={item.id}
                     type="button"
                     onClick={() => setAngleHint(item.id)}
-                    className={`p-2.5 rounded-xl border text-xs font-bold text-left transition-all ${
-                      angleHint === item.id
-                        ? 'bg-volt/10 border-volt text-volt shadow-sm'
-                        : 'bg-asfalto border-aco text-muted hover:text-texto'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-left transition-all ${angleHint === item.id
+                      ? 'bg-volt/10 border-volt text-volt shadow-sm'
+                      : 'bg-asfalto border-aco text-muted hover:text-texto'
+                      }`}
                   >
                     {item.label}
                   </button>
@@ -407,12 +404,12 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
                               dmg.severity === 'low'
                                 ? 'volt'
                                 : dmg.severity === 'medium'
-                                ? 'alert'
-                                : 'error'
+                                  ? 'alert'
+                                  : 'error'
                             }
                             className="text-[9px] uppercase font-bold"
                           >
-                            {dmg.damageType} ({dmg.severity})
+                            {getDamageTypeLabelPT(dmg.damageType)} ({dmg.severity === 'low' ? 'Leve' : dmg.severity === 'medium' ? 'Moderada' : 'Grave'})
                           </Badge>
                         </div>
                         <p className="text-[11px] text-muted mt-0.5">{dmg.description}</p>
@@ -457,11 +454,10 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
                 <button
                   type="button"
                   onClick={toggleRecording}
-                  className={`absolute right-3 bottom-3 p-2 rounded-lg border transition-all ${
-                    isRecording
-                      ? 'bg-alerta/20 border-alerta text-alerta animate-pulse'
-                      : 'bg-grafite border-aco text-muted hover:text-volt'
-                  }`}
+                  className={`absolute right-3 bottom-3 p-2 rounded-lg border transition-all ${isRecording
+                    ? 'bg-alerta/20 border-alerta text-alerta animate-pulse'
+                    : 'bg-grafite border-aco text-muted hover:text-volt'
+                    }`}
                   title={isRecording ? 'Parar gravação' : 'Gravar voz'}
                 >
                   {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -560,17 +556,16 @@ export const AiInspectionAssistantModal: React.FC<AiInspectionAssistantModalProp
                         prev.map((s, i) => (i === idx ? { ...s, selected: !s.selected } : s))
                       );
                     }}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                      srv.selected
-                        ? 'bg-asfalto border-volt/60 shadow-sm'
-                        : 'bg-grafite/60 border-aco/50 text-muted'
-                    }`}
+                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${srv.selected
+                      ? 'bg-asfalto border-volt/60 shadow-sm'
+                      : 'bg-grafite/60 border-aco/50 text-muted'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
                         checked={srv.selected}
-                        onChange={() => {}}
+                        onChange={() => { }}
                         className="rounded border-aco text-volt focus:ring-volt"
                       />
                       <div>

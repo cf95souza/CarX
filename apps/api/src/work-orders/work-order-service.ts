@@ -5,6 +5,7 @@ import { realtimeHub } from '../realtime/realtime-hub.js';
 import { planService } from '../plans/plan-service.js';
 import { whatsappService } from '../whatsapp/whatsapp-service.js';
 import { fiscalService } from '../fiscal/fiscal-service.js';
+import { npsService } from '../nps/nps-service.js';
 import { generatePixPayload } from '../payments/pix-generator.js';
 import { randomBytes } from 'node:crypto';
 import {
@@ -69,7 +70,8 @@ export class WorkOrderService {
       case WorkOrderStatus.CHECKED_IN:
         return 0;
       case WorkOrderStatus.IN_PROGRESS:
-        return Math.max(10, currentProgress);
+        // Inicializa rigorosamente em 0% (ou baseado nas etapas reais salvas pelo técnico)
+        return currentProgress || 0;
       case WorkOrderStatus.PAUSED:
         return currentProgress;
       case WorkOrderStatus.QA:
@@ -772,7 +774,8 @@ export class WorkOrderService {
     // Baixa idempotente automática de insumos e bobinas ao entregar a Ordem de Serviço
     if (targetStatus === WorkOrderStatus.DELIVERED) {
       await stockService.deductWorkOrderMaterials(tenantId, id, actorUserId);
-      fiscalService.autoIssueIfConfigured(tenantId, id, 'delivery').catch(() => {});
+      fiscalService.autoIssueIfConfigured(tenantId, id, 'delivery').catch(() => { });
+      npsService.createSurvey(tenantId, id).catch(() => { });
     }
 
     const updated = await this.getById(tenantId, id);
@@ -1148,7 +1151,7 @@ export class WorkOrderService {
     // Mascarar telefone do cliente para conformidade com a LGPD
     const rawPhone = String(row.customerPhone || '');
     const cleanPhone = rawPhone.replace(/\D/g, '');
-    const maskedPhone = cleanPhone.length >= 8 
+    const maskedPhone = cleanPhone.length >= 8
       ? `(${cleanPhone.slice(0, 2)}) *****-${cleanPhone.slice(-4)}`
       : 'Não informado';
 
@@ -1319,8 +1322,8 @@ export class WorkOrderService {
 
     return {
       success: true,
-      message: depositCents > 0 
-        ? 'Orçamento aprovado! Efetue o pagamento do sinal Pix para agendamento do veículo.' 
+      message: depositCents > 0
+        ? 'Orçamento aprovado! Efetue o pagamento do sinal Pix para agendamento do veículo.'
         : 'Orçamento aprovado com sucesso! A oficina já foi notificada para início dos trabalhos.',
       status: targetStatus,
       acceptedAt: new Date().toISOString(),
@@ -1764,7 +1767,7 @@ export class WorkOrderService {
     // Modo Manual (WhatsApp Web) — compatível com Plano Essencial / Sem custos
     const encodedText = encodeURIComponent(textMessage);
     const phoneParam = customerPhone ? `55${customerPhone}` : '';
-    const manualUrl = phoneParam 
+    const manualUrl = phoneParam
       ? `https://wa.me/${phoneParam}?text=${encodedText}`
       : `https://wa.me/?text=${encodedText}`;
 
@@ -2113,7 +2116,7 @@ export class WorkOrderService {
     });
 
     if (isFullyPaid) {
-      fiscalService.autoIssueIfConfigured(tenantId, workOrderId, 'payment').catch(() => {});
+      fiscalService.autoIssueIfConfigured(tenantId, workOrderId, 'payment').catch(() => { });
     }
 
     return {
@@ -2215,7 +2218,9 @@ export class WorkOrderService {
                ON CONFLICT (tenant_id, name) DO NOTHING`,
               [tenantId, b.name, b.color, b.orderIndex]
             );
-          } catch {}
+          } catch {
+            // Ignora conflito concorrente na inserção padrão de box
+          }
         }
         const bayRes = await tenantQuery<{ id: string }>(
           tenantId,

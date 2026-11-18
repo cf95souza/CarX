@@ -228,18 +228,55 @@ export class CatalogPricingService {
     actorUserId?: string
   ): Promise<CatalogServiceDto> {
     const existing = await this.getServiceById(tenantId, serviceId);
+    const raw: any = data || {};
 
-    const updatedName = data.name !== undefined ? data.name.trim() : existing.name;
-    const updatedDesc = data.description !== undefined ? data.description : existing.description;
-    const updatedPrice = data.priceCents !== undefined ? data.priceCents : existing.priceCents;
-    const updatedMin = data.estimatedMinutes !== undefined ? data.estimatedMinutes : existing.estimatedMinutes;
-    const updatedCat = data.category !== undefined ? data.category : existing.category;
-    const updatedSeg = data.segment !== undefined ? data.segment : existing.segment;
-    const updatedWarranty = data.warrantyMonths !== undefined ? data.warrantyMonths : existing.warrantyMonths;
-    const updatedConsumption = data.materialConsumptionEstimate !== undefined
-      ? data.materialConsumptionEstimate
-      : existing.materialConsumptionEstimate;
-    const updatedActive = data.isActive !== undefined ? data.isActive : existing.isActive;
+    const updatedName = raw.name !== undefined
+      ? raw.name.trim()
+      : (raw.nome !== undefined ? raw.nome.trim() : existing.name);
+
+    const updatedDesc = raw.description !== undefined
+      ? raw.description
+      : (raw.descricao !== undefined ? raw.descricao : existing.description);
+
+    const updatedPrice = raw.priceCents !== undefined
+      ? raw.priceCents
+      : (raw.price_cents !== undefined
+        ? raw.price_cents
+        : (raw.preco_base !== undefined ? Math.round(Number(raw.preco_base) * 100) : existing.priceCents));
+
+    const updatedMin = raw.estimatedMinutes !== undefined
+      ? raw.estimatedMinutes
+      : (raw.estimated_minutes !== undefined
+        ? raw.estimated_minutes
+        : (raw.tempo_estimado !== undefined ? Number(raw.tempo_estimado) : existing.estimatedMinutes));
+
+    const updatedCat = raw.category !== undefined
+      ? raw.category
+      : (raw.categoria !== undefined ? raw.categoria : existing.category);
+
+    const updatedSeg = raw.segment !== undefined
+      ? raw.segment
+      : (raw.tipo_veiculo !== undefined ? raw.tipo_veiculo : existing.segment);
+
+    const updatedWarranty = raw.warrantyMonths !== undefined
+      ? raw.warrantyMonths
+      : (raw.warranty_months !== undefined
+        ? raw.warranty_months
+        : (raw.garantia !== undefined
+          ? (String(raw.garantia).toLowerCase().includes('sem') ? 0 : (parseInt(String(raw.garantia).replace(/\D/g, ''), 10) || 0))
+          : existing.warrantyMonths));
+
+    const updatedConsumption = raw.materialConsumptionEstimate !== undefined
+      ? raw.materialConsumptionEstimate
+      : (raw.material_consumption_estimate !== undefined
+        ? raw.material_consumption_estimate
+        : (raw.comissao_percent !== undefined
+          ? { ...(existing.materialConsumptionEstimate || {}), comissao_percent: Number(raw.comissao_percent) }
+          : existing.materialConsumptionEstimate));
+
+    const updatedActive = raw.isActive !== undefined
+      ? raw.isActive
+      : (raw.is_active !== undefined ? raw.is_active : existing.isActive);
 
     if (updatedName.length < 2) {
       throw new CatalogPricingError('O nome do serviço deve conter pelo menos 2 caracteres.');
@@ -985,11 +1022,11 @@ export class CatalogPricingService {
       vehicleSizeClass: targetSizeClass,
       package: appliedPackage
         ? {
-            id: appliedPackage.id,
-            name: appliedPackage.name,
-            discountType: appliedPackage.discountType as any,
-            discountValue: appliedPackage.discountValue,
-          }
+          id: appliedPackage.id,
+          name: appliedPackage.name,
+          discountType: appliedPackage.discountType as any,
+          discountValue: appliedPackage.discountValue,
+        }
         : null,
       items,
       subtotalCents,

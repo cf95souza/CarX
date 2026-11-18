@@ -178,7 +178,14 @@ export const ModalEntregaVeiculo: React.FC<ModalEntregaVeiculoProps> = ({
         wasBilledDelivery: balanceCents > 0 && allowBilledDelivery,
       };
 
-      await api.workOrders.updateStatus(os.id, 'DELIVERED', deliveryNotes, metadata);
+      await api.workOrders.updateStatus(os.id, 'DELIVERED', deliveryNotes);
+
+      // Dispara/garante geração da pesquisa de satisfação NPS para o cliente
+      try {
+        await api.nps.createSurvey(os.id);
+      } catch {
+        // Tolerante
+      }
 
       toast.success(`Veículo da OS #${os.osNumber || os.id} entregue com sucesso!`);
       const updatedOs = {

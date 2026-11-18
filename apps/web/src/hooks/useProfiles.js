@@ -30,6 +30,10 @@ function normalizeProfile(p) {
     is_active: isActive,
     avatar_url: p.avatar_url || null,
     created_at: p.created_at || new Date().toISOString(),
+    work_orders_count: Number(p.work_orders_count || 0),
+    average_qa_score: p.average_qa_score != null ? Number(p.average_qa_score) : null,
+    qa_audits_count: Number(p.qa_audits_count || 0),
+    qa_approved_rate: p.qa_approved_rate != null ? Number(p.qa_approved_rate) : null,
   };
 }
 

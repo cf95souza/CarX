@@ -637,9 +637,16 @@ export class FinancialService {
       const totalProducedCents = parseInt(statsRes.rows[0]?.total_produced_cents || '0', 10);
 
       // 3. Média de QA auditado para OS deste técnico
-      const qaRes = await tenantQuery<{ average_qa_score: string }>(
+      const qaRes = await tenantQuery<{
+        average_qa_score: string | null;
+        total_audits: string;
+        approved_audits: string;
+      }>(
         tenantId,
-        `SELECT ROUND(AVG(qa.score), 2) as average_qa_score
+        `SELECT 
+           ROUND(AVG(qa.score), 2) as average_qa_score,
+           COUNT(qa.id)::int as total_audits,
+           COUNT(CASE WHEN qa.status = 'approved' THEN 1 END)::int as approved_audits
          FROM qa_audits qa
          JOIN work_orders wo ON wo.id = qa.work_order_id
          WHERE qa.tenant_id = $1
@@ -647,7 +654,13 @@ export class FinancialService {
            AND qa.score IS NOT NULL;`,
         [tenantId, tech.id]
       );
-      const averageQaScore = parseFloat(qaRes.rows[0]?.average_qa_score || '5.0');
+      const totalAudits = parseInt(qaRes.rows[0]?.total_audits || '0', 10);
+      const approvedAudits = parseInt(qaRes.rows[0]?.approved_audits || '0', 10);
+      const averageQaScore = totalAudits > 0 && qaRes.rows[0]?.average_qa_score
+        ? parseFloat(qaRes.rows[0].average_qa_score)
+        : (workOrdersCount > 0 ? 5.0 : 0);
+      const qaAuditsCount = totalAudits;
+      const qaApprovedPercent = totalAudits > 0 ? Math.round((approvedAudits / totalAudits) * 100) : null;
 
       // 4. CÁLCULO FUNDAMENTAL DO STREAK REAL DE DIAS SEM RETRABALHO
       // Fatos auditados:
@@ -710,6 +723,8 @@ export class FinancialService {
         workOrdersCount,
         totalProducedCents,
         averageQaScore,
+        qaAuditsCount,
+        qaApprovedPercent,
         streakDaysWithoutRework,
         lastReworkDate,
       });

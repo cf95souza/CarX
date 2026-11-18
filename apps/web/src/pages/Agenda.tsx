@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, getStoredTenantSlug } from '../services/api';
 import { copyToClipboard } from '../utils/clipboard';
+import { toast } from '../utils/toast';
 import {
   ChevronLeft,
   ChevronRight,
@@ -214,7 +215,7 @@ export const Agenda: React.FC = () => {
           const top = Math.max(0, Math.round((startHour - 8) * 56));
           const height = Math.max(48, Math.round(durationHours * 56) - 4);
 
-          const woStatus = String(app.workOrderStatus || app.raw?.workOrderStatus || '').toUpperCase();
+          const woStatus = String(app.workOrderStatus || (app as any).raw?.workOrderStatus || '').toUpperCase();
           const isFinished = app.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
 
           let bg = app.statusColor || '#E8EEF4';
@@ -1382,7 +1383,7 @@ export const Agenda: React.FC = () => {
             </div>
 
             {(() => {
-              const woStatus = String(selectedDetailApp.workOrderStatus || selectedDetailApp.raw?.workOrderStatus || '').toUpperCase();
+              const woStatus = String(selectedDetailApp.workOrderStatus || (selectedDetailApp as any).raw?.workOrderStatus || '').toUpperCase();
               const isFinished = selectedDetailApp.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
 
               if (isFinished) {
@@ -1490,7 +1491,7 @@ export const Agenda: React.FC = () => {
                 <Edit3 size={15} color="#C8F52E" /> Remanejar / Editar
               </button>
               {(() => {
-                const woStatus = String(selectedDetailApp.workOrderStatus || selectedDetailApp.raw?.workOrderStatus || '').toUpperCase();
+                const woStatus = String(selectedDetailApp.workOrderStatus || (selectedDetailApp as any).raw?.workOrderStatus || '').toUpperCase();
                 const isFinished = selectedDetailApp.status === 'completed' || ['QA', 'READY', 'DELIVERED', 'COMPLETED', 'CONCLUIDO', 'ENTREGUE'].includes(woStatus);
 
                 if (isFinished) {

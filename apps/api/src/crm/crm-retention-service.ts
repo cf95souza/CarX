@@ -211,16 +211,16 @@ export class CrmRetentionService {
   }
 
   /**
-   * Lista certificados de garantia que possuem marcos de revisão periódica (6m / 12m)
-   * que estão vencendo nos próximos 30 dias ou que já venceram sem contato.
+   * Lista certificados de garantia e ordens concluídas que possuem marcos de revisão periódica
+   * (PPF 6m, Vitrificação 12m, etc.), exibindo todas as garantias vigentes e priorizando as que requerem atenção.
    */
   static async listWarrantyRevisions(tenantId: string): Promise<WarrantyRevisionItemDto[]> {
     const query = `
       SELECT 
-        w.id as warranty_id,
-        w.verification_token,
-        w.service_name,
-        w.starts_at,
+        COALESCE(w.id, wo.id) as warranty_id,
+        COALESCE(w.verification_token, wo.id::varchar) as verification_token,
+        COALESCE(w.service_name, 'Proteção e Estética Automotiva') as service_name,
+        COALESCE(w.starts_at, wo.delivered_at, wo.updated_at, wo.created_at) as starts_at,
         c.id as customer_id,
         c.name as customer_name,
         c.phone as customer_phone,
@@ -228,20 +228,21 @@ export class CrmRetentionService {
         v.plate as vehicle_plate,
         v.model as vehicle_model,
         r.id as rule_id,
-        r.interval_days,
-        r.service_category
-      FROM warranties w
-      JOIN customers c ON c.id = w.customer_id
-      JOIN vehicles v ON v.id = w.vehicle_id
-      LEFT JOIN crm_retention_rules r ON r.tenant_id = w.tenant_id AND (
-        (LOWER(w.service_name) LIKE '%ppf%' AND r.service_category = 'ppf') OR
-        (LOWER(w.service_name) LIKE '%vitrif%' AND r.service_category = 'vitrificacao') OR
-        (LOWER(w.service_name) LIKE '%higieniz%' AND r.service_category = 'higienizacao') OR
+        COALESCE(r.interval_days, 180) as interval_days,
+        COALESCE(r.service_category, 'geral') as service_category
+      FROM work_orders wo
+      JOIN customers c ON c.id = wo.customer_id
+      JOIN vehicles v ON v.id = wo.vehicle_id
+      LEFT JOIN warranties w ON w.work_order_id = wo.id AND w.tenant_id = wo.tenant_id
+      LEFT JOIN crm_retention_rules r ON r.tenant_id = wo.tenant_id AND (
+        (LOWER(COALESCE(w.service_name, '')) LIKE '%ppf%' AND r.service_category = 'ppf') OR
+        (LOWER(COALESCE(w.service_name, '')) LIKE '%vitrif%' AND r.service_category = 'vitrificacao') OR
+        (LOWER(COALESCE(w.service_name, '')) LIKE '%higieniz%' AND r.service_category = 'higienizacao') OR
         r.trigger_type = 'warranty_revision'
       ) AND r.is_active = true
-      WHERE w.tenant_id = $1
-        AND w.status = 'active'
-      ORDER BY w.starts_at ASC
+      WHERE wo.tenant_id = $1
+        AND (wo.status IN ('delivered', 'completed', 'DELIVERED', 'COMPLETED') OR (w.id IS NOT NULL AND w.status = 'active'))
+      ORDER BY starts_at DESC
     `;
 
     const res = await tenantQuery<any>(tenantId, query, [tenantId]);
@@ -249,36 +250,35 @@ export class CrmRetentionService {
     const now = new Date();
 
     for (const row of res.rows) {
-      const startsAt = new Date(row.starts_at);
+      const startsAt = new Date(row.starts_at || now);
       const intervalDays = row.interval_days ? parseInt(row.interval_days, 10) : 180;
-      
+
       const revisionDueDate = new Date(startsAt.getTime() + intervalDays * 24 * 60 * 60 * 1000);
       const diffMs = revisionDueDate.getTime() - now.getTime();
       const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-      // Considerar se a data de revisão vence em até 45 dias no futuro ou até 90 dias no passado
-      if (diffDays <= 45 && diffDays >= -120) {
-        items.push({
-          warrantyId: row.warranty_id,
-          verificationToken: row.verification_token,
-          serviceName: row.service_name,
-          serviceCategory: row.service_category || 'geral',
-          customerId: row.customer_id,
-          customerName: row.customer_name,
-          customerPhone: row.customer_phone,
-          vehicleId: row.vehicle_id,
-          vehiclePlate: row.vehicle_plate,
-          vehicleModel: row.vehicle_model,
-          startsAt: startsAt.toISOString(),
-          revisionDueDate: revisionDueDate.toISOString(),
-          daysRemainingOrOverdue: diffDays,
-          isOverdue: diffDays < 0,
-          ruleId: row.rule_id || null,
-        });
-      }
+      // Registra todas as garantias vigentes com contagem precisa de dias para revisão
+      items.push({
+        warrantyId: row.warranty_id,
+        verificationToken: row.verification_token,
+        serviceName: row.service_name,
+        serviceCategory: row.service_category || 'geral',
+        customerId: row.customer_id,
+        customerName: row.customer_name,
+        customerPhone: row.customer_phone,
+        vehicleId: row.vehicle_id,
+        vehiclePlate: row.vehicle_plate,
+        vehicleModel: row.vehicle_model,
+        startsAt: startsAt.toISOString(),
+        revisionDueDate: revisionDueDate.toISOString(),
+        daysRemainingOrOverdue: diffDays,
+        isOverdue: diffDays < 0,
+        ruleId: row.rule_id || null,
+      });
     }
 
-    return items;
+    // Ordena priorizando revisões vencidas/próximas e depois por data de início
+    return items.sort((a, b) => a.daysRemainingOrOverdue - b.daysRemainingOrOverdue);
   }
 
   /**

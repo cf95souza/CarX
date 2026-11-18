@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-11-18T19:44:50-03:00",
+  "pipeline": "System Quality Gate — Camada 1 & 2 Build & Packaging",
+  "workspaces": {
+    "@carx/shared": {
+      "status": "SUCCESS",
+      "command": "pnpm --filter @carx/shared build",
+      "output": "tsc -> dist/"
+    },
+    "@carx/ui": {
+      "status": "SUCCESS",
+      "command": "pnpm --filter @carx/ui typecheck",
+      "output": "tsc --noEmit -> 0 errors"
+    },
+    "@carx/admin": {
+      "status": "SUCCESS",
+      "command": "pnpm --filter @carx/admin build",
+      "output": "vite build -> 1509 modules transformed (dist/index.html, dist/assets/index.js 454.85 kB)"
+    },
+    "@carx/web": {
+      "status": "SUCCESS",
+      "command": "pnpm --filter @carx/web build",
+      "output": "vite build -> 1637 modules transformed, PWA precache 119 entries (1659.14 KiB)"
+    },
+    "@carx/api": {
+      "status": "SUCCESS",
+      "command": "pnpm --filter @carx/api build",
+      "output": "tsc && cpSync migrations -> dist/ (37 migrations .up.sql e .down.sql empacotadas)"
+    }
+  },
+  "overallStatus": "PASSED",
+  "totalErrors": 0
+}

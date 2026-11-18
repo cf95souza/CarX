@@ -2078,6 +2078,8 @@ export interface TechnicianRankingItemDto {
   workOrdersCount: number;
   totalProducedCents: number;
   averageQaScore: number;
+  qaAuditsCount?: number;
+  qaApprovedPercent?: number | null;
   streakDaysWithoutRework: number;
   lastReworkDate: string | null;
 }

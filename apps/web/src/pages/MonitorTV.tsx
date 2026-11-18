@@ -241,14 +241,14 @@ export const MonitorTV: React.FC = () => {
         );
       case 'SCHEDULED':
         return (
-          <Badge variant="outline" className="gap-1 font-black text-[#38BDF8] border-[#38BDF8]/40 uppercase">
+          <Badge variant="info" className="gap-1 font-black uppercase">
             <Clock size={12} />
             Agendado
           </Badge>
         );
       case 'APPROVED':
         return (
-          <Badge variant="outline" className="gap-1 font-black text-[#C8F52E] border-[#C8F52E]/40 uppercase">
+          <Badge variant="volt" className="gap-1 font-black uppercase">
             <CheckCircle2 size={12} />
             Aprovado
           </Badge>

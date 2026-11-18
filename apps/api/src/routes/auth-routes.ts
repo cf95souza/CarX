@@ -222,7 +222,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   });
 
   /**
-   * GET /tenant/members — Lista de colaboradores e técnicos da oficina
+   * GET /tenant/members — Lista de colaboradores e técnicos da oficina com métricas reais de QA
    */
   fastify.get('/tenant/members', { preHandler: [authenticateBearer, requireTenantContext] }, async (request, reply) => {
     const tenantId = request.tenantId;
@@ -237,6 +237,10 @@ export async function authRoutes(fastify: FastifyInstance) {
       role: string;
       is_active: boolean;
       created_at: string;
+      work_orders_count: string;
+      average_qa_score: string | null;
+      qa_audits_count: string;
+      qa_approved_rate: string | null;
     }>(
       tenantId,
       `
@@ -246,10 +250,20 @@ export async function authRoutes(fastify: FastifyInstance) {
         u.email,
         m.role,
         m.is_active,
-        u.created_at
+        u.created_at,
+        COUNT(DISTINCT wo.id)::int as work_orders_count,
+        ROUND(AVG(qa.score), 1) as average_qa_score,
+        COUNT(qa.id)::int as qa_audits_count,
+        ROUND(
+          COUNT(CASE WHEN qa.status = 'approved' THEN 1 END)::numeric 
+          / NULLIF(COUNT(qa.id), 0) * 100
+        )::int as qa_approved_rate
       FROM users u
       JOIN memberships m ON m.user_id = u.id
+      LEFT JOIN work_orders wo ON wo.tenant_id = $1 AND wo.technician_id = u.id AND wo.status IN ('DELIVERED', 'READY', 'COMPLETED')
+      LEFT JOIN qa_audits qa ON qa.tenant_id = $1 AND qa.work_order_id = wo.id
       WHERE m.tenant_id = $1
+      GROUP BY u.id, u.name, u.email, m.role, m.is_active, u.created_at
       ORDER BY u.name ASC;
       `,
       [tenantId]

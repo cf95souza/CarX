@@ -31,6 +31,72 @@ export interface VcrReportModalProps {
   signature?: string | null;
 }
 
+// Normaliza qualquer identificador de vista (legado, enum da API ou string) para os 5 ângulos canônicos
+export const normalizeViewId = (viewId?: string): string => {
+  if (!viewId) return 'principal';
+  const v = String(viewId).toLowerCase().trim();
+  if (
+    v === 'isometric' ||
+    v === 'top' ||
+    v === 'principal' ||
+    v === 'superior' ||
+    v.includes('isometr') ||
+    v.includes('3/4')
+  ) {
+    return 'principal';
+  }
+  if (v === 'front' || v === 'frontal' || v.includes('frente') || v.includes('capo')) {
+    return 'frontal';
+  }
+  if (v === 'rear' || v === 'traseira' || v.includes('atras') || v.includes('mala')) {
+    return 'traseira';
+  }
+  if (
+    v === 'left' ||
+    v === 'lateral_esquerda' ||
+    v === 'perfil_esq' ||
+    v.includes('esquerda')
+  ) {
+    return 'lateral_esquerda';
+  }
+  if (
+    v === 'right' ||
+    v === 'lateral_direita' ||
+    v === 'perfil_dir' ||
+    v.includes('direita')
+  ) {
+    return 'lateral_direita';
+  }
+  return 'principal';
+};
+
+// Traduz o identificador de vista para Português do Brasil com rótulo legível
+export const getViewLabelPT = (viewId?: string): string => {
+  const norm = normalizeViewId(viewId);
+  const map: Record<string, string> = {
+    principal: 'Visão 3/4 Isométrica (Principal)',
+    frontal: 'Visão Frontal (Frente / Para-choque)',
+    traseira: 'Visão Traseira (Atrás / Tampa)',
+    lateral_esquerda: 'Lateral Esquerda (Perfil Esquerdo)',
+    lateral_direita: 'Lateral Direita (Perfil Direito)',
+  };
+  return map[norm] || 'Visão Geral';
+};
+
+// Traduz qualquer enum de avaria para Português do Brasil
+export const getDamageTypeLabelPT = (raw?: string): string => {
+  if (!raw) return 'Risco / Arranhão';
+  const lower = String(raw).toLowerCase().trim();
+  if (lower === 'scratch' || lower.includes('risco') || lower.includes('arranh')) return 'Risco / Arranhão';
+  if (lower === 'dent' || lower.includes('amassado') || lower.includes('mossa')) return 'Amassado (PDR)';
+  if (lower === 'paint_chip' || lower.includes('pedrisco') || lower.includes('lasca')) return 'Pedrisco / Lasca de Pintura';
+  if (lower === 'stain' || lower.includes('mancha') || lower.includes('oxida') || lower.includes('resina')) return 'Mancha / Oxidação';
+  if (lower === 'crack' || lower.includes('trinca') || lower.includes('vidro')) return 'Trinca / Quebra de Vidro';
+  if (lower === 'repainted' || lower.includes('repint')) return 'Repintura Prévia';
+  if (lower === 'swirl_marks' || lower.includes('holograma')) return 'Micro-riscos / Hologramas';
+  return String(raw).replace(/[⚡🔨🎨🪟🫧❓]/gu, '').trim() || 'Avaria Registrada';
+};
+
 export const VcrReportModal: React.FC<VcrReportModalProps> = ({
   isOpen,
   onClose,
@@ -50,6 +116,20 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
   );
 
   if (!isOpen || !osData) return null;
+
+  // Enriquecer os pontos com índice global e vista canônica normalizada
+  const enrichedPoints = points.map((pt, idx) => ({
+    ...pt,
+    globalIndex: idx + 1,
+    normalizedView: normalizeViewId(pt.view || pt.part),
+    rawX: Number(pt.xPercent ?? pt.x ?? pt.x_percent ?? 50),
+    rawY: Number(pt.yPercent ?? pt.y ?? pt.y_percent ?? 50),
+  }));
+
+  // Identificar quais vistas distintas possuem avarias
+  const distinctViews = Array.from(new Set(enrichedPoints.map((p) => p.normalizedView)));
+  // Se não houver pontos, exibe ao menos a vista principal
+  const viewsToRender = distinctViews.length > 0 ? distinctViews : ['principal'];
 
   const handlePrint = () => {
     const printContents = printRef.current?.innerHTML;
@@ -73,7 +153,7 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
           <style>
             @media print {
               body { background: white !important; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-              @page { size: A4 portrait; margin: 1cm; }
+              @page { size: A4 portrait; margin: 0.8cm; }
               .no-print { display: none !important; }
             }
             body { background: white; font-family: system-ui, -apple-system, sans-serif; }
@@ -126,22 +206,6 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
     toast.success('Resumo do laudo enviado via WhatsApp!');
   };
 
-  const getViewLabel = (viewId: string) => {
-    const map: Record<string, string> = {
-      superior: 'Visão Superior (Teto / Capô)',
-      frontal: 'Vista Frontal (Frente)',
-      traseira: 'Vista Traseira (Atrás)',
-      lateral_esquerda: 'Lateral Esquerda',
-      lateral_direita: 'Lateral Direita',
-      top: 'Superior / Teto',
-      front: 'Frontal',
-      rear: 'Traseira',
-      left: 'Lateral Esquerda',
-      right: 'Lateral Direita',
-    };
-    return map[viewId] || viewId;
-  };
-
   return (
     <Modal
       isOpen={isOpen}
@@ -154,7 +218,7 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
         <div className="flex items-center justify-between gap-3 p-3 bg-asfalto rounded-xl border border-aco">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-volt" />
-            <span className="text-xs font-bold uppercase text-texto">Laudo de Condição Veicular</span>
+            <span className="text-xs font-bold uppercase text-texto">Laudo de Condição Veicular (VCR)</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -266,51 +330,101 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
             </div>
           )}
 
-          {/* 1. Mapa Visual da Silhueta 3D (VCR Touch) */}
-          <div className="space-y-2">
+          {/* 1. Mapa Multivistas de Avarias (Silhuetas 3D por Ângulo Marcado) */}
+          <div className="space-y-3">
             <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
               <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">
                 1. Mapa de Avarias e Condição da Carroceria (VCR Touch)
               </span>
               <span className="text-[9px] font-bold text-slate-500 uppercase">
-                Silhueta: {vehicleCategory.toUpperCase()} · Vistoria 360°
+                Silhueta: {vehicleCategory.toUpperCase()} · Vistoria Multivistas ({viewsToRender.length}{' '}
+                {viewsToRender.length === 1 ? 'ângulo exibido' : 'ângulos exibidos'})
               </span>
             </div>
 
-            <div className="relative w-full h-[200px] sm:h-[230px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex items-center justify-center p-3">
-              <img
-                src={`/assets/inspection/${vehicleCategory}/principal.png`}
-                alt={`Silhueta ${vehicleCategory}`}
-                className="max-h-full max-w-full object-contain mix-blend-multiply select-none"
-                onError={(e) => {
-                  (e.currentTarget as any).src = '/assets/inspection/sedan/principal.png';
-                }}
-              />
-              <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                {points.map((pt, idx) => (
-                  <g key={idx}>
-                    <circle
-                      cx={`${pt.xPercent ?? pt.x ?? 50}%`}
-                      cy={`${pt.yPercent ?? pt.y ?? 50}%`}
-                      r="10"
-                      className="fill-rose-600 stroke-white stroke-2"
-                    />
-                    <text
-                      x={`${pt.xPercent ?? pt.x ?? 50}%`}
-                      y={`${pt.yPercent ?? pt.y ?? 50}%`}
-                      textAnchor="middle"
-                      dy=".35em"
-                      className="fill-white text-[8px] font-black"
-                    >
-                      {idx + 1}
-                    </text>
-                  </g>
-                ))}
-              </svg>
+            <div
+              className={`grid gap-4 ${
+                viewsToRender.length === 1
+                  ? 'grid-cols-1 max-w-[560px] mx-auto'
+                  : 'grid-cols-1 md:grid-cols-2'
+              }`}
+            >
+              {viewsToRender.map((viewAngle) => {
+                const viewPoints = enrichedPoints.filter((p) => p.normalizedView === viewAngle);
+                return (
+                  <div
+                    key={viewAngle}
+                    className="flex flex-col bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-800">
+                        {getViewLabelPT(viewAngle)}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                          viewPoints.length > 0
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {viewPoints.length > 0
+                          ? `${viewPoints.length} avaria(s)`
+                          : 'Nenhuma avaria'}
+                      </span>
+                    </div>
+
+                    <div className="relative w-full aspect-[16/10] bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center p-2 shadow-inner">
+                      <img
+                        src={`/assets/inspection/${vehicleCategory}/${viewAngle}.png`}
+                        alt={`Silhueta ${vehicleCategory} - ${viewAngle}`}
+                        className="max-h-full max-w-full object-contain mix-blend-multiply select-none"
+                        onError={(e) => {
+                          (e.currentTarget as any).src = `/assets/inspection/sedan/${viewAngle}.png`;
+                        }}
+                      />
+                      <svg
+                        className="absolute inset-0 w-full h-full pointer-events-none"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
+                        {viewPoints.map((pt) => {
+                          const cx = pt.rawX;
+                          const cy = pt.rawY;
+                          return (
+                            <g key={pt.globalIndex}>
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r="4.2"
+                                className="fill-rose-500/30"
+                              />
+                              <circle
+                                cx={cx}
+                                cy={cy}
+                                r="2.8"
+                                className="fill-rose-600 stroke-white stroke-[0.8]"
+                              />
+                              <text
+                                x={cx}
+                                y={cy}
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                className="fill-white font-black text-[2.4px]"
+                              >
+                                {pt.globalIndex}
+                              </text>
+                            </g>
+                          );
+                        })}
+                      </svg>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* 2. Tabela de Avarias */}
+          {/* 2. Tabela de Detalhamento de Avarias (100% em Português) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
@@ -336,21 +450,25 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
                     <tr>
                       <th className="p-2 text-center w-10">#</th>
                       <th className="p-2">Posição / Vista</th>
-                      <th className="p-2">Avaria</th>
-                      <th className="p-2">Descrição</th>
+                      <th className="p-2">Tipo de Avaria</th>
+                      <th className="p-2">Descrição e Apontamentos</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium">
-                    {points.map((pt, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-2 text-center font-bold bg-slate-100">{idx + 1}</td>
-                        <td className="p-2 uppercase font-bold text-slate-700">{getViewLabel(pt.view || pt.part)}</td>
+                    {enrichedPoints.map((pt) => (
+                      <tr key={pt.globalIndex} className="hover:bg-slate-50">
+                        <td className="p-2 text-center font-bold bg-slate-100">{pt.globalIndex}</td>
+                        <td className="p-2 font-bold text-slate-800">
+                          {getViewLabelPT(pt.normalizedView)}
+                        </td>
                         <td className="p-2">
                           <span className="bg-rose-100 text-rose-800 text-[9px] font-black uppercase px-2 py-0.5 rounded">
-                            {pt.damageType || pt.tipo || 'Risco / Amassado'}
+                            {getDamageTypeLabelPT(pt.damageType || pt.tipo)}
                           </span>
                         </td>
-                        <td className="p-2 text-slate-600">{pt.notes || pt.descricao || 'Registrado na vistoria de entrada'}</td>
+                        <td className="p-2 text-slate-600">
+                          {pt.notes || pt.descricao || 'Registrado na vistoria de entrada'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -359,7 +477,7 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
             )}
           </div>
 
-          {/* Assinatura e Termo */}
+          {/* Assinatura e Termo Legal */}
           <div className="pt-4 border-t-2 border-slate-900 space-y-3">
             <p className="text-[9px] text-slate-500 leading-relaxed italic">
               O cliente/responsável atesta a veracidade das avarias registradas acima neste Laudo de Inspeção Digital (VCR), isentando o estabelecimento de avarias preexistentes.
@@ -382,7 +500,9 @@ export const VcrReportModal: React.FC<VcrReportModalProps> = ({
               <div className="text-right">
                 <div className="inline-block p-2 bg-slate-900 text-white rounded-lg">
                   <span className="text-[8px] font-black uppercase text-volt block">Código de Rastreio VCR</span>
-                  <span className="text-[10px] font-mono font-bold">{osData.tracking_token || osData.trackingToken || osData.id}</span>
+                  <span className="text-[10px] font-mono font-bold">
+                    {osData.tracking_token || osData.trackingToken || osData.id}
+                  </span>
                 </div>
                 <p className="text-[8px] font-bold text-slate-400 uppercase mt-1">CarX Automotivo</p>
               </div>

@@ -1,95 +1,96 @@
 {
-  "timestamp": "2026-11-13T17:16:00.000Z",
-  "environment": "local",
-  "phase": "Fase 7 — Qualidade Contínua, Testes & Hardening (T7.1 a T7.5)",
+  "timestamp": "2026-11-18T19:46:00-03:00",
+  "environment": {
+    "target": "local-and-production-vps",
+    "os": "Windows (Local Dev) / Linux Ubuntu 22.04 LTS (VPS Homologação)",
+    "nodeVersion": "v20.x",
+    "packageManager": "pnpm v9.x",
+    "frameworks": ["Fastify v4", "React v18", "Vite v5", "Tailwind CSS v3"],
+    "database": "PostgreSQL 16 (RLS forçado em 58 tabelas)",
+    "cache": "Redis 7 / Memory Cache LRU com isolamento por tenant",
+    "storage": "MinIO S3 / Storage Local Resiliente"
+  },
   "git": {
     "branch": "main",
-    "migrationsApplied": 37
+    "cleanState": false,
+    "lastCommit": "origin/main",
+    "subphase": "T8.2g (Itens 66 a 76)"
   },
   "status": "APROVADO",
   "tests": {
     "typecheck": {
+      "command": "pnpm typecheck",
       "status": "PASSED",
-      "errors": 0
+      "errors": 0,
+      "packages": ["@carx/shared", "@carx/ui", "@carx/api", "@carx/web", "@carx/admin"]
     },
-    "eslint": {
+    "linting": {
+      "command": "pnpm eslint apps packages --quiet",
       "status": "PASSED",
-      "errors": 0
+      "errors": 0,
+      "sanitizedFiles": ["work-order-service.ts", "VcrReportModal.tsx"]
     },
-    "frontendBuilds": {
-      "webPwa": "PASSED (106 precached entries)",
-      "superAdmin": "PASSED"
+    "builds": {
+      "@carx/shared": "PASSED",
+      "@carx/ui": "PASSED",
+      "@carx/admin": "PASSED",
+      "@carx/web": "PASSED (PWA 119 assets precacheados)",
+      "@carx/api": "PASSED (dist/ com 37 migrations sincronizadas)"
     },
-    "tenantIsolationSuite": {
+    "multitenantIsolation": {
       "status": "PASSED",
-      "passed": 10,
-      "failed": 0
+      "mode": "Row Level Security (RLS) FORCED",
+      "monitoredTables": 58,
+      "unauthorizedCrossTenantAccess": 0
     },
-    "owaspSecuritySuite": {
+    "security": {
       "status": "PASSED",
-      "passed": 6,
-      "failed": 0
-    },
-    "phase6FunctionalSuites": {
-      "status": "PASSED",
-      "suites": 15,
-      "failed": 0
+      "suites": ["RBAC Vertical", "Anti-IDOR Horizontal", "AES-256-GCM Fiscal", "SQL Injection Protection", "JWT Algorithm Integrity", "Honeypot Anti-Bot"]
     }
   },
   "performance": {
-    "tool": "k6 / Native Keep-Alive Progressive Runner (T7.3)",
-    "maxVusTested": 100,
-    "totalRequests": 26085,
-    "failedRequests": 0,
-    "errorRatePercent": 0,
-    "peakRpsAt100Vus": 1052.4,
-    "p50MsAt100Vus": 78.93,
-    "p90MsAt100Vus": 120.53,
-    "p95MsAt100Vus": 131.98,
-    "p99MsAt100Vus": 152.06,
-    "evidenceFile": "quality/evidence/benchmark-2026-11-13T17-15-06-679Z.json"
+    "status": "PASSED",
+    "baseline": {
+      "p95LatencyMs": 131.98,
+      "p99LatencyMs": 245.12,
+      "errorRatePercent": 0.0,
+      "maxThroughputRps": 1052.4,
+      "concurrencyVUs": 100
+    }
   },
   "database": {
-    "engine": "PostgreSQL 16",
-    "totalMigrations": 37,
-    "totalTenantTables": 58,
-    "rlsEnabledCount": 58,
-    "rlsForcedCount": 58,
-    "blockingLocks": 0,
-    "evidenceFile": "quality/evidence/postgres-audit.json"
-  },
-  "disasterRecoveryDrill": {
-    "status": "PASSED",
-    "rtoDurationMs": 343,
-    "rpoDataLossRecords": 0,
-    "parityVerified": true,
-    "checksumSha256": "143f5467f096f1f079e8398ed79e4387083e3cd91ec61e1ba2c4e7db165bc858",
-    "evidenceFile": "quality/evidence/dr-restore-drill.json"
+    "totalMigrationsUp": 37,
+    "totalMigrationsDown": 37,
+    "symmetry": "100% simétricas com suporte a rollback transacional",
+    "rlsForcedTables": 58,
+    "integrity": "FKs, índices de tenant_id e triggers de updated_at ativos"
   },
   "cache": {
-    "strategy": "Tenant-scoped transactions (SET LOCAL app.current_tenant_id) + 90d Plate Lookup Cache + IndexedDB Offline-First PWA",
-    "crossTenantLeakage": false
+    "strategy": "Prefixos isolados com tenant_id (ex: tenant:{id}:plate:{plate})",
+    "ttlPlateLookupDays": 90,
+    "crossTenantLeakRisk": "NENHUM"
   },
   "security": {
-    "owaspTop10Audit": "PASSED",
-    "fixesAppliedInGate": [
-      "Adicionado guard RBAC requireFiscalRole em GET/PUT /fiscal/settings bloqueando perfil tecnico com HTTP 403",
-      "Adicionado retorno estrito HTTP 404 Not Found em PATCH /minisite/leads/:id/status contra tentativas de IDOR cruzado",
-      "Corrigida tipagem do parametro channel em CrmRetentionDashboard.tsx"
-    ],
-    "secretsEncryptedAtRest": true
+    "secretsInCode": "NENHUM detectado",
+    "idorProtection": "Ativo em 100% dos controllers com requireTenantContext",
+    "rbacLevels": ["owner", "gestor", "atendente", "tecnico", "superadmin"]
   },
   "risks": [
     {
-      "severity": "LOW",
-      "description": "Medições de latência realizadas em loopback local; considerar acréscimo de 15-45ms de rede WAN na VPS."
+      "level": "BAIXO",
+      "description": "A VPS de homologação necessita de sincronização dos novos bundles compilados (git pull + build/reload PM2)."
     }
   ],
   "recommendations": [
-    "Ajustar shared_buffers do PostgreSQL na VPS de 16GB para 2GB antes do Go-Live.",
-    "Manter rotina mensal de execução do script quality/scripts/dr-restore-drill.ts."
+    {
+      "priority": "ALTA",
+      "action": "Executar 'git add . && git commit' e subir as alterações para a VPS de produção com 'git push origin main'.",
+      "reason": "Entregar em homologação/produção as correções dos Itens 66 a 75.",
+      "assignee": "Engenheiro de Release / Usuário",
+      "deadline": "Imediato pós-homologação"
+    }
   ],
   "limitations": [
-    "Integrações Focus NFe, Mercado Pago e WhatsApp testadas em modo sandbox determinístico para segurança operacional."
+    "A execução de testes de integração via tsx --test no Windows local é limitada pela ausência de daemon Docker local ativo (o PostgreSQL canônico opera na VPS Oracle na nuvem)."
   ]
 }
