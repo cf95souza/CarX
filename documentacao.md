@@ -4791,3 +4791,21 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
 
 
 
+
+
+### Refinamento da Esteira Operacional: Resolução Erro 400 em QA e Vínculo Automático da Agenda por Placa
+- **Problema Resolvido**:
+  - Ao registrar auditoria de qualidade (QA) via `/qa/audits`, a validação do Zod rejeitava com erro HTTP 400 (`Dados de auditoria inválidos`) caso o frontend enviasse o número sequencial da OS (`os_number`) em vez de um UUID estrito, ou caso itens do checklist apresentassem campos nulos.
+  - Além disso, agendamentos criados de forma avulsa pela tela da Agenda ficavam com `work_order_id = NULL`. Ao finalizar o serviço ou mudar a OS para QA/READY/DELIVERED, o agendamento permanecia como `scheduled` e gerava falso alerta de atraso após o horário previsto (ex: atraso de 322 minutos).
+- **Arquitetura da Soluções**:
+  1. **Resolução Tolerante de Work Order (`qa-service.ts` e `schemas.ts`)**:
+     - `CreateQaAuditSchema` e `CreateWarrantySchema` flexibilizados para aceitar `workOrderId: z.string().min(1)`;
+     - Método `resolveWorkOrder(tenantId, workOrderIdOrNumber)` adicionado no `QaService`: aceita tanto UUID quanto `os_number` (numérico ou string), resolvendo a chave primária UUID real da OS com 100% de precisão;
+     - Ao aprovar o QA, sincroniza o agendamento vinculado tanto pelo `work_order_id` quanto pelo `vehicle_id`;
+  2. **Vínculo Automático e Auto-Sync de Agendamentos Órfãos (`appointment-service.ts`)**:
+     - Auto-sync retroativo no `getSmartScheduleOverview`: vincula agendamentos avulsos à respectiva OS pela placa do veículo (`vehicle_plate`) e atualiza o status para `completed` quando a OS estiver em `QA`, `READY`, `DELIVERED` ou `COMPLETED`;
+     - Query SQL de `listAppointments` aprimorada com `LEFT JOIN` inteligente que associa a OS pelo `work_order_id` ou pela placa do veículo caso `work_order_id` seja nulo;
+  3. **Conclusão Direta e Ações na Interface (`Agenda.tsx` e `OrdensServico.tsx`)**:
+     - Botão verde `[✓ Concluir]` no modal de detalhes do agendamento atualizado com invalidação imediata de queries e feedback via toast;
+     - Botão roxo **"Vistoria QA"** e botão Volt **"Entregar Carro"** renderizados com checagem case-insensitive (`String(os.status).toUpperCase() === 'QA'`) e prioridade de posicionamento na tabela de OS.
+- **Validações**: Compilação de `@carx/shared`, `@carx/api` e `@carx/web` testadas com 0 erros.

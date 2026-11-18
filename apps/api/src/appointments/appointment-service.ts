@@ -655,7 +655,13 @@ export class AppointmentService {
       LEFT JOIN users u ON u.id = a.technician_id
       LEFT JOIN customers c ON c.id = a.customer_id AND c.tenant_id = a.tenant_id
       LEFT JOIN vehicles v ON v.id = a.vehicle_id AND v.tenant_id = a.tenant_id
-      LEFT JOIN work_orders wo ON wo.id = a.work_order_id AND wo.tenant_id = a.tenant_id
+      LEFT JOIN work_orders wo ON (
+        (wo.id = a.work_order_id)
+        OR (a.work_order_id IS NULL AND (
+          (a.vehicle_id IS NOT NULL AND wo.vehicle_id = a.vehicle_id)
+          OR (a.vehicle_plate IS NOT NULL AND v.plate IS NOT NULL AND UPPER(REPLACE(a.vehicle_plate, '-', '')) = UPPER(REPLACE(v.plate, '-', '')))
+        ) AND wo.status NOT IN ('QUOTE', 'CANCELED', 'CANCELADO'))
+      ) AND wo.tenant_id = a.tenant_id
       WHERE ${conditions.join(' AND ')}
       ORDER BY a.start_time ASC;
     `;
@@ -703,7 +709,13 @@ export class AppointmentService {
       LEFT JOIN users u ON u.id = a.technician_id
       LEFT JOIN customers c ON c.id = a.customer_id AND c.tenant_id = a.tenant_id
       LEFT JOIN vehicles v ON v.id = a.vehicle_id AND v.tenant_id = a.tenant_id
-      LEFT JOIN work_orders wo ON wo.id = a.work_order_id AND wo.tenant_id = a.tenant_id
+      LEFT JOIN work_orders wo ON (
+        (wo.id = a.work_order_id)
+        OR (a.work_order_id IS NULL AND (
+          (a.vehicle_id IS NOT NULL AND wo.vehicle_id = a.vehicle_id)
+          OR (a.vehicle_plate IS NOT NULL AND v.plate IS NOT NULL AND UPPER(REPLACE(a.vehicle_plate, '-', '')) = UPPER(REPLACE(v.plate, '-', '')))
+        ) AND wo.status NOT IN ('QUOTE', 'CANCELED', 'CANCELADO'))
+      ) AND wo.tenant_id = a.tenant_id
       WHERE a.tenant_id = $1 AND a.id = $2;
     `;
 
@@ -1107,11 +1119,56 @@ export class AppointmentService {
     const dayStart = `${dateStr}T00:00:00.000Z`;
     const dayEnd = `${dateStr}T23:59:59.999Z`;
 
-    // Auto-sync retroativo de ordens de serviço agendadas que ainda não tenham registro na tabela appointments
+    // Auto-sync retroativo de ordens de serviço agendadas e vinculação de agendamentos órfãos
     try {
+      // 1. Vincula agendamentos avulsos à OS pelo veículo/placa correspondente e sincroniza status
+      await tenantQuery(
+        tenantId,
+        `UPDATE appointments a
+         SET work_order_id = wo.id,
+             customer_id = COALESCE(a.customer_id, wo.customer_id),
+             vehicle_id = COALESCE(a.vehicle_id, wo.vehicle_id),
+             technician_id = COALESCE(a.technician_id, wo.technician_id),
+             status = CASE 
+               WHEN wo.status IN ('QA', 'READY', 'DELIVERED', 'COMPLETED') THEN 'completed'
+               WHEN wo.status = 'IN_PROGRESS' THEN 'in_progress'
+               WHEN wo.status = 'CHECKED_IN' THEN 'confirmed'
+               WHEN wo.status IN ('CANCELED', 'CANCELADO') THEN 'canceled'
+               ELSE a.status
+             END,
+             updated_at = NOW()
+         FROM work_orders wo
+         LEFT JOIN vehicles v ON v.id = wo.vehicle_id
+         WHERE a.tenant_id = $1
+           AND a.work_order_id IS NULL
+           AND wo.tenant_id = $1
+           AND wo.status NOT IN ('QUOTE', 'CANCELED', 'CANCELADO')
+           AND (
+             (a.vehicle_id IS NOT NULL AND a.vehicle_id = wo.vehicle_id)
+             OR (a.vehicle_plate IS NOT NULL AND v.plate IS NOT NULL AND UPPER(REPLACE(a.vehicle_plate, '-', '')) = UPPER(REPLACE(v.plate, '-', '')))
+           );`,
+        [tenantId]
+      );
+
+      // 2. Garante que qualquer agendamento com OS em QA, READY, DELIVERED ou COMPLETED esteja com status 'completed'
+      await tenantQuery(
+        tenantId,
+        `UPDATE appointments a
+         SET status = 'completed',
+             updated_at = NOW()
+         FROM work_orders wo
+         WHERE a.tenant_id = $1
+           AND a.work_order_id = wo.id
+           AND wo.tenant_id = $1
+           AND wo.status IN ('QA', 'READY', 'DELIVERED', 'COMPLETED')
+           AND a.status != 'completed';`,
+        [tenantId]
+      );
+
       const unsyncedWos = await tenantQuery<{
         id: string;
         os_number: number;
+        status: string;
         customer_id: string;
         vehicle_id: string;
         technician_id: string | null;
@@ -1128,6 +1185,7 @@ export class AppointmentService {
         `SELECT 
            wo.id,
            wo.os_number,
+           wo.status,
            wo.customer_id,
            wo.vehicle_id,
            wo.technician_id,
@@ -1161,6 +1219,9 @@ export class AppointmentService {
           const title = `OS #${row.os_number} · ${row.cust_name || 'Cliente'}`;
           const summary = row.items_summary || 'Serviço Automotivo';
           const vehModel = `${row.veh_brand || ''} ${row.veh_model || ''}`.trim() || null;
+          const initialStatus = ['QA', 'READY', 'DELIVERED', 'COMPLETED'].includes(String(row.status || '').toUpperCase())
+            ? 'completed'
+            : (String(row.status || '').toUpperCase() === 'IN_PROGRESS' ? 'in_progress' : 'scheduled');
 
           await tenantQuery(
             tenantId,
@@ -1168,7 +1229,7 @@ export class AppointmentService {
                tenant_id, work_order_id, customer_id, vehicle_id, technician_id,
                bay_id, title, start_time, end_time, estimated_minutes,
                status, origin, service_summary, customer_name, customer_phone, vehicle_plate, vehicle_model
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled', 'INTERNAL', $11, $12, $13, $14, $15)`,
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'INTERNAL', $12, $13, $14, $15, $16)`,
             [
               tenantId,
               row.id,
@@ -1180,6 +1241,7 @@ export class AppointmentService {
               sAt.toISOString(),
               eAt.toISOString(),
               estM,
+              initialStatus,
               summary,
               row.cust_name || null,
               row.cust_phone || null,

@@ -45,14 +45,24 @@ export class QaError extends Error {
 
 export class QaService {
   /**
-   * Realiza uma auditoria de qualidade (QA) pós-execução na Ordem de Serviço
+   * Resolve a Ordem de Serviço pelo UUID ou pelo número sequencial (os_number)
    */
-  async createAudit(
-    tenantId: string,
-    inspectorId: string,
-    input: CreateQaAuditInputDto
-  ): Promise<QaAuditDto> {
-    // 1. Verifica se a OS existe e pertence à oficina
+  private async resolveWorkOrder(tenantId: string, workOrderIdOrNumber: string) {
+    const raw = String(workOrderIdOrNumber || '').trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw);
+    const osNum = parseInt(raw, 10);
+
+    let whereSql = 'tenant_id = $1 AND id = $2';
+    let params: any[] = [tenantId, raw];
+
+    if (!isUuid && !isNaN(osNum) && String(osNum) === raw) {
+      whereSql = 'tenant_id = $1 AND os_number = $2';
+      params = [tenantId, osNum];
+    } else if (!isUuid) {
+      whereSql = 'tenant_id = $1 AND (id::text = $2 OR os_number::text = $2)';
+      params = [tenantId, raw];
+    }
+
     const woRes = await tenantQuery<{
       id: string;
       os_number: number;
@@ -63,16 +73,28 @@ export class QaService {
       tenantId,
       `SELECT id, os_number, status, customer_id, vehicle_id
        FROM work_orders
-       WHERE tenant_id = $1 AND id = $2
+       WHERE ${whereSql}
        LIMIT 1;`,
-      [tenantId, input.workOrderId]
+      params
     );
 
     if (woRes.rows.length === 0) {
       throw new QaError('Ordem de serviço não encontrada.', 404, 'WORK_ORDER_NOT_FOUND');
     }
 
-    const wo = woRes.rows[0];
+    return woRes.rows[0];
+  }
+
+  /**
+   * Realiza uma auditoria de qualidade (QA) pós-execução na Ordem de Serviço
+   */
+  async createAudit(
+    tenantId: string,
+    inspectorId: string,
+    input: CreateQaAuditInputDto
+  ): Promise<QaAuditDto> {
+    // 1. Verifica se a OS existe e pertence à oficina (aceitando UUID ou número)
+    const wo = await this.resolveWorkOrder(tenantId, input.workOrderId);
 
     // 2. Insere o registro de auditoria em qa_audits
     const auditRes = await tenantQuery<{
@@ -102,7 +124,7 @@ export class QaService {
       RETURNING *;`,
       [
         tenantId,
-        input.workOrderId,
+        wo.id,
         inspectorId,
         input.status,
         input.score ?? null,
@@ -124,7 +146,7 @@ export class QaService {
              previous_status = status,
              updated_at = NOW()
          WHERE tenant_id = $1 AND id = $2;`,
-        [tenantId, input.workOrderId]
+        [tenantId, wo.id]
       );
 
       // Sincroniza agendamento no box para 'completed' (libera box na Agenda Inteligente)
@@ -133,8 +155,8 @@ export class QaService {
         `UPDATE appointments
          SET status = 'completed',
              updated_at = NOW()
-         WHERE tenant_id = $1 AND work_order_id = $2;`,
-        [tenantId, input.workOrderId]
+         WHERE tenant_id = $1 AND (work_order_id = $2 OR vehicle_id = $3);`,
+        [tenantId, wo.id, wo.vehicle_id]
       );
 
       // Registra na trilha de auditoria
@@ -222,6 +244,14 @@ export class QaService {
    * Lista histórico de auditorias de uma OS
    */
   async listAuditsByWorkOrder(tenantId: string, workOrderId: string): Promise<QaAuditDto[]> {
+    let resolvedId = workOrderId;
+    try {
+      const resolved = await this.resolveWorkOrder(tenantId, workOrderId);
+      resolvedId = resolved.id;
+    } catch {
+      // Se não resolver, usa o próprio workOrderId
+    }
+
     const res = await tenantQuery<any>(
       tenantId,
       `SELECT qa.*, u.name as inspector_name
@@ -229,7 +259,7 @@ export class QaService {
        LEFT JOIN users u ON u.id = qa.inspector_id
        WHERE qa.tenant_id = $1 AND qa.work_order_id = $2
        ORDER BY qa.created_at DESC;`,
-      [tenantId, workOrderId]
+      [tenantId, resolvedId]
     );
 
     return res.rows.map((r) => this.mapAuditDto(r));
@@ -242,26 +272,8 @@ export class QaService {
     tenantId: string,
     input: CreateWarrantyInputDto
   ): Promise<WarrantyDto> {
-    // 1. Busca dados da OS, cliente e veículo
-    const woRes = await tenantQuery<{
-      id: string;
-      customer_id: string;
-      vehicle_id: string;
-      status: string;
-    }>(
-      tenantId,
-      `SELECT id, customer_id, vehicle_id, status
-       FROM work_orders
-       WHERE tenant_id = $1 AND id = $2
-       LIMIT 1;`,
-      [tenantId, input.workOrderId]
-    );
-
-    if (woRes.rows.length === 0) {
-      throw new QaError('Ordem de serviço não encontrada para emitir garantia.', 404, 'WORK_ORDER_NOT_FOUND');
-    }
-
-    const wo = woRes.rows[0];
+    // 1. Busca dados da OS, cliente e veículo (aceitando UUID ou número)
+    const wo = await this.resolveWorkOrder(tenantId, input.workOrderId);
 
     // 2. Se foi vinculada uma bobina/rolo de estoque (ou se a OS usou bobina), vincula e busca lote
     let rollId = input.materialRollId || null;
@@ -273,7 +285,7 @@ export class QaService {
         `SELECT material_roll_id FROM work_order_materials 
          WHERE tenant_id = $1 AND work_order_id = $2 AND material_roll_id IS NOT NULL 
          LIMIT 1;`,
-        [tenantId, input.workOrderId]
+        [tenantId, wo.id]
       );
       if (rollMatRes.rows.length > 0 && rollMatRes.rows[0].material_roll_id) {
         rollId = rollMatRes.rows[0].material_roll_id;

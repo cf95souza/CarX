@@ -52,7 +52,7 @@ export const QaChecklistModal: React.FC<QaChecklistModalProps> = ({
 
   if (!os || !isOpen) return null;
 
-  const workOrderId = os.workOrderId || os.id;
+  const workOrderId = String(os.workOrderId || os.id || os.osNumber || os.os_number || '');
   const allChecked =
     checks.acabamento &&
     checks.bordas &&
@@ -95,13 +95,15 @@ export const QaChecklistModal: React.FC<QaChecklistModalProps> = ({
         toast.error('Retrabalho registrado no QA! Ordem devolvida ao topo da fila do técnico.');
       }
 
-      // Invalida filas e painel
+      // Invalida filas, histórico e agenda
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['technician-queue'] });
+      queryClient.invalidateQueries({ queryKey: ['technician-history'] });
       queryClient.invalidateQueries({ queryKey: ['technicians-ranking'] });
-      queryClient.invalidateQueries({ queryKey: ['technicians-ranking'] });
+      queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments-list'] });
 
       onSuccess?.();
       onClose();

@@ -1523,9 +1523,13 @@ export const Agenda: React.FC = () => {
                       try {
                         await api.appointments.updateStatus(selectedDetailApp.id, 'completed');
                         queryClient.invalidateQueries({ queryKey: ['smart-schedule-overview'] });
+                        queryClient.invalidateQueries({ queryKey: ['appointments-list'] });
+                        queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+                        queryClient.invalidateQueries({ queryKey: ['work-orders-list'] });
                         setSelectedDetailApp(null);
+                        toast.success('Agendamento concluído com sucesso!');
                       } catch (e: any) {
-                        alert(e.message || 'Erro ao atualizar');
+                        toast.error(e.message || 'Erro ao concluir agendamento');
                       }
                     }}
                     style={{

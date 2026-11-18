@@ -1712,7 +1712,7 @@ export const QaChecklistItemSchema = z
 export type QaChecklistItem = z.infer<typeof QaChecklistItemSchema>;
 
 export const CreateQaAuditSchema = z.object({
-  workOrderId: z.string().uuid(),
+  workOrderId: z.string().min(1),
   status: z.enum(['approved', 'rejected_rework']),
   score: z.coerce.number().int().min(1).max(5).optional().nullable(),
   checklistItems: z.array(QaChecklistItemSchema).default([]),
@@ -1737,12 +1737,12 @@ export interface QaAuditDto {
 }
 
 export const CreateWarrantySchema = z.object({
-  workOrderId: z.string().uuid(),
-  serviceId: z.string().uuid().optional().nullable(),
-  serviceName: z.string().min(2),
-  materialRollId: z.string().uuid().optional().nullable(),
+  workOrderId: z.string().min(1),
+  serviceId: z.string().optional().nullable(),
+  serviceName: z.string().min(1),
+  materialRollId: z.string().optional().nullable(),
   materialLotNumber: z.string().optional().nullable(),
-  warrantyMonths: z.number().int().positive().default(12),
+  warrantyMonths: z.coerce.number().int().positive().default(12),
   notes: z.string().optional().nullable(),
 });
 export type CreateWarrantyInputDto = z.infer<typeof CreateWarrantySchema>;

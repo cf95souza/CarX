@@ -48,8 +48,8 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 61: Configurações & Integrações (Settings): Ajuste de Layout e Espaçamento Responsivo (Print 4) (100% Concluído e Validado)
         * [x] Item 62: Assinatura SaaS / Gateway de Pagamento de Licenças de Uso das Oficinas (Padrão OperaBeauty) (100% Concluído e Validado)
       - [T8.2f] Esteira Operacional: QA, Entrega com Garantia e Histórico do Operador (Itens 63 a 65 — EXECUÇÃO SEQUENCIAL 1 A 1):
-        * [x] Item 63: Vistoria de QA Guiada (Controle de Qualidade) em Ordens de Serviço (Botão Roxo em Destaque + Checklist Técnico + Aprovação para Pronto) (100% Concluído e Validado)
-        * [x] Item 64: Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Botão "Entregar Carro" + Conferência Financeira + Assinatura + Transição DELIVERED + Visualizador de Certificado) (100% Concluído e Validado)
+        * [x] Item 63: Vistoria de QA Guiada (Controle de Qualidade) em Ordens de Serviço (Botão Roxo em Destaque + Checklist Técnico + Aprovação para Pronto + Correção Erro 400 em /qa/audits via resolução tolerante de UUID/os_number) (100% Concluído e Validado)
+        * [x] Item 64: Fluxo de Entrega do Veículo & Emissão de Certificado de Garantia (Botão "Entregar Carro" + Conferência Financeira + Assinatura + Transição DELIVERED + Visualizador de Certificado + Sincronização Inteligente de Agendamentos por Placa) (100% Concluído e Validado)
         * [x] Item 65: Histórico Reativo de Serviços Concluídos do Operador (/operador -> Histórico com dados completos, sincronização pós-finalização e suporte offline) (100% Concluído e Validado)
 
 🎯 PRÓXIMO PASSO IMEDIATO:

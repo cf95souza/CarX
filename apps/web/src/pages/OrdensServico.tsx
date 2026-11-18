@@ -859,6 +859,39 @@ export const OrdensServico: React.FC = () => {
                             <MessageSquare size={16} />
                           </button>
 
+                          {String(os.status).toUpperCase() === 'QA' && (
+                            <button
+                              onClick={() => handleOpenQaModal(os)}
+                              className="px-2.5 py-1.5 text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-all font-bold flex items-center gap-1.5 shadow-sm text-xs cursor-pointer"
+                              title="Realizar Inspeção de Qualidade (QA) para Liberação do Veículo"
+                            >
+                              <ClipboardCheck size={14} />
+                              <span>Vistoria QA</span>
+                            </button>
+                          )}
+
+                          {String(os.status).toUpperCase() === 'READY' && (
+                            <button
+                              onClick={() => handleOpenDeliveryModal(os)}
+                              className="px-2.5 py-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-all font-bold flex items-center gap-1.5 shadow-sm text-xs cursor-pointer border border-[#0E1116]/10"
+                              title="Realizar Entrega Técnica do Veículo e Emitir Certificado de Garantia"
+                            >
+                              <KeyRound size={14} className="text-[#0E1116]" />
+                              <span>Entregar Carro</span>
+                            </button>
+                          )}
+
+                          {['DELIVERED', 'COMPLETED', 'CONCLUIDO'].includes(String(os.status).toUpperCase()) && (
+                            <button
+                              onClick={() => handleOpenCertificadoModal(os)}
+                              className="px-2.5 py-1.5 text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-all font-bold flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
+                              title="Visualizar / Imprimir Certificado de Garantia Digital"
+                            >
+                              <Award size={14} className="text-emerald-700" />
+                              <span>Garantia</span>
+                            </button>
+                          )}
+
                           {balanceCents > 0 && (
                             <button
                               onClick={() => handleOpenPaymentModal(os)}
@@ -870,17 +903,6 @@ export const OrdensServico: React.FC = () => {
                             </button>
                           )}
 
-                          {os.status === 'QA' && (
-                            <button
-                              onClick={() => handleOpenQaModal(os)}
-                              className="px-2.5 py-1.5 text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-all font-bold flex items-center gap-1.5 shadow-sm text-xs cursor-pointer"
-                              title="Realizar Inspeção de Qualidade (QA) para Liberação do Veículo"
-                            >
-                              <ClipboardCheck size={14} />
-                              <span>Vistoria QA</span>
-                            </button>
-                          )}
-
                           {os.status === 'APPROVED' && (
                             <button
                               onClick={() => handleTransition(os.id, 'CHECKED_IN')}
@@ -888,28 +910,6 @@ export const OrdensServico: React.FC = () => {
                               title="Realizar Check-in no Pátio"
                             >
                               <Play size={16} />
-                            </button>
-                          )}
-
-                          {os.status === 'READY' && (
-                            <button
-                              onClick={() => handleOpenDeliveryModal(os)}
-                              className="px-2.5 py-1.5 text-[#0E1116] bg-[#C8F52E] hover:brightness-105 rounded-lg transition-all font-bold flex items-center gap-1.5 shadow-sm text-xs cursor-pointer border border-[#0E1116]/10"
-                              title="Realizar Entrega Técnica do Veículo e Emitir Certificado de Garantia"
-                            >
-                              <KeyRound size={14} className="text-[#0E1116]" />
-                              <span>Entregar Carro</span>
-                            </button>
-                          )}
-
-                          {(os.status === 'DELIVERED' || os.status === 'COMPLETED') && (
-                            <button
-                              onClick={() => handleOpenCertificadoModal(os)}
-                              className="px-2.5 py-1.5 text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-all font-bold flex items-center gap-1.5 text-xs shadow-sm cursor-pointer"
-                              title="Visualizar / Imprimir Certificado de Garantia Digital"
-                            >
-                              <Award size={14} className="text-emerald-700" />
-                              <span>Garantia</span>
                             </button>
                           )}
                         </div>
