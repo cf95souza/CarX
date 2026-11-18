@@ -4809,3 +4809,19 @@ ebraind/Gestor · Painel@2x.png, com destaque ativo em Verde Volt.
      - Botão verde `[✓ Concluir]` no modal de detalhes do agendamento atualizado com invalidação imediata de queries e feedback via toast;
      - Botão roxo **"Vistoria QA"** e botão Volt **"Entregar Carro"** renderizados com checagem case-insensitive (`String(os.status).toUpperCase() === 'QA'`) e prioridade de posicionamento na tabela de OS.
 - **Validações**: Compilação de `@carx/shared`, `@carx/api` e `@carx/web` testadas com 0 erros.
+
+
+### Mapeamento da Subfase T8.2g — Refinamentos de Usabilidade, Laudo Multivistas, Gamificação, Persistência e Quality Gate (Itens 66 a 76)
+- **Contexto**: Registrado a partir da homologação visual do usuário e análise das 7 evidências (prints) coletadas no ambiente de testes.
+- **Itens Catalogados (Aguardando autorização de início, execução sequencial 1 a 1)**:
+  - **Item 66 (Print 1)**: Remoção de falso sinal Pix nas observações automáticas de propostas e orçamentos (condicionar à presença de quitação real no banco);
+  - **Item 67 (Print 2)**: Desacoplamento da coluna de Ações em Ordens de Serviço (o ícone de olho abre os detalhes gerais da OS; a prancheta abre diretamente o Laudo VCR oficial ou preenchimento de checklist caso pendente);
+  - **Item 68 (Print 3)**: Laudo VCR Multivistas (exibição de todas as vistas do veículo onde houve apontamento: frontal, isométrica, laterais), correção de coordenadas dos marcadores e tradução técnica 100% para Português do Brasil;
+  - **Item 69**: Sincronização real da tela de Garantias & Revisões (`/crm-retencao`) e disparos de pesquisa NPS com as ordens entregues no PostgreSQL;
+  - **Item 70**: Integração funcional da tela de Redes & Franquias (`/corporate`) aos endpoints da API e dados reais da oficina;
+  - **Item 71**: Unificação e persistência do percentual de conclusão da OS (início estrito em 0% sincronizado entre Gestor, Monitor TV e Operador);
+  - **Item 72 (Print 4)**: Métricas reais do App do Operador (cálculo dinâmico de dias sem retrabalho via auditorias de QA e contadores diários reais de veículos finalizados);
+  - **Item 73 (Print 5)**: Gamificação e ranking de colaboradores conectado às notas de auditoria (`qa_audits`), eliminando dados mockados e tratando cargos administrativos;
+  - **Item 74 (Print 6)**: Redesenho do Certificado de Garantia no padrão Design System Rebrand CarX Dark/Volt premium, com suporte ao logotipo próprio da oficina e preenchimento de datas reais;
+  - **Item 75 (Print 7)**: Persistência real de todos os campos de edição de serviços do catálogo (`/servicos`) no banco de dados (`warranty_months`, comissão, prazos e preços);
+  - **Item 76**: Auditoria técnica profunda de qualidade de ponta a ponta baseada na skill `system-quality-gate` gerando o relatório formal `quality-report.md`.
