@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   ExternalLink,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 export function AdminLayout() {
@@ -39,6 +40,7 @@ export function AdminLayout() {
     { label: 'Cupons de Desconto', to: '/coupons', icon: Ticket },
     { label: 'Gerenciador WhatsApp', to: '/whatsapp', icon: MessageSquareCode },
     { label: 'Funil de Leads', to: '/leads', icon: Users2 },
+    { label: 'Configurações SaaS', to: '/settings', icon: SlidersHorizontal },
     { label: 'Trilha de Auditoria', to: '/audit', icon: ShieldCheck },
   ];
 

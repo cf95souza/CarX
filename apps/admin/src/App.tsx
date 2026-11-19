@@ -14,6 +14,7 @@ import { CouponsPage } from './pages/CouponsPage';
 import { WhatsAppManagerPage } from './pages/WhatsAppManagerPage';
 import { LeadsPage } from './pages/LeadsPage';
 import { AuditLogsPage } from './pages/AuditLogsPage';
+import { PlatformSettingsPage } from './pages/PlatformSettingsPage';
 
 export function App() {
   const routerBase =
@@ -50,6 +51,8 @@ export function App() {
             <Route path="whatsapp" element={<WhatsAppManagerPage />} />
             <Route path="leads" element={<LeadsPage />} />
             <Route path="audit" element={<AuditLogsPage />} />
+            <Route path="settings" element={<PlatformSettingsPage />} />
+            <Route path="configuracoes" element={<PlatformSettingsPage />} />
           </Route>
 
           {/* Fallback */}

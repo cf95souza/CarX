@@ -31,19 +31,29 @@ export class MercadoPagoService {
       mercadopago_access_token: string | null;
       mercadopago_public_key: string | null;
       mercadopago_webhook_secret: string | null;
+      pix_key: string | null;
+      pix_key_type: string | null;
       sandbox_mode: boolean;
+      grace_period_days?: number | null;
     }>(
-      'SELECT gateway, mercadapago_access_token AS mercadopago_access_token, mercadopago_public_key, mercadopago_webhook_secret, sandbox_mode FROM platform_billing_settings LIMIT 1'
+      `SELECT gateway, mercadopago_access_token, mercadopago_public_key, mercadopago_webhook_secret,
+              pix_key, pix_key_type, sandbox_mode, COALESCE(grace_period_days, 5) AS grace_period_days
+       FROM platform_billing_settings LIMIT 1`
     ).catch(async () => {
-      // Fallback caso a coluna tenha nome sem o erro de digitação
+      // Fallback caso a tabela ainda não tenha grace_period_days
       return query<{
         gateway: string;
         mercadopago_access_token: string | null;
         mercadopago_public_key: string | null;
         mercadopago_webhook_secret: string | null;
+        pix_key: string | null;
+        pix_key_type: string | null;
         sandbox_mode: boolean;
+        grace_period_days?: number | null;
       }>(
-        'SELECT gateway, mercadopago_access_token, mercadopago_public_key, mercadopago_webhook_secret, sandbox_mode FROM platform_billing_settings LIMIT 1'
+        `SELECT gateway, mercadopago_access_token, mercadopago_public_key, mercadopago_webhook_secret,
+                pix_key, pix_key_type, sandbox_mode
+         FROM platform_billing_settings LIMIT 1`
       );
     });
 
@@ -55,7 +65,91 @@ export class MercadoPagoService {
       accessToken: envToken || dbSettings?.mercadopago_access_token || '',
       publicKey: process.env.MERCADOPAGO_PUBLIC_KEY || dbSettings?.mercadopago_public_key || '',
       webhookSecret: process.env.MERCADOPAGO_WEBHOOK_SECRET || dbSettings?.mercadopago_webhook_secret || '',
+      pixKey: dbSettings?.pix_key || '',
+      pixKeyType: dbSettings?.pix_key_type || 'cnpj',
       sandboxMode: dbSettings?.sandbox_mode ?? true,
+      gracePeriodDays: Number(dbSettings?.grace_period_days || 5),
+    };
+  }
+
+  /**
+   * Testa a conectividade com o gateway de pagamento (Mercado Pago / Simulador)
+   */
+  async testConnection(params?: { gateway?: string; accessToken?: string }) {
+    const current = await this.getSettings();
+    const gateway = params?.gateway || current.gateway || 'mercadopago';
+    let token = params?.accessToken?.trim();
+
+    if (!token || token.startsWith('****')) {
+      token = current.accessToken?.trim();
+    }
+
+    if (gateway === 'sandbox' || gateway === 'simulator') {
+      return {
+        success: true,
+        provider: 'sandbox',
+        collector_id: 'SANDBOX-SIMULATOR',
+        nickname: 'Simulador Integrado CarX',
+        email: 'sandbox@carx.com.br',
+        country: 'BRA',
+        is_sandbox: true,
+        message: 'Modo Simulador Sandbox nativo ativo. As faturas são geradas e liquidadas em ambiente de testes seguro.',
+      };
+    }
+
+    if (gateway === 'mercadopago') {
+      if (!token) {
+        return {
+          success: false,
+          message: 'Nenhum Access Token foi informado ou configurado para o Mercado Pago.',
+        };
+      }
+
+      if (!token.startsWith('APP_USR-') && !token.startsWith('TEST-')) {
+        return {
+          success: false,
+          message: 'Formato de Access Token inválido. O token do Mercado Pago deve iniciar com "APP_USR-" (Produção) ou "TEST-" (Sandbox).',
+        };
+      }
+
+      try {
+        const mpRes = await fetch('https://api.mercadopago.com/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = (await mpRes.json()) as any;
+
+        if (mpRes.ok) {
+          const isSandbox = token.startsWith('TEST-');
+          return {
+            success: true,
+            provider: 'mercadopago',
+            collector_id: data.id,
+            nickname: data.nickname || data.first_name || 'Conta Mercado Pago',
+            email: data.email,
+            country: data.site_id,
+            is_sandbox: isSandbox,
+            message: isSandbox
+              ? 'Conectado com sucesso em modo SANDBOX. ATENÇÃO: Bancos reais rejeitam Pix de teste com "QR code inválido". Para cobranças reais, utilize o Access Token de Produção (APP_USR-).'
+              : 'Conectado com sucesso ao Mercado Pago em PRODUÇÃO! Sua conta está autenticada e apta a gerar cobranças Pix reais.',
+          };
+        } else {
+          return {
+            success: false,
+            message: data.message || `Falha de autenticação no Mercado Pago (HTTP ${mpRes.status}). Verifique o token informado.`,
+          };
+        }
+      } catch (err: any) {
+        return {
+          success: false,
+          message: err.message || 'Falha ao conectar com a API do Mercado Pago.',
+        };
+      }
+    }
+
+    return {
+      success: true,
+      provider: gateway,
+      message: `Gateway ${gateway} selecionado. As configurações foram armazenadas com sucesso.`,
     };
   }
 

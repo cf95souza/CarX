@@ -2937,6 +2937,46 @@ CREATE TRIGGER trg_crm_retention_contacts_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 ```
 
+---
+
+### Migration 038 — Reestruturação Comercial dos Planos (R$ 39,90 e R$ 69,90)
+
+```sql
+-- Atualiza plano Essencial para R$ 39,90/mês
+UPDATE plans 
+SET price_cents = 3990, 
+    max_users = 1, 
+    storage_limit_mb = 2048, 
+    is_active = true,
+    updated_at = NOW() 
+WHERE slug = 'essencial';
+
+-- Atualiza plano Profissional para R$ 69,90/mês
+UPDATE plans 
+SET price_cents = 6990, 
+    max_users = 5, 
+    storage_limit_mb = 10240, 
+    is_active = true,
+    updated_at = NOW() 
+WHERE slug = 'profissional';
+
+-- Desativa plano Premium das novas contratações
+UPDATE plans 
+SET is_active = false, 
+    updated_at = NOW() 
+WHERE slug = 'premium';
+```
+
+---
+
+### Migration 039 — Configurações da Plataforma & Tolerância de Carência (SaaS Master)
+
+```sql
+-- Migration 039: Adicionar coluna grace_period_days na tabela platform_billing_settings
+ALTER TABLE platform_billing_settings ADD COLUMN IF NOT EXISTS grace_period_days INTEGER NOT NULL DEFAULT 5;
+```
+
+
 
 
 

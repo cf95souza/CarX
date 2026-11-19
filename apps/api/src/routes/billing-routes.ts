@@ -480,58 +480,188 @@ export async function billingRoutes(fastify: FastifyInstance) {
   );
 
   /**
-   * GET /admin/billing/settings — Configurações de Faturamento do Super Admin
+   * GET /admin/billing/settings — Configurações de Faturamento do Super Admin (Padrão OperaBeauty)
    */
   fastify.get(
     '/admin/billing/settings',
     { preHandler: [requireSuperadminAuth] },
     async (request, reply) => {
       const settings = await mercadoPagoService.getSettings();
+      const host = (request.headers.host || '137.131.151.125:3333').replace(/^https?:\/\//, '');
+      const protocol = request.headers['x-forwarded-proto'] || 'http';
+      const defaultWebhookUrl = `${protocol}://${host}/billing/webhook`;
+
       return reply.code(200).send({
+        payment_gateway: settings.gateway,
         gateway: settings.gateway,
-        hasAccessToken: Boolean(settings.accessToken),
-        publicKey: settings.publicKey,
-        hasWebhookSecret: Boolean(settings.webhookSecret),
+        environment: settings.sandboxMode ? 'sandbox' : 'production',
+        sandbox_mode: settings.sandboxMode,
         sandboxMode: settings.sandboxMode,
+        gateway_api_key: settings.accessToken ? '****' + settings.accessToken.slice(-4) : '',
+        access_token: settings.accessToken ? '****' + settings.accessToken.slice(-4) : '',
+        has_api_key: Boolean(settings.accessToken),
+        hasAccessToken: Boolean(settings.accessToken),
+        gateway_public_key: settings.publicKey,
+        public_key: settings.publicKey,
+        publicKey: settings.publicKey,
+        webhook_secret: settings.webhookSecret ? '****' + settings.webhookSecret.slice(-4) : '',
+        has_webhook_secret: Boolean(settings.webhookSecret),
+        hasWebhookSecret: Boolean(settings.webhookSecret),
+        pix_key: settings.pixKey,
+        pix_key_type: settings.pixKeyType,
+        grace_period_days: settings.gracePeriodDays,
+        webhook_url: defaultWebhookUrl,
       });
     }
   );
 
   /**
-   * PUT /admin/billing/settings — Atualiza Configurações de Faturamento do Super Admin
+   * Handler reutilizável para salvar configurações de faturamento
    */
-  fastify.put<{
-    Body: {
-      gateway?: string;
-      mercadopago_access_token?: string;
-      mercadopago_public_key?: string;
-      mercadopago_webhook_secret?: string;
-      sandbox_mode?: boolean;
-    };
-  }>(
-    '/admin/billing/settings',
-    { preHandler: [requireSuperadminAuth] },
-    async (request, reply) => {
-      const body = request.body;
+  const handleSaveBillingSettings = async (request: any, reply: any) => {
+    const body = request.body || {};
+    const gateway = body.payment_gateway || body.gateway || 'mercadopago';
+    const sandboxMode =
+      body.environment !== undefined
+        ? body.environment === 'sandbox'
+        : body.sandbox_mode !== undefined
+        ? Boolean(body.sandbox_mode)
+        : body.sandboxMode !== undefined
+        ? Boolean(body.sandboxMode)
+        : true;
 
+    const rawToken =
+      body.gateway_api_key || body.access_token || body.mercadopago_access_token;
+    const rawPublicKey =
+      body.gateway_public_key || body.public_key || body.mercadopago_public_key || body.publicKey;
+    const rawWebhookSecret =
+      body.webhook_secret || body.mercadopago_webhook_secret;
+
+    // Recupera dados atuais para preservar chaves antigas se vierem vazias ou mascaradas
+    const currentRes = await query<{
+      mercadopago_access_token: string | null;
+      mercadopago_webhook_secret: string | null;
+    }>(
+      'SELECT mercadopago_access_token, mercadopago_webhook_secret FROM platform_billing_settings LIMIT 1'
+    );
+    const current = currentRes.rows[0];
+
+    let finalAccessToken: string | null = null;
+    if (rawToken && !rawToken.startsWith('****')) {
+      finalAccessToken = rawToken.trim();
+    } else if (current) {
+      finalAccessToken = current.mercadopago_access_token;
+    }
+
+    let finalWebhookSecret: string | null = null;
+    if (rawWebhookSecret && !rawWebhookSecret.startsWith('****')) {
+      finalWebhookSecret = rawWebhookSecret.trim();
+    } else if (current) {
+      finalWebhookSecret = current.mercadopago_webhook_secret;
+    }
+
+    const graceDays = Number(body.grace_period_days) || 5;
+
+    // Verificar se existe registro ou precisa inserir
+    const checkCount = await query<{ count: string }>('SELECT COUNT(*)::text as count FROM platform_billing_settings');
+    if (Number(checkCount.rows[0]?.count || 0) === 0) {
       await query(
-        `UPDATE platform_billing_settings
-         SET gateway = COALESCE($1, gateway),
-             mercadopago_access_token = COALESCE($2, mercadopago_access_token),
-             mercadopago_public_key = COALESCE($3, mercadopago_public_key),
-             mercadopago_webhook_secret = COALESCE($4, mercadopago_webhook_secret),
-             sandbox_mode = COALESCE($5, sandbox_mode),
-             updated_at = NOW()`,
+        `INSERT INTO platform_billing_settings (
+          gateway, mercadopago_access_token, mercadopago_public_key, mercadopago_webhook_secret,
+          pix_key, pix_key_type, sandbox_mode, grace_period_days, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
         [
-          body.gateway || null,
-          body.mercadopago_access_token || null,
-          body.mercadopago_public_key || null,
-          body.mercadopago_webhook_secret || null,
-          body.sandbox_mode ?? null,
+          gateway,
+          finalAccessToken,
+          rawPublicKey ? rawPublicKey.trim() : null,
+          finalWebhookSecret,
+          body.pix_key ? body.pix_key.trim() : null,
+          body.pix_key_type || 'cnpj',
+          sandboxMode,
+          graceDays,
         ]
       );
+    } else {
+      await query(
+        `UPDATE platform_billing_settings
+         SET gateway = $1,
+             mercadopago_access_token = $2,
+             mercadopago_public_key = $3,
+             mercadopago_webhook_secret = $4,
+             pix_key = $5,
+             pix_key_type = $6,
+             sandbox_mode = $7,
+             grace_period_days = $8,
+             updated_at = NOW()`,
+        [
+          gateway,
+          finalAccessToken,
+          rawPublicKey ? rawPublicKey.trim() : null,
+          finalWebhookSecret,
+          body.pix_key ? body.pix_key.trim() : null,
+          body.pix_key_type || 'cnpj',
+          sandboxMode,
+          graceDays,
+        ]
+      );
+    }
 
-      return reply.code(200).send({ success: true, message: 'Configurações de faturamento salvas com sucesso!' });
+    const updatedSettings = await mercadoPagoService.getSettings();
+    return reply.code(200).send({
+      success: true,
+      message: 'Configurações de cobrança do SaaS salvas com sucesso!',
+      has_api_key: Boolean(updatedSettings.accessToken),
+      gateway_api_key: updatedSettings.accessToken ? '****' + updatedSettings.accessToken.slice(-4) : '',
+    });
+  };
+
+  /**
+   * POST /admin/billing/settings — Salva Configurações de Faturamento
+   */
+  fastify.post('/admin/billing/settings', { preHandler: [requireSuperadminAuth] }, handleSaveBillingSettings);
+
+  /**
+   * PUT /admin/billing/settings — Atualiza Configurações de Faturamento
+   */
+  fastify.put('/admin/billing/settings', { preHandler: [requireSuperadminAuth] }, handleSaveBillingSettings);
+
+  /**
+   * POST /admin/billing/settings/test-gateway — Valida credenciais com o gateway (Mercado Pago)
+   */
+  fastify.post(
+    '/admin/billing/settings/test-gateway',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      const body = (request.body as any) || {};
+      const gateway = body.payment_gateway || body.gateway;
+      const token = body.gateway_api_key || body.access_token || body.mercadopago_access_token;
+
+      const result = await mercadoPagoService.testConnection({
+        gateway,
+        accessToken: token,
+      });
+
+      return reply.code(200).send(result);
+    }
+  );
+
+  /**
+   * Alias: POST /admin/billing/test-gateway
+   */
+  fastify.post(
+    '/admin/billing/test-gateway',
+    { preHandler: [requireSuperadminAuth] },
+    async (request, reply) => {
+      const body = (request.body as any) || {};
+      const gateway = body.payment_gateway || body.gateway;
+      const token = body.gateway_api_key || body.access_token;
+
+      const result = await mercadoPagoService.testConnection({
+        gateway,
+        accessToken: token,
+      });
+
+      return reply.code(200).send(result);
     }
   );
 }

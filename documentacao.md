@@ -4903,3 +4903,26 @@ A subfase **T8.2g** foi integralmente concluída, testada e homologada de ponta 
 - **Item 79**: Gating e guards server-side consolidados em `financial-routes.ts` e serviços operacionais;
 - **Item 80**: Tela de Assinatura (`AssinaturaSaaS.tsx`) reconstruída em 2 colunas com design Rebrand Dark/Volt e destaque para o plano Profissional ("Mais Escolhido").
 - **Validação Técnica**: Compilação TypeScript de 100% dos pacotes aprovada com 0 erros e builds de produção verificados.
+
+---
+
+## ⚡ Fase em Andamento: T8.2i — Configurações da Plataforma: Gateway de Pagamento SaaS, Chave PIX e Tolerância de Carência (Item 81) 🚀
+
+- **Item 81 — Painel de Configurações da Plataforma no Super Admin (`PlatformSettingsPage.tsx`)**:
+  - Implementação completa da tela corporativa de gestão de faturamento do SaaS no Super Admin do CarX (`apps/admin`), espelhada com perfeição no padrão de referência do OperaBeauty e adequada à identidade visual **Dark / Volt** do CarX;
+  - **Gateway de Pagamento SaaS & Chave PIX**:
+    - **Seletor de Ambiente**: Alternância fluida entre `Sandbox (Testes)` e `Produção (Real)` com atualização instantânea de escopo;
+    - **Provedor / Gateway Integrado**: Suporte a Mercado Pago, Simulador Sandbox Nativo, Asaas e Stripe;
+    - **Tolerância de Carência (Grace Period)**: Seleção de carência (3, 5, 7 ou 10 dias) com preservação no banco e tolerância para atrasos no pagamento das mensalidades;
+    - **Chave PIX Institucional do SaaS**: Cadastro de Chave Oficial (CNPJ, E-mail, Celular ou Aleatória) utilizada na montagem dos payloads EMV BR Code das faturas;
+    - **Access Token da API com Criptografia**: Campo de senha protegido com visualizador de olho (`Eye` / `EyeOff`), selo de segurança `Criptografia Ativa (AES-256)` e teste dinâmico;
+    - **Validação em Tempo Real com a API do Mercado Pago (`Testar Conexão com Gateway`)**: Endpoint `POST /admin/billing/settings/test-gateway` que consome a API oficial `https://api.mercadopago.com/users/me`, trazendo feedback enriquecido (Nome da Conta, E-mail, Ambiente da Chave, País MLB e alerta crítico caso uma chave `TEST-` seja utilizada em produção);
+    - **URL do Webhook Dinâmica com Cópia Rápida**: Exibição da URL oficial de recebimento de notificações (`/billing/webhook`) com botão "Copiar URL" e feedback tátil;
+  - **Segurança & Conta Master**:
+    - Exibição do E-mail do Administrador Master (`admin@carx.com.br`) e selo de Segundo Fator (2FA TOTP C13 Protegido);
+  - **Encerramento de Sessão Mestre**:
+    - Botão de logout seguro com confirmação visual;
+  - **Banco de Dados e Backend**:
+    - Migration `039_platform_billing_grace_period.up.sql` adicionando a coluna `grace_period_days INTEGER NOT NULL DEFAULT 5` à tabela `platform_billing_settings`;
+    - Endpoints Fastify `GET /admin/billing/settings`, `POST /admin/billing/settings`, `PUT /admin/billing/settings` e `POST /admin/billing/settings/test-gateway` com autenticação compulsória `requireSuperadminAuth` e auditoria de segurança.
+

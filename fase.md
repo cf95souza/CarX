@@ -68,9 +68,11 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 78: Blindagem Server-Side de Cota de Usuários (requireQuota('users') em POST /tenant/members e PATCH /tenant/members/:id) (100% Concluído e Validado)
         * [x] Item 79: Gating de Recursos Avançados (Agendamento Online, Comissões e Bobinas com assertFeature e Modal de Upgrade) (100% Concluído e Validado)
         * [x] Item 80: Atualização das Telas de Assinatura e Planos do SuperAdmin (AssinaturaSaaS.tsx e PlansPage.tsx adaptados para 2 colunas com visual Volt) (100% Concluído e Validado)
+      - [T8.2i] Configurações da Plataforma: Gateway de Pagamento SaaS, Chave PIX e Tolerância de Carência (Item 81 — 100% CONCLUÍDA E DEPLOYADA NA VPS!):
+        * [x] Item 81: Tela de Configurações da Plataforma no Super Admin (PlatformSettingsPage.tsx) no padrão OperaBeauty Dark/Volt + Rota /settings + Backend Fastify com suporte a Mercado Pago, Sandbox, Carência, Teste de Conexão com a API em tempo real e Migration 039 (100% Concluído e Validado)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
-   • Homologação Visual dos Novos Planos pelo Usuário no SuperAdmin (http://137.131.151.125:8081) e na Loja (http://137.131.151.125:8080/assinatura)
+   • Homologação do Módulo de Configurações da Plataforma pelo Usuário no SuperAdmin (http://137.131.151.125:8081/settings) e Configuração das Credenciais Oficiais do Mercado Pago
 
 📊 MAPA DE TODAS AS TAREFAS DA FASE 6 (DIFERENCIAIS COMPETITIVOS):
 --------------------------------------------------------------------------------

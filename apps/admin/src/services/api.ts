@@ -59,6 +59,51 @@ export interface WhatsAppInstanceOverview {
   lastActiveAt?: string;
 }
 
+export interface PlatformBillingSettingsDto {
+  payment_gateway: string;
+  gateway: string;
+  environment: 'sandbox' | 'production';
+  sandbox_mode: boolean;
+  gateway_api_key?: string;
+  access_token?: string;
+  has_api_key: boolean;
+  hasAccessToken?: boolean;
+  gateway_public_key?: string;
+  public_key?: string;
+  webhook_secret?: string;
+  has_webhook_secret: boolean;
+  pix_key?: string;
+  pix_key_type?: string;
+  grace_period_days: number;
+  webhook_url?: string;
+}
+
+export interface SavePlatformBillingSettingsDto {
+  payment_gateway?: string;
+  gateway?: string;
+  environment?: 'sandbox' | 'production';
+  sandbox_mode?: boolean;
+  gateway_api_key?: string;
+  access_token?: string;
+  gateway_public_key?: string;
+  public_key?: string;
+  webhook_secret?: string;
+  pix_key?: string;
+  pix_key_type?: string;
+  grace_period_days?: number;
+}
+
+export interface TestGatewayResultDto {
+  success: boolean;
+  provider?: string;
+  collector_id?: string | number;
+  nickname?: string;
+  email?: string;
+  country?: string;
+  is_sandbox?: boolean;
+  message: string;
+}
+
 class ApiError extends Error {
   statusCode: number;
   constructor(message: string, statusCode: number) {
@@ -357,6 +402,30 @@ export const adminApi = {
   // Telemetria Técnica de WhatsApp (Sem Mocks)
   getWhatsAppTelemetry: async (): Promise<WhatsAppTelemetrySummaryDto> => {
     return fetchClient<WhatsAppTelemetrySummaryDto>('/admin/whatsapp/telemetry');
+  },
+
+  // Configurações Globais da Plataforma & Gateway SaaS (Padrão OperaBeauty)
+  getPlatformBillingSettings: async (): Promise<PlatformBillingSettingsDto> => {
+    return fetchClient<PlatformBillingSettingsDto>('/admin/billing/settings');
+  },
+
+  savePlatformBillingSettings: async (
+    data: SavePlatformBillingSettingsDto
+  ): Promise<{ success: boolean; message: string; has_api_key?: boolean; gateway_api_key?: string }> => {
+    return fetchClient('/admin/billing/settings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  testGatewayConnection: async (data?: {
+    payment_gateway?: string;
+    gateway_api_key?: string;
+  }): Promise<TestGatewayResultDto> => {
+    return fetchClient('/admin/billing/settings/test-gateway', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
   },
 };
 
