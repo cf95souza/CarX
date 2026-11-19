@@ -707,9 +707,9 @@ export function PlansPage() {
                     </label>
                     <input
                       type="number"
-                      min={100}
+                      min={0}
                       max={1024000}
-                      step={512}
+                      step={1}
                       value={formLimits.max_storage_mb}
                       onChange={(e) =>
                         setFormLimits({
@@ -720,7 +720,7 @@ export function PlansPage() {
                       className="w-full bg-asfalto border border-aco rounded-btn px-3 py-2 text-xs text-white focus:outline-none focus:border-volt"
                     />
                     <span className="text-[10px] text-muted">
-                      Ex: 1024 (1 GB), 10240 (10 GB).
+                      Ex: 1024 (1 GB), 2048 (2 GB), 10240 (10 GB).
                     </span>
                   </div>
 
