@@ -774,90 +774,74 @@ export default function LandingPage() {
             <p className="text-slate-400 text-sm">Escolha o plano ideal para a fase da sua oficina. Todos com 14 dias de teste grátis.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             
             {/* Plano Essencial */}
-            <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6 flex flex-col justify-between">
+            <div className="p-8 sm:p-9 rounded-3xl bg-slate-900/60 border border-slate-800 space-y-6 flex flex-col justify-between">
               <div className="space-y-4">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Essencial</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white font-mono">R$ 69,90</span>
+                  <span className="text-4xl font-black text-white font-mono">R$ 39,90</span>
                   <span className="text-xs text-slate-400">/mês</span>
                 </div>
-                <p className="text-xs text-slate-400">Ideal para oficinas menores, aplicadores autônomos e estúdios em início de operação.</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Ideal para profissionais autônomos, aplicadores individuais e estúdios em início de operação.
+                </p>
                 
-                <div className="space-y-2.5 pt-4 border-t border-slate-800 text-xs text-slate-300">
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>1 Usuário (Gestor)</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>1 GB de Fotos (Storage S3)</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Orçamentos e OS ilimitadas</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Passaporte Digital com QR</span></div>
+                <div className="space-y-3 pt-5 border-t border-slate-800 text-xs text-slate-300">
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span><strong>1 Usuário</strong> (Gestor / Dono individual)</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span><strong>Ordens de serviço ilimitadas</strong></span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Vistoria e Checklist VCR Touch com fotos</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Orçamentos com proposta online e Pix</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>WhatsApp direto via wa.me (sem custo)</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Passaporte Digital com QR Code</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Armazenamento MinIO: <strong>2 GB de fotos</strong></span></div>
                 </div>
               </div>
 
               <Link 
                 to="/onboarding?plano=essencial" 
-                className="block text-center py-3 rounded-lg border border-slate-700 hover:border-[#C8F52E] text-white hover:text-[#C8F52E] font-bold text-xs transition-colors"
+                className="block text-center py-3.5 rounded-xl border border-slate-700 hover:border-[#C8F52E] text-white hover:text-[#C8F52E] font-bold text-xs uppercase tracking-wider transition-colors"
               >
                 Testar Essencial Grátis
               </Link>
             </div>
 
             {/* Plano Profissional (Destaque) */}
-            <div className="p-8 rounded-2xl bg-slate-900 border-2 border-[#C8F52E] space-y-6 flex flex-col justify-between relative shadow-xl shadow-[#C8F52E]/10">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#C8F52E] text-[#0E1116] text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+            <div className="p-8 sm:p-9 rounded-3xl bg-slate-900 border-2 border-[#C8F52E] space-y-6 flex flex-col justify-between relative shadow-2xl shadow-[#C8F52E]/10">
+              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-[#C8F52E] text-[#0E1116] text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md">
                 Mais Escolhido
               </div>
 
               <div className="space-y-4">
                 <span className="text-xs font-bold text-[#C8F52E] uppercase tracking-widest">Profissional</span>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-white font-mono">R$ 149,90</span>
+                  <span className="text-4xl font-black text-white font-mono">R$ 69,90</span>
                   <span className="text-xs text-slate-400">/mês</span>
                 </div>
-                <p className="text-xs text-slate-400">A esteira completa para oficinas e centros de estética em crescimento acelerado.</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  A esteira completa para oficinas e centros automotivos com equipe e alto volume de produção.
+                </p>
                 
-                <div className="space-y-2.5 pt-4 border-t border-slate-800 text-xs text-slate-300">
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Até 5 Usuários e Técnicos</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>5 GB de Fotos e Laudos</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Controle Financeiro & DRE</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>PWA do Técnico com Cronômetro</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Gestão de Bobinas de PPF</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Checklist Fotográfico VCR</span></div>
+                <div className="space-y-3 pt-5 border-t border-slate-800 text-xs text-slate-300">
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Até <strong>5 colaboradores simultâneos</strong></span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span><strong>App do Operador móvel</strong> no box com cronômetro</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span><strong>Link de Agendamento Online</strong> da loja (Vitrine)</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Cálculo de <strong>Comissões de técnicos</strong></span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Controle de bobinas de PPF/películas e estoque</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span><strong>Certificado de Garantia Digital</strong> e Passaporte</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>CRM de Pós-Venda, Revisões e Pesquisa NPS</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Monitor TV da Loja (Pátio em tempo real)</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Disparo de WhatsApp Automático</span></div>
+                  <div className="flex items-center gap-2.5"><Check size={16} className="text-[#C8F52E] shrink-0" /><span>Armazenamento MinIO: <strong>10 GB de fotos</strong></span></div>
                 </div>
               </div>
 
               <Link 
                 to="/onboarding?plano=profissional" 
-                className="block text-center py-3.5 rounded-lg bg-[#C8F52E] text-[#0E1116] font-extrabold text-xs uppercase tracking-wider hover:bg-[#d5fa4b] transition-colors shadow-md"
+                className="block text-center py-3.5 rounded-xl bg-[#C8F52E] text-[#0E1116] font-extrabold text-xs uppercase tracking-wider hover:bg-[#d5fa4b] transition-colors shadow-md"
               >
                 Iniciar Teste de 14 Dias
-              </Link>
-            </div>
-
-            {/* Plano Premium */}
-            <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6 flex flex-col justify-between">
-              <div className="space-y-4">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Premium</span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-white font-mono">R$ 299,90</span>
-                  <span className="text-xs text-slate-400">/mês</span>
-                </div>
-                <p className="text-xs text-slate-400">Para grandes operações, matriz e filiais que demandam máxima automação e limites expandidos.</p>
-                
-                <div className="space-y-2.5 pt-4 border-t border-slate-800 text-xs text-slate-300">
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Usuários Ilimitados</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>20 GB de Storage em Nuvem</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Monitor TV 360° em Tempo Real</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>Multi-unidades / Filiais</span></div>
-                  <div className="flex items-center gap-2"><Check size={14} className="text-[#C8F52E]" /><span>API Pública REST e Webhooks</span></div>
-                </div>
-              </div>
-
-              <Link 
-                to="/onboarding?plano=premium" 
-                className="block text-center py-3 rounded-lg border border-slate-700 hover:border-[#C8F52E] text-white hover:text-[#C8F52E] font-bold text-xs transition-colors"
-              >
-                Testar Premium Grátis
               </Link>
             </div>
           </div>

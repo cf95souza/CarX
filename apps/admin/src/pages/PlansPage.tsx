@@ -603,7 +603,7 @@ export function PlansPage() {
                     <input
                       type="text"
                       required
-                      placeholder="Ex: 149,90"
+                      placeholder="Ex: 69,90"
                       value={formPriceReais}
                       onChange={(e) => setFormPriceReais(e.target.value)}
                       className="w-full bg-asfalto border border-aco rounded-btn px-3 py-2 text-xs text-white focus:outline-none focus:border-volt"

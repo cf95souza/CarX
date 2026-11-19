@@ -560,11 +560,10 @@ export const OnboardingPage: React.FC = () => {
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                   Plano Escolhido para o Período de Teste
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { key: 'essencial', name: 'Essencial', price: 'R$ 69,90/mês' },
-                    { key: 'profissional', name: 'Profissional', price: 'R$ 149,90/mês', badge: 'Recomendado' },
-                    { key: 'premium', name: 'Premium', price: 'R$ 299,90/mês' },
+                    { key: 'essencial', name: 'Essencial', price: 'R$ 39,90/mês' },
+                    { key: 'profissional', name: 'Profissional', price: 'R$ 69,90/mês', badge: 'Recomendado' },
                   ].map((p) => {
                     const isPlanSel = planSlug === p.key;
                     return (
