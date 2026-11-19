@@ -63,14 +63,14 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 74: Redesenho do Certificado de Garantia (Design System Rebrand CarX) e Suporte ao Logotipo Personalizado da Oficina (Print 6) (100% Concluído e Validado)
         * [x] Item 75: Persistência Real e Edição Completa dos Campos do Catálogo de Serviços (Garantia, Comissão, Tempos e Preço) (Print 7) (100% Concluído e Validado)
         * [x] Item 76: Análise e Auditoria Detalhada de Qualidade de Ponta a Ponta Baseada na Skill system-quality-gate (100% Concluído e Aprovado — 0 Erros de Tipagem, 0 Erros de Linting, Builds 100% Aprovados)
-      - [T8.2h] Reestruturação Comercial dos Planos (R$ 39,90 e R$ 69,90) e Blindagem Estrita de Limitações/Cotas (Itens 77 a 80 — 100% CONCLUÍDA E VALIDADA!):
-        * [x] Item 77: Reestruturação dos Planos Canônicos no Modelo 2 Níveis (Essencial R$ 39,90 e Pro R$ 69,90) + Migration 038 (100% Concluído e Validado)
+      - [T8.2h] Reestruturação Comercial dos Planos (R$ 39,90 e R$ 69,90) e Blindagem Estrita de Limitações/Cotas (Itens 77 a 80 — 100% CONCLUÍDA E DEPLOYADA NA VPS!):
+        * [x] Item 77: Reestruturação dos Planos Canônicos no Modelo 2 Níveis (Essencial R$ 39,90 e Pro R$ 69,90) + Migration 038 Aplicada (100% Concluído e Validado)
         * [x] Item 78: Blindagem Server-Side de Cota de Usuários (requireQuota('users') em POST /tenant/members e PATCH /tenant/members/:id) (100% Concluído e Validado)
         * [x] Item 79: Gating de Recursos Avançados (Agendamento Online, Comissões e Bobinas com assertFeature e Modal de Upgrade) (100% Concluído e Validado)
         * [x] Item 80: Atualização das Telas de Assinatura e Planos do SuperAdmin (AssinaturaSaaS.tsx e PlansPage.tsx adaptados para 2 colunas com visual Volt) (100% Concluído e Validado)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
-   • Deploy da Subfase T8.2h na VPS Oracle Linux (git push origin main, deploy remoto e migration 038 up)
+   • Homologação Visual dos Novos Planos pelo Usuário no SuperAdmin (http://137.131.151.125:8081) e na Loja (http://137.131.151.125:8080/assinatura)
 
 📊 MAPA DE TODAS AS TAREFAS DA FASE 6 (DIFERENCIAIS COMPETITIVOS):
 --------------------------------------------------------------------------------
