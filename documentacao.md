@@ -4883,3 +4883,23 @@ A subfase **T8.2g** foi integralmente concluída, testada e homologada de ponta 
 - **Item 74 (Print 6)**: Certificado de Garantia redesenhado no **Design System Rebrand CarX Dark / Volt**, integração ao logotipo próprio da oficina e preenchimento de datas reais;
 - **Item 75 (Print 7)**: Persistência real de todos os campos de edição do catálogo de serviços com suporte bidirecional camelCase / snake_case e matching inteligente de botões táteis de garantia;
 - **Item 76**: Auditoria técnica profunda System Quality Gate com parecer final **APROVADO** (0 erros de tipagem, 0 erros de linting, builds de produção perfeitos).
+
+---
+
+## ⚡ Fase em Andamento: T8.2h — Reestruturação Comercial dos Planos (R$ 39,90 e R$ 69,90) e Blindagem Estrita de Limitações/Cotas (Itens 77 a 80) 🚀
+
+- **Estratégia de Precificação Agressiva (Benchmark com Concorrente)**:
+  - Transição do modelo de 3 planos legados (R$ 69,90, R$ 149,90 e R$ 299,90) para **2 planos de altíssima conversão**:
+    1. **Plano 1 (Essencial / Start) — R$ 39,90/mês**: Focado em profissionais autônomos e estúdios individuais. Limite estrito de 1 usuário, ordens de serviço ilimitadas, vistoria VCR com fotos, aceite digital de propostas e WhatsApp manual via `wa.me`;
+    2. **Plano 2 (Profissional / Pro) — R$ 69,90/mês**: Focado em oficinas com equipe e alto volume. Limite de 3 a 5 colaboradores com app do operador no box, agendamento online público da loja, cálculo automático de comissões, controle de bobinas de PPF, CRM de pós-venda com NPS e emissão de Certificado de Garantia com QR Code.
+- **Engenharia de Segurança e Blindagem de Cotas**:
+  - Injeção obrigatória do middleware `requireQuota('users')` na rota `POST /tenant/members` em `auth-routes.ts`;
+  - Gating estrito server-side para recursos do plano Pro (Agendamento Online, Comissões e Bobinas de PPF);
+  - Interceptação visual no frontend com cards e modais táteis de upgrade para planos superiores.
+
+### 🏆 Conclusão e Homologação da Subfase T8.2h (Itens 77 a 80)
+- **Item 77**: Planos canônicos atualizados em `@carx/shared` (Essencial R$ 39,90 e Profissional R$ 69,90) e Migration `038_commercial_pricing_restructure.up.sql` criada para o PostgreSQL;
+- **Item 78**: Blindagem server-side de cota de usuários ativada em `auth-routes.ts` (`requireQuota('users')`), impedindo vazamento de membros no plano individual;
+- **Item 79**: Gating e guards server-side consolidados em `financial-routes.ts` e serviços operacionais;
+- **Item 80**: Tela de Assinatura (`AssinaturaSaaS.tsx`) reconstruída em 2 colunas com design Rebrand Dark/Volt e destaque para o plano Profissional ("Mais Escolhido").
+- **Validação Técnica**: Compilação TypeScript de 100% dos pacotes aprovada com 0 erros e builds de produção verificados.

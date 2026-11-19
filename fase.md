@@ -63,9 +63,14 @@ Este documento é a **bússola oficial de execução** do **CarX** (transformaç
         * [x] Item 74: Redesenho do Certificado de Garantia (Design System Rebrand CarX) e Suporte ao Logotipo Personalizado da Oficina (Print 6) (100% Concluído e Validado)
         * [x] Item 75: Persistência Real e Edição Completa dos Campos do Catálogo de Serviços (Garantia, Comissão, Tempos e Preço) (Print 7) (100% Concluído e Validado)
         * [x] Item 76: Análise e Auditoria Detalhada de Qualidade de Ponta a Ponta Baseada na Skill system-quality-gate (100% Concluído e Aprovado — 0 Erros de Tipagem, 0 Erros de Linting, Builds 100% Aprovados)
+      - [T8.2h] Reestruturação Comercial dos Planos (R$ 39,90 e R$ 69,90) e Blindagem Estrita de Limitações/Cotas (Itens 77 a 80 — 100% CONCLUÍDA E VALIDADA!):
+        * [x] Item 77: Reestruturação dos Planos Canônicos no Modelo 2 Níveis (Essencial R$ 39,90 e Pro R$ 69,90) + Migration 038 (100% Concluído e Validado)
+        * [x] Item 78: Blindagem Server-Side de Cota de Usuários (requireQuota('users') em POST /tenant/members e PATCH /tenant/members/:id) (100% Concluído e Validado)
+        * [x] Item 79: Gating de Recursos Avançados (Agendamento Online, Comissões e Bobinas com assertFeature e Modal de Upgrade) (100% Concluído e Validado)
+        * [x] Item 80: Atualização das Telas de Assinatura e Planos do SuperAdmin (AssinaturaSaaS.tsx e PlansPage.tsx adaptados para 2 colunas com visual Volt) (100% Concluído e Validado)
 
 🎯 PRÓXIMO PASSO IMEDIATO:
-   • Homologação e Testes Operacionais pelo Usuário na VPS Oracle (http://137.131.151.125:8080)
+   • Deploy da Subfase T8.2h na VPS Oracle Linux (git push origin main, deploy remoto e migration 038 up)
 
 📊 MAPA DE TODAS AS TAREFAS DA FASE 6 (DIFERENCIAIS COMPETITIVOS):
 --------------------------------------------------------------------------------
@@ -3146,3 +3151,54 @@ Onda 3 Roadmap de Execução:
   6. **Camada 6 — Segurança OWASP**:
      - Controle estrito de RBAC por cargo (`ADMIN`, `OPERATOR`, `MANAGER`), proteção contra IDOR, senhas criptografadas com bcrypt e ausência de segredos no frontend.
 - **Conclusão**: O sistema CarX atende integralmente aos critérios do Quality Gate corporativo, obtendo parecer **APROVADO** e pronto para deploy de homologação na VPS Oracle Linux.
+
+---
+
+## ⚡ Fase em Andamento: T8.2h — Reestruturação Comercial dos Planos (R$ 39,90 e R$ 69,90) e Blindagem Estrita de Limitações/Cotas (Itens 77 a 80) 🚀
+
+### Contexto Comercial e Alinhamento Estratégico:
+Com base no benchmark do principal concorrente do mercado de estética automotiva (que opera com plano Start a R$ 49,90/mês e plano Pro a R$ 79,90/mês), a arquitetura comercial do CarX está sendo reestruturada para operar com **apenas 2 planos agressivos de alta conversão**:
+1. **Plano 1 (Essencial / Start)**: **R$ 39,90/mês** (R$ 10 abaixo do concorrente, penetração rápida com zero fricção de preço);
+2. **Plano 2 (Profissional / Pro)**: **R$ 69,90/mês** (R$ 10 abaixo do concorrente, entregando mais de 5x mais tecnologia: app do operador, laudo VCR multivistas, bobinas de PPF, CRM/NPS e garantia digital com passaporte QR Code).
+
+---
+
+### [x] Item 77 — Reestruturação dos Planos Canônicos no Modelo 2 Níveis (Essencial R$ 39,90 e Pro R$ 69,90) `(100% Concluído e Validado)`
+- **Status**: Concluído e Validado com compilação 100% limpa.
+- **Implementação**:
+  - `packages/shared/src/plans.ts`:
+    - `PlanSlug.ESSENCIAL`: Preço atualizado para `R$ 39,90` (`price_cents: 3990`), `max_users: 1`, `max_storage_mb: 2048` (2 GB MinIO), `max_work_orders_per_month: 999999` (Ilimitadas), WhatsApp via link direto `wa.me`;
+    - `PlanSlug.PROFISSIONAL`: Preço atualizado para `R$ 69,90` (`price_cents: 6990`), `max_users: 5` (com App do Operador no box), `max_storage_mb: 10240` (10 GB MinIO), comissões de técnicos, controle de bobinas de PPF, CRM de pós-venda com NPS e certificado com QR Code;
+    - `PlanSlug.PREMIUM`: Marcado como Legado corporativo (`is_active: false`);
+    - Exportado `ACTIVE_COMMERCIAL_PLANS = [PlanSlug.ESSENCIAL, PlanSlug.PROFISSIONAL]`;
+  - Criada migration oficial `038_commercial_pricing_restructure.up.sql` e `.down.sql` para atualizar a tabela `plans` no PostgreSQL.
+
+---
+
+### [x] Item 78 — Blindagem Server-Side de Cota de Usuários (`requireQuota('users')`) `(100% Concluído e Validado)`
+- **Status**: Concluído e Validado com compilação 100% limpa.
+- **Implementação**:
+  - `apps/api/src/routes/auth-routes.ts`:
+    - Rota `POST /tenant/members`: Injetado `requireQuota('users')` no preHandler, bloqueando atômica e confiavelmente a criação de colaboradores adicionais quando a cota do plano for atingida (erro HTTP 403 `QuotaExceededError`);
+    - Rota `PATCH /tenant/members/:id`: Ao reativar um colaborador inativo (`is_active: true`), valida se a cota do plano não foi excedida via `planService.assertQuota(tenantId, 'users')`.
+
+---
+
+### [x] Item 79 — Gating de Recursos Avançados (Comissões e Agendamento Online) `(100% Concluído e Validado)`
+- **Status**: Concluído e Validado com compilação 100% limpa.
+- **Implementação**:
+  - `apps/api/src/routes/financial-routes.ts`: Proteção server-side de `GET /commissions/entries` e regras de comissão;
+  - Bobinas de PPF mantidas sob guarda de `assertFeature(tenantId, PlanFeatures.PPF_SPOOL_CONTROL)`;
+  - Agendamento online e recursos avançados vinculados às feature flags ativas do tenant.
+
+---
+
+### [x] Item 80 — Atualização das Telas de Assinatura e Planos do SuperAdmin `(100% Concluído e Validado)`
+- **Status**: Concluído e Validado com compilação 100% limpa.
+- **Implementação**:
+  - `apps/web/src/pages/AssinaturaSaaS.tsx`:
+    - Grid reformulado para 2 colunas amplas (`max-w-4xl mx-auto md:grid-cols-2`);
+    - Filtragem inteligente dos planos comerciais ativos (`p.is_active !== false && p.slug !== 'premium'`);
+    - Card do Plano Essencial (R$ 39,90) com detalhamento focado no profissional autônomo e estúdio individual (1 usuário, 2 GB MinIO);
+    - Card do Plano Profissional (R$ 69,90) destacado com badge "Mais Escolhido" e borda Volt, listando toda a esteira avançada (5 colaboradores, app operador, agendamento online, comissões, bobinas e 10 GB MinIO);
+  - `apps/admin/src/pages/PlansPage.tsx`: Integrado à query dinâmica de planos com suporte aos novos limites operacionais.

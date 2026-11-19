@@ -403,8 +403,10 @@ export const AssinaturaSaaS: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {availablePlans.map((p) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-8">
+          {availablePlans
+            .filter((p) => p.is_active !== false && p.slug !== 'premium')
+            .map((p) => {
             const isCurrent = currentPlan?.slug === p.slug;
             const isPopular = p.slug === 'profissional';
             const priceFormatted = formatBRL(p.price_cents || p.priceCents);
@@ -412,7 +414,7 @@ export const AssinaturaSaaS: React.FC = () => {
             return (
               <div
                 key={p.id}
-                className={`rounded-3xl p-6 sm:p-7 flex flex-col justify-between transition-all relative ${
+                className={`rounded-3xl p-7 sm:p-8 flex flex-col justify-between transition-all relative ${
                   isCurrent
                     ? 'bg-[#171C24] text-white border-2 border-[#C8F52E] shadow-xl'
                     : isPopular
@@ -421,82 +423,108 @@ export const AssinaturaSaaS: React.FC = () => {
                 }`}
               >
                 {isPopular && !isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#0E1116] text-[#C8F52E] font-display font-bold text-[10px] uppercase tracking-wider shadow-sm">
-                    Mais Escolhido
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#0E1116] text-[#C8F52E] font-display font-bold text-[11px] uppercase tracking-wider shadow-sm flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#C8F52E]" />
+                    <span>Mais Escolhido</span>
                   </div>
                 )}
 
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-display font-black text-xl uppercase tracking-tight">
+                    <h3 className="font-display font-black text-2xl uppercase tracking-tight">
                       {p.name}
                     </h3>
                     {isCurrent && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#C8F52E] text-[#0E1116]">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase bg-[#C8F52E] text-[#0E1116]">
                         Plano Atual
                       </span>
                     )}
                   </div>
-                  <p className={`text-xs mb-4 ${isCurrent ? 'text-slate-300' : 'text-[#5B6674]'}`}>
-                    {p.description || `Ideal para oficinas e estúdios que buscam excelência.`}
+                  <p className={`text-xs mb-5 ${isCurrent ? 'text-slate-300' : 'text-[#5B6674]'}`}>
+                    {p.description || (p.slug === 'essencial' ? 'Ideal para profissionais autônomos e estúdios individuais.' : 'Para centros automotivos com equipe e alto volume de produção.')}
                   </p>
 
                   <div className="mb-6">
-                    <span className="font-display font-black text-3xl">
+                    <span className="font-display font-black text-4xl">
                       {priceFormatted}
                     </span>
-                    <span className={`text-xs ml-1 ${isCurrent ? 'text-slate-400' : 'text-[#5B6674]'}`}>/mês</span>
+                    <span className={`text-xs ml-1 font-semibold ${isCurrent ? 'text-slate-400' : 'text-[#5B6674]'}`}>/mês</span>
                   </div>
 
-                  {/* Lista de Recursos */}
-                  <div className="space-y-2.5 mb-6 text-xs">
-                    <div className="flex items-center gap-2">
-                      <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                      <span>Até <strong>{p.limits?.max_users || 3} colaboradores</strong> simultâneos</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                      <span>Até <strong>{p.limits?.max_units || 1} filial/unidade</strong></span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                      <span>
-                        {p.limits?.workOrdersMonthly ? `Até ${p.limits.workOrdersMonthly} OS por mês` : 'Ordens de serviço ilimitadas'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                      <span>Checklist de entrada, laudo e fotos</span>
-                    </div>
-                    {p.slug !== 'essencial' && (
+                  {/* Lista de Recursos Estruturada por Plano */}
+                  <div className="space-y-3 mb-8 text-xs">
+                    {p.slug === 'essencial' ? (
                       <>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span><strong>1 Usuário</strong> (Dono / Operador individual)</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span><strong>Ordens de serviço ilimitadas</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Orçamentos com proposta online e Pix de sinal</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Vistoria e Checklist VCR Touch com fotos</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>WhatsApp manual direto via wa.me (sem custo)</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Armazenamento MinIO: <strong>2 GB de fotos</strong></span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Até <strong>5 colaboradores simultâneos</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span><strong>App do Operador móvel</strong> no box com cronômetro</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span><strong>Ordens de serviço ilimitadas</strong></span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span><strong>Link de Agendamento Online</strong> da loja (Vitrine)</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Cálculo de <strong>Comissões de técnicos</strong> por serviço</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Controle de bobinas de PPF/películas e insumos</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span><strong>Certificado de Garantia Digital</strong> e Passaporte QR</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>CRM de Pós-Venda, Revisões e Pesquisa NPS</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
+                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
+                          <span>Monitor TV da Loja (Pátio em tempo real)</span>
+                        </div>
+                        <div className="flex items-center gap-2.5">
                           <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
                           <span>Disparo de WhatsApp Automático</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                           <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                          <span>Controle de bobinas de PPF e estoque</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                          <span>Comissões e relatórios DRE avançados</span>
-                        </div>
-                      </>
-                    )}
-                    {p.slug === 'premium' && (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                          <span>Módulo Fiscal NFS-e Automático</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                          <span>Multiunidade Redes &amp; Franquias</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Check className={`w-4 h-4 shrink-0 ${isCurrent ? 'text-[#C8F52E]' : 'text-emerald-600'}`} />
-                          <span>APIs REST Públicas &amp; Webhooks</span>
+                          <span>Armazenamento MinIO: <strong>10 GB de fotos</strong></span>
                         </div>
                       </>
                     )}

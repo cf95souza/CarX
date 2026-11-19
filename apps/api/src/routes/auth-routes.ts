@@ -5,6 +5,8 @@ import { requireTenantContext } from '../plugins/tenant.js';
 import { tenantQuery } from '../database/tenant-query.js';
 import { hashPassword } from '../auth/password.js';
 import { pool, adminPool } from '../database/db.js';
+import { requireQuota } from '../middlewares/plan-guards.js';
+import { planService } from '../plans/plan-service.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -327,6 +329,19 @@ export async function authRoutes(fastify: FastifyInstance) {
             : typeof body.status === 'boolean'
               ? body.status
               : body.status === 'ativo' || body.status === 'true';
+
+        // Se for reativar um colaborador, validar se a cota do plano não foi atingida
+        if (isActive) {
+          const currentMem = await tenantQuery<{ is_active: boolean }>(
+            tenantId,
+            `SELECT is_active FROM memberships WHERE tenant_id = $1 AND user_id = $2 LIMIT 1;`,
+            [tenantId, id]
+          );
+          if (currentMem.rows.length > 0 && !currentMem.rows[0].is_active) {
+            await planService.assertQuota(tenantId, 'users');
+          }
+        }
+
         await tenantQuery(
           tenantId,
           `UPDATE memberships SET is_active = $1, updated_at = NOW() WHERE tenant_id = $2 AND user_id = $3;`,
@@ -339,11 +354,11 @@ export async function authRoutes(fastify: FastifyInstance) {
   );
 
   /**
-   * POST /tenant/members — Criação de colaborador e vinculação à oficina
+   * POST /tenant/members — Criação de colaborador e vinculação à oficina (com validação estrita de cota do plano)
    */
   fastify.post<{ Body: { name: string; email: string; password?: string; role?: string } }>(
     '/tenant/members',
-    { preHandler: [authenticateBearer, requireTenantContext] },
+    { preHandler: [authenticateBearer, requireTenantContext, requireQuota('users')] },
     async (request, reply) => {
       const tenantId = request.tenantId;
       if (!tenantId) {

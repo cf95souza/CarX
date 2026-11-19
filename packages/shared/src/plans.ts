@@ -216,21 +216,22 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
   [PlanSlug.ESSENCIAL]: {
     name: 'Essencial',
     slug: PlanSlug.ESSENCIAL,
-    description: 'Para lojas e estéticas automotivas em fase inicial',
-    price_cents: 6990, // R$ 69,90/mês
+    description: 'Ideal para profissionais autônomos e estúdios em fase inicial',
+    price_cents: 3990, // R$ 39,90/mês
     interval: 'monthly',
     limits: {
       max_units: 1,
-      max_users: 3, // Regra estrita: 4º usuário bloqueado
-      max_work_orders_per_month: 100,
-      max_storage_mb: 1024, // 1 GB
-      max_whatsapp_messages_per_month: 200,
+      max_users: 1, // Regra estrita: 1 usuário (Dono/Operador individual)
+      max_work_orders_per_month: 999999, // Ilimitado
+      max_storage_mb: 2048, // 2 GB MinIO
+      max_whatsapp_messages_per_month: 0, // Envio manual direto via wa.me
     },
     features: [
       PlanFeatures.WORK_ORDERS,
       PlanFeatures.CUSTOMERS,
       PlanFeatures.VEHICLES,
       PlanFeatures.QUOTES,
+      PlanFeatures.INSPECTION_CHECKLIST,
       PlanFeatures.BASIC_REPORTS,
       PlanFeatures.WHATSAPP_BASIC,
     ],
@@ -238,14 +239,14 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
   [PlanSlug.PROFISSIONAL]: {
     name: 'Profissional',
     slug: PlanSlug.PROFISSIONAL,
-    description: 'Para centros automotivos com equipe estruturada e alto volume de produção',
-    price_cents: 14990, // R$ 149,90/mês
+    description: 'Para oficinas e centros automotivos com equipe e alto volume de produção',
+    price_cents: 6990, // R$ 69,90/mês
     interval: 'monthly',
     limits: {
-      max_units: 2,
-      max_users: 10,
-      max_work_orders_per_month: 500,
-      max_storage_mb: 10240, // 10 GB
+      max_units: 1,
+      max_users: 5, // Até 5 colaboradores simultâneos com app móvel no box
+      max_work_orders_per_month: 999999, // Ilimitado
+      max_storage_mb: 10240, // 10 GB MinIO
       max_whatsapp_messages_per_month: 1000,
     },
     features: [
@@ -253,22 +254,22 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
       PlanFeatures.CUSTOMERS,
       PlanFeatures.VEHICLES,
       PlanFeatures.QUOTES,
+      PlanFeatures.INSPECTION_CHECKLIST,
       PlanFeatures.BASIC_REPORTS,
       PlanFeatures.FINANCIAL,
       PlanFeatures.COMMISSIONS,
       PlanFeatures.INVENTORY,
-      PlanFeatures.INSPECTION_CHECKLIST,
       PlanFeatures.NPS,
       PlanFeatures.WHATSAPP_AUTO,
       PlanFeatures.WHATSAPP_GATEWAY,
       PlanFeatures.PPF_SPOOL_CONTROL,
-      PlanFeatures.NFSE,
+      PlanFeatures.CUSTOMER_PORTAL,
     ],
   },
   [PlanSlug.PREMIUM]: {
-    name: 'Premium',
+    name: 'Premium (Legado)',
     slug: PlanSlug.PREMIUM,
-    description: 'Para redes de oficinas, franquias e operações multiloja de grande porte',
+    description: 'Plano legado corporativo para redes e operações de grande porte',
     price_cents: 29990, // R$ 299,90/mês
     interval: 'monthly',
     limits: {
@@ -299,4 +300,12 @@ export const CANONICAL_PLANS: Record<PlanSlugType, PlanDefinition> = {
     ],
   },
 };
+
+/**
+ * Planos ativos disponíveis para novas assinaturas e checkout
+ */
+export const ACTIVE_COMMERCIAL_PLANS = [
+  PlanSlug.ESSENCIAL,
+  PlanSlug.PROFISSIONAL,
+] as const;
 
